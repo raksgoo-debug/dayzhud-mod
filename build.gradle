@@ -43,7 +43,6 @@ minecraft {
     }
 }
 
-sourceSets.main.resources { srcDir 'src/main/resources' }
 
 repositories {
     mavenCentral()
