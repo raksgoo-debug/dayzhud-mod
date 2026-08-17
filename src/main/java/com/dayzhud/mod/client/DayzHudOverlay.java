@@ -1,27 +1,36 @@
 package com.dayzhud.mod.client;
 
+import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 /**
- * Draws a DayZ-style vertical status stack in the bottom-left corner: an icon plus a
- * numeric readout per row, colored by severity. Icons are drawn procedurally (small pixel
- * grids) rather than using texture files, so there's nothing to import or attribute.
- *
- * Layout/scale/position are all plain constants below - tweak freely.
+ * Draws a DayZ-style horizontal status row in the bottom-right corner: an icon plus a
+ * numeric readout per column, colored by severity. Icons are smooth anti-aliased PNG
+ * textures (src/main/resources/assets/dayzhud/textures/gui/) rather than blocky pixel art.
  */
 public class DayzHudOverlay implements IGuiOverlay {
 
-    private static final int ICON_SCALE = 2;      // each icon pixel is drawn at 2x2 screen pixels
-    private static final int ICON_SIZE = 8 * ICON_SCALE;
-    private static final int ROW_HEIGHT = ICON_SIZE + 4;
+    private static final int ICON_SIZE = 14;       // on-screen icon size in pixels
+    private static final int COLUMN_WIDTH = 46;     // horizontal spacing between stat columns
+    private static final int TEXT_GAP = 2;
     private static final int MARGIN_X = 8;
     private static final int MARGIN_Y = 8;
-    private static final int TEXT_GAP = 6;
+
+    private static final ResourceLocation ICON_HEART = rl("icon_heart");
+    private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
+    private static final ResourceLocation ICON_FOOD = rl("icon_food");
+    private static final ResourceLocation ICON_BOLT = rl("icon_bolt");
+    private static final ResourceLocation ICON_THERMOMETER = rl("icon_thermometer");
+
+    private static ResourceLocation rl(String name) {
+        return new ResourceLocation(DayzHudMod.MOD_ID, "textures/gui/" + name + ".png");
+    }
 
     @Override
     public void render(net.minecraftforge.client.gui.overlay.ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
@@ -29,7 +38,6 @@ public class DayzHudOverlay implements IGuiOverlay {
         LocalPlayer player = mc.player;
         if (player == null || mc.options.hideGui) return;
 
-        // Values, all normalized 0..1 unless noted.
         float health01 = player.getHealth() / Math.max(1f, player.getMaxHealth());
         float food01 = player.getFoodData().getFoodLevel() / 20f;
         float water01 = ThirstWasTakenCompat.getThirst01(player)
@@ -37,49 +45,54 @@ public class DayzHudOverlay implements IGuiOverlay {
         float stamina01 = VitalsTracker.getStamina01();
         float temperature01 = VitalsTracker.getTemperature01();
 
-        int baseX = MARGIN_X;
-        int baseY = screenHeight - MARGIN_Y - ROW_HEIGHT;
+        // Five columns, right-aligned, growing leftward from the bottom-right corner.
+        // Order left-to-right: temperature, stamina, food, water, health (health closest to the corner).
+        int rowY = screenHeight - MARGIN_Y - ICON_SIZE;
+        int rightX = screenWidth - MARGIN_X;
 
-        // Bottom-to-top stack, DayZ order: temperature, stamina, food, water, health (health nearest hotbar).
-        drawRow(graphics, baseX, baseY - ROW_HEIGHT * 4, Icons.THERMOMETER, tempColor(temperature01), tempLabel(temperature01));
-        drawRow(graphics, baseX, baseY - ROW_HEIGHT * 3, Icons.BOLT, severityColor(stamina01, false), Math.round(stamina01 * 100) + "%");
-        drawRow(graphics, baseX, baseY - ROW_HEIGHT * 2, Icons.APPLE, severityColor(food01, false), Math.round(food01 * 100) + "%");
-        drawRow(graphics, baseX, baseY - ROW_HEIGHT, Icons.DROP, severityColor(water01, false), Math.round(water01 * 100) + "%");
-        drawRow(graphics, baseX, baseY, Icons.HEART, severityColor(health01, true), Math.round(health01 * 100) + "%");
+        int col4 = rightX - COLUMN_WIDTH * 0; // health (rightmost)
+        int col3 = rightX - COLUMN_WIDTH * 1; // water
+        int col2 = rightX - COLUMN_WIDTH * 2; // food
+        int col1 = rightX - COLUMN_WIDTH * 3; // stamina
+        int col0 = rightX - COLUMN_WIDTH * 4; // temperature (leftmost)
+
+        drawStat(graphics, col0, rowY, ICON_THERMOMETER, tempColor(temperature01), tempLabel(temperature01), true);
+        drawStat(graphics, col1, rowY, ICON_BOLT, severityColor(stamina01, false), Math.round(stamina01 * 100) + "%", false);
+        drawStat(graphics, col2, rowY, ICON_FOOD, severityColor(food01, false), Math.round(food01 * 100) + "%", false);
+        drawStat(graphics, col3, rowY, ICON_DROPLET, severityColor(water01, false), Math.round(water01 * 100) + "%", false);
+        drawStat(graphics, col4, rowY, ICON_HEART, severityColor(health01, true), Math.round(health01 * 100) + "%", false);
     }
 
-    private void drawRow(GuiGraphics graphics, int x, int y, boolean[][] icon, int color, String text) {
-        drawIcon(graphics, icon, x, y, color);
-        graphics.drawString(Minecraft.getInstance().font, text, x + ICON_SIZE + TEXT_GAP, y + ICON_SIZE / 2 - 4, 0xFFFFFF, true);
-    }
+    /** x is the column's right edge; icon+text are right-aligned within the column so columns don't collide. */
+    private void drawStat(GuiGraphics graphics, int columnRightX, int y, ResourceLocation icon, int color, String text, boolean isWordLabel) {
+        int textWidth = Minecraft.getInstance().font.width(text);
+        int totalWidth = ICON_SIZE + TEXT_GAP + textWidth;
+        int startX = columnRightX - totalWidth;
 
-    private void drawIcon(GuiGraphics graphics, boolean[][] grid, int x, int y, int color) {
         RenderSystem.enableBlend();
-        for (int row = 0; row < grid.length; row++) {
-            for (int col = 0; col < grid[row].length; col++) {
-                if (grid[row][col]) {
-                    int px = x + col * ICON_SCALE;
-                    int py = y + row * ICON_SCALE;
-                    graphics.fill(px, py, px + ICON_SCALE, py + ICON_SCALE, color);
-                }
-            }
-        }
+        RenderSystem.setShaderColor(
+                ((color >> 16) & 0xFF) / 255f,
+                ((color >> 8) & 0xFF) / 255f,
+                (color & 0xFF) / 255f,
+                1f
+        );
+        graphics.blit(icon, startX, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
+
+        graphics.drawString(Minecraft.getInstance().font, text, startX + ICON_SIZE + TEXT_GAP, y + ICON_SIZE / 2 - 4, 0xFFFFFF, true);
     }
 
-    /** Red when critical, orange mid, white/green when healthy - DayZ-ish severity coloring. */
     private int severityColor(float value01, boolean isHealth) {
-        int alpha = 0xFF000000;
-        if (value01 <= 0.25f) return alpha | 0xE23A2E;      // red - critical
-        if (value01 <= 0.5f) return alpha | 0xE2A62E;       // amber - low
-        return alpha | (isHealth ? 0xFFFFFF : 0xCFCFCF);    // white/light grey - fine
+        if (value01 <= 0.25f) return 0xE23A2E;      // red - critical
+        if (value01 <= 0.5f) return 0xE2A62E;        // amber - low
+        return isHealth ? 0xFFFFFF : 0xCFCFCF;       // white/light grey - fine
     }
 
     private int tempColor(float t) {
-        int alpha = 0xFF000000;
-        if (t < 0.3f) return alpha | 0x4DA6FF;  // cold - blue
-        if (t > 0.7f) return alpha | 0xFF5C33;  // hot - orange/red
-        return alpha | 0xFFFFFF;                // neutral - white
+        if (t < 0.3f) return 0x4DA6FF;  // cold - blue
+        if (t > 0.7f) return 0xFF5C33;  // hot - orange/red
+        return 0xFFFFFF;                // neutral - white
     }
 
     private String tempLabel(float t) {
@@ -88,70 +101,5 @@ public class DayzHudOverlay implements IGuiOverlay {
         if (t < 0.65f) return "Normal";
         if (t < 0.85f) return "Hot";
         return "Overheating";
-    }
-
-    /** Procedural 8x8 pixel icons - no texture files needed. */
-    private static final class Icons {
-        static final boolean[][] HEART = bools(
-                "01100110",
-                "11111111",
-                "11111111",
-                "11111111",
-                "01111100",
-                "00111000",
-                "00010000",
-                "00000000"
-        );
-        static final boolean[][] DROP = bools(
-                "00010000",
-                "00111000",
-                "01111100",
-                "11111110",
-                "11011110",
-                "11111110",
-                "01111100",
-                "00111000"
-        );
-        static final boolean[][] APPLE = bools(
-                "00101000",
-                "00010000",
-                "01111100",
-                "11111110",
-                "11111110",
-                "11111110",
-                "01111100",
-                "00111000"
-        );
-        static final boolean[][] BOLT = bools(
-                "00011000",
-                "00110000",
-                "01111100",
-                "00111000",
-                "00011000",
-                "00110000",
-                "01100000",
-                "00000000"
-        );
-        static final boolean[][] THERMOMETER = bools(
-                "00110000",
-                "00110000",
-                "00110000",
-                "00110000",
-                "00110000",
-                "01111000",
-                "11111100",
-                "11111100"
-        );
-
-        static boolean[][] bools(String... rows) {
-            boolean[][] out = new boolean[rows.length][];
-            for (int i = 0; i < rows.length; i++) {
-                String row = rows[i];
-                boolean[] r = new boolean[row.length()];
-                for (int j = 0; j < row.length(); j++) r[j] = row.charAt(j) == '1';
-                out[i] = r;
-            }
-            return out;
-        }
     }
 }

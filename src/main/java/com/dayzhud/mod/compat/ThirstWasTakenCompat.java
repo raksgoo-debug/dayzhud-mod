@@ -2,48 +2,41 @@ package com.dayzhud.mod.compat;
 
 import com.dayzhud.mod.DayzHudMod;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Direction;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.ModList;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Optional;
 
 /**
- * Reads the player's current/max thirst from "Thirst Was Taken" (modid: thirstwastaken)
- * WITHOUT a compile-time dependency, so this mod builds and runs fine whether or not
- * that mod is installed.
+ * Reads the player's current thirst from "Thirst Was Taken" (real mod id: "thirst",
+ * NOT "thirstwastaken" - the jar filename is misleading) via its actual capability API,
+ * confirmed directly from the mod's own jar (version 1.20.1-1.4.0):
  *
- * IMPORTANT - read this before relying on it:
- * Thirst Was Taken doesn't publish a stable public API, so the exact capability/attachment
- * class can shift between its versions. This class tries the method names most commonly
- * used by that mod's capability object ("getThirst"/"getMaxThirst" and common variants).
- * If it can't find a match it fails closed (isAvailable() returns false) rather than
- * guessing wrong, and the HUD falls back to vanilla food saturation for the water gauge.
+ *   dev.ghen.thirst.foundation.common.capability.ModCapabilities.PLAYER_THIRST
+ *       -> a Forge Capability<IThirst>
+ *   dev.ghen.thirst.foundation.common.capability.IThirst.getThirst()
+ *       -> int, 0..20 (same scale as vanilla hunger; confirmed by the 10-icon vanilla-style bar)
  *
- * If the default lookup doesn't hit on your exact copy of the mod:
- *   1. Open the installed ThirstWasTaken-*.jar in a decompiler (e.g. Bytecode Viewer / vineflower).
- *   2. Find the capability/attachment class attached to Player (search for "Capability<" or
- *      "AttachmentType<" near a class with a name like ThirstCapability / PlayerThirst).
- *   3. Note the exact getter method names and update CANDIDATE_GET_METHODS /
- *      CANDIDATE_MAX_METHODS below, and CAPABILITY_HOLDER_CLASS if the capability class
- *      itself differs from what's guessed here.
+ * This mod still has no compile-time dependency on Thirst Was Taken - Capability, Direction,
+ * and LazyOptional are all normal Forge API classes we already depend on, so only the two
+ * TWT-specific class lookups (ModCapabilities, IThirst) go through reflection. If a future
+ * TWT version renames these, getThirst01() just falls back to vanilla saturation instead of
+ * crashing - see the catch block below.
  */
 public final class ThirstWasTakenCompat {
 
-    private static final String MOD_ID = "thirstwastaken";
-
-    // Common capability provider class names seen across TWT's version history.
-    // Tried in order; first one that resolves and yields a usable getter wins.
-    private static final String[] CANDIDATE_CAPABILITY_CLASSES = {
-            "com.ghenghen.thirstwastaken.capability.ThirstCapability",
-            "com.ghenghen.thirstwastaken.common.capability.ThirstCapability",
-            "com.ghenghen.thirstwastaken.capability.PlayerThirstCapability"
-    };
-
-    private static final String[] CANDIDATE_GET_METHODS = {"getThirst", "getWater", "getHydration", "getThirstLevel"};
-    private static final String[] CANDIDATE_MAX_METHODS = {"getMaxThirst", "getMaxWater", "getMaxHydration"};
+    private static final String MOD_ID = "thirst";
+    private static final String CAPABILITIES_CLASS = "dev.ghen.thirst.foundation.common.capability.ModCapabilities";
+    private static final String ITHIRST_CLASS = "dev.ghen.thirst.foundation.common.capability.IThirst";
+    private static final int MAX_THIRST = 20;
 
     private static boolean resolved = false;
-    private static boolean available = false;
+    private static Capability<?> playerThirstCapability;
+    private static Method getThirstMethod;
 
     private ThirstWasTakenCompat() {}
 
@@ -51,102 +44,40 @@ public final class ThirstWasTakenCompat {
         return ModList.get().isLoaded(MOD_ID);
     }
 
-    /** Returns thirst as a 0..1 fraction, or empty if unavailable/unresolvable. */
+    /** Returns thirst as a 0..1 fraction, or empty if the mod isn't present/resolvable. */
     public static Optional<Float> getThirst01(LocalPlayer player) {
         if (!isModLoaded()) return Optional.empty();
         if (!resolved) resolve();
-        if (!available) return Optional.empty();
+        if (playerThirstCapability == null || getThirstMethod == null) return Optional.empty();
 
         try {
-            Object capObject = findCapabilityInstance(player);
-            if (capObject == null) return Optional.empty();
+            LazyOptional<?> lazy = player.getCapability(playerThirstCapability, (Direction) null);
+            Object thirstCap = lazy.orElse(null);
+            if (thirstCap == null) return Optional.empty();
 
-            float current = -1f, max = -1f;
-            for (String name : CANDIDATE_GET_METHODS) {
-                Method m = tryGetMethod(capObject.getClass(), name);
-                if (m != null) {
-                    current = ((Number) m.invoke(capObject)).floatValue();
-                    break;
-                }
-            }
-            for (String name : CANDIDATE_MAX_METHODS) {
-                Method m = tryGetMethod(capObject.getClass(), name);
-                if (m != null) {
-                    max = ((Number) m.invoke(capObject)).floatValue();
-                    break;
-                }
-            }
-
-            if (current < 0f) return Optional.empty();
-            if (max <= 0f) max = 20f; // TWT historically uses a 0-20 scale like vanilla hunger
-            return Optional.of(Math.max(0f, Math.min(1f, current / max)));
+            int current = (int) getThirstMethod.invoke(thirstCap);
+            return Optional.of(Math.max(0f, Math.min(1f, current / (float) MAX_THIRST)));
         } catch (Exception e) {
-            DayzHudMod.LOGGER.debug("[dayzhud] Thirst Was Taken compat read failed, falling back to vanilla saturation.", e);
+            DayzHudMod.LOGGER.debug("[dayzhud] Thirst Was Taken read failed, falling back to vanilla saturation.", e);
             return Optional.empty();
         }
     }
 
     private static void resolve() {
         resolved = true;
-        for (String className : CANDIDATE_CAPABILITY_CLASSES) {
-            try {
-                Class.forName(className);
-                available = true;
-                return;
-            } catch (ClassNotFoundException ignored) {
-                // try next candidate
-            }
-        }
-        DayzHudMod.LOGGER.info("[dayzhud] Thirst Was Taken is installed but its capability class "
-                + "wasn't found under any known name - water gauge will use vanilla saturation instead. "
-                + "See ThirstWasTakenCompat.java for how to fix this for your mod version.");
-        available = false;
-    }
-
-    private static Object findCapabilityInstance(LocalPlayer player) {
-        // TWT attaches its data via a Forge Capability on the player. We look it up
-        // generically by scanning the player's exposed capabilities for an object whose
-        // class matches one of our candidates, avoiding a hard reference to TWT's
-        // Capability<T> token (which we don't have without compiling against the mod).
-        for (String className : CANDIDATE_CAPABILITY_CLASSES) {
-            try {
-                Class<?> capClass = Class.forName(className);
-                Object found = net.minecraftforge.common.util.LazyOptional.class != null
-                        ? scanCapabilities(player, capClass)
-                        : null;
-                if (found != null) return found;
-            } catch (ClassNotFoundException ignored) {
-            }
-        }
-        return null;
-    }
-
-    private static Object scanCapabilities(LocalPlayer player, Class<?> capClass) {
         try {
-            // Player capabilities are exposed via getCapability(Capability<T>), which needs
-            // the mod's own Capability token - we don't have it. Instead, most TWT builds
-            // also expose the value through the entity's persistent/forge data, so as a
-            // practical fallback we reflectively probe common capability-holder field names
-            // on the player mixin/attachment. This keeps the mod compiling without TWT on
-            // the classpath while still finding real data when the class layout matches.
-            for (java.lang.reflect.Field f : player.getClass().getDeclaredFields()) {
-                if (capClass.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    return f.get(player);
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
+            Class<?> capsClass = Class.forName(CAPABILITIES_CLASS);
+            Field capField = capsClass.getField("PLAYER_THIRST");
+            playerThirstCapability = (Capability<?>) capField.get(null);
 
-    private static Method tryGetMethod(Class<?> clazz, String name) {
-        try {
-            Method m = clazz.getMethod(name);
-            m.setAccessible(true);
-            return m;
-        } catch (NoSuchMethodException e) {
-            return null;
+            Class<?> iThirstClass = Class.forName(ITHIRST_CLASS);
+            getThirstMethod = iThirstClass.getMethod("getThirst");
+            getThirstMethod.setAccessible(true);
+        } catch (Exception e) {
+            DayzHudMod.LOGGER.warn("[dayzhud] Thirst Was Taken is installed but its API couldn't be resolved "
+                    + "(mod may have changed internals) - water gauge will use vanilla saturation instead.", e);
+            playerThirstCapability = null;
+            getThirstMethod = null;
         }
     }
 }
