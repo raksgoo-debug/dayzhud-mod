@@ -16,11 +16,11 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  */
 public class DayzHudOverlay implements IGuiOverlay {
 
-    private static final int ICON_SIZE = 14;       // on-screen icon size in pixels
-    private static final int COLUMN_WIDTH = 46;     // horizontal spacing between stat columns
+    private static final int ICON_SIZE = 9;        // on-screen icon size in pixels
+    private static final int COLUMN_WIDTH = 30;      // horizontal spacing between stat columns
     private static final int TEXT_GAP = 2;
-    private static final int MARGIN_X = 8;
-    private static final int MARGIN_Y = 8;
+    private static final int MARGIN_X = 6;
+    private static final int MARGIN_Y = 30;          // clears the hotbar + XP bar + any hotbar-adjacent icons
 
     private static final ResourceLocation ICON_HEART = rl("icon_heart");
     private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
@@ -65,8 +65,9 @@ public class DayzHudOverlay implements IGuiOverlay {
 
     /** x is the column's right edge; icon+text are right-aligned within the column so columns don't collide. */
     private void drawStat(GuiGraphics graphics, int columnRightX, int y, ResourceLocation icon, int color, String text, boolean isWordLabel) {
-        int textWidth = Minecraft.getInstance().font.width(text);
-        int totalWidth = ICON_SIZE + TEXT_GAP + textWidth;
+        float textScale = 0.8f;
+        int scaledTextWidth = Math.round(Minecraft.getInstance().font.width(text) * textScale);
+        int totalWidth = ICON_SIZE + TEXT_GAP + scaledTextWidth;
         int startX = columnRightX - totalWidth;
 
         RenderSystem.enableBlend();
@@ -80,7 +81,13 @@ public class DayzHudOverlay implements IGuiOverlay {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
 
-        graphics.drawString(Minecraft.getInstance().font, text, startX + ICON_SIZE + TEXT_GAP, y + ICON_SIZE / 2 - 4, 0xFFFFFF, true);
+        int textX = startX + ICON_SIZE + TEXT_GAP;
+        int textY = y + ICON_SIZE / 2 - 4;
+        graphics.pose().pushPose();
+        graphics.pose().translate(textX, textY, 0);
+        graphics.pose().scale(textScale, textScale, 1f);
+        graphics.drawString(Minecraft.getInstance().font, text, 0, 0, 0xFFFFFF, true);
+        graphics.pose().popPose();
     }
 
     private int severityColor(float value01, boolean isHealth) {
