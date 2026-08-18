@@ -88,7 +88,7 @@ public class DayzHudOverlay implements IGuiOverlay {
         int col1Icon = rightX - COLUMN_WIDTH * 3; // food
         int col0Icon = rightX - COLUMN_WIDTH * 4; // temperature
 
-        drawGaugeStat(graphics, col0Icon, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempLabel(temperature01));
+        drawGaugeStat(graphics, col0Icon, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempCelsius(temperature01) + "C");
         drawGaugeStat(graphics, col1Icon, rowY, ICON_FOOD_OUTLINE, ICON_FOOD_SOLID, food01, severityColor(food01), Math.round(food01 * 100) + "%");
         drawGaugeStat(graphics, col2Icon, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
@@ -108,8 +108,9 @@ public class DayzHudOverlay implements IGuiOverlay {
         int barRight = offhandLeft - STAMINA_BAR_GAP_FROM_OFFHAND;
         int barLeft = Math.max(STAMINA_BAR_MIN_LEFT, barRight - STAMINA_BAR_WIDTH);
 
-        // Dark transparent backing plate, no border - just the plate and the fill.
-        graphics.fill(barLeft, barTop, barRight, barBottom, 0xC0000000);
+        // Lighter translucent grey backing plate instead of near-black, so the empty
+        // portion reads as a soft panel rather than a harsh dark block.
+        graphics.fill(barLeft, barTop, barRight, barBottom, 0x90707070);
 
         int filledWidth = Math.round((barRight - barLeft) * Math.max(0f, Math.min(1f, stamina01)));
         int fillColor = 0xFF000000 | severityColor(stamina01);
@@ -199,11 +200,8 @@ public class DayzHudOverlay implements IGuiOverlay {
         return COLOR_NEUTRAL;
     }
 
-    private String tempLabel(float t) {
-        if (t < 0.15f) return "Freezing";
-        if (t < 0.35f) return "Cold";
-        if (t < 0.65f) return "Normal";
-        if (t < 0.85f) return "Hot";
-        return "Burning";
+    /** Maps the internal 0-1 gauge to a plausible Celsius reading for display (0 = -10C, 0.5 = 15C, 1 = 40C). */
+    private int tempCelsius(float t) {
+        return Math.round(-10f + t * 50f);
     }
 }
