@@ -88,7 +88,7 @@ public class DayzHudOverlay implements IGuiOverlay {
         int col1Icon = rightX - COLUMN_WIDTH * 3; // food
         int col0Icon = rightX - COLUMN_WIDTH * 4; // temperature
 
-        drawGaugeStat(graphics, col0Icon, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempCelsius(temperature01) + "C");
+        drawGaugeStat(graphics, col0Icon, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempCelsius(temperature01) + "\u00B0C");
         drawGaugeStat(graphics, col1Icon, rowY, ICON_FOOD_OUTLINE, ICON_FOOD_SOLID, food01, severityColor(food01), Math.round(food01 * 100) + "%");
         drawGaugeStat(graphics, col2Icon, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
