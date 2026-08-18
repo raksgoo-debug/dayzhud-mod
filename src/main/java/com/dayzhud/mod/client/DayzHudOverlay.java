@@ -16,11 +16,11 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
  */
 public class DayzHudOverlay implements IGuiOverlay {
 
-    private static final int ICON_SIZE = 9;        // on-screen icon size in pixels
-    private static final int COLUMN_WIDTH = 30;      // horizontal spacing between stat columns
-    private static final int TEXT_GAP = 2;
+    private static final int ICON_SIZE = 12;        // on-screen icon size in pixels (outline icons need a bit more room than solid silhouettes did)
+    private static final int COLUMN_WIDTH = 36;      // horizontal spacing between stat columns
+    private static final int TEXT_GAP = 3;
     private static final int MARGIN_X = 6;
-    private static final int MARGIN_Y = 30;          // clears the hotbar + XP bar + any hotbar-adjacent icons
+    private static final int MARGIN_Y = 14;          // sits just above the hotbar, not floating high above it
 
     private static final ResourceLocation ICON_HEART = rl("icon_heart");
     private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
@@ -82,7 +82,8 @@ public class DayzHudOverlay implements IGuiOverlay {
         RenderSystem.disableBlend();
 
         int textX = startX + ICON_SIZE + TEXT_GAP;
-        int textY = y + ICON_SIZE / 2 - 4;
+        float scaledFontHeight = Minecraft.getInstance().font.lineHeight * textScale;
+        int textY = y + Math.round((ICON_SIZE - scaledFontHeight) / 2f);
         graphics.pose().pushPose();
         graphics.pose().translate(textX, textY, 0);
         graphics.pose().scale(textScale, textScale, 1f);
