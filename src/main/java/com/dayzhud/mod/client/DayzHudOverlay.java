@@ -24,9 +24,9 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int MARGIN_X = 6;
     private static final int MARGIN_Y = 6;           // sits right against the hotbar
 
-    private static final int STAMINA_BAR_WIDTH = 6;
-    private static final int STAMINA_BAR_HEIGHT = 54;
-    private static final int STAMINA_MARGIN_X = 10;
+    private static final int STAMINA_BAR_WIDTH = 70;
+    private static final int STAMINA_BAR_HEIGHT = 3;
+    private static final int STAMINA_BAR_BOTTOM_GAP = 3;  // gap above the hotbar
 
     private static final ResourceLocation ICON_HEART = rl("icon_heart");
     private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
@@ -67,23 +67,22 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawStaminaBar(graphics, screenWidth, screenHeight, stamina01);
     }
 
-    /** DayZ-style vertical stamina bar, bottom-left corner. */
+    /** DayZ-style thin horizontal stamina bar, centered just above the hotbar. */
     private void drawStaminaBar(GuiGraphics graphics, int screenWidth, int screenHeight, float stamina01) {
-        int barBottom = screenHeight - MARGIN_Y;
+        int hotbarHeight = 22; // standard vanilla hotbar height
+        int barBottom = screenHeight - hotbarHeight - STAMINA_BAR_BOTTOM_GAP;
         int barTop = barBottom - STAMINA_BAR_HEIGHT;
-        int barLeft = STAMINA_MARGIN_X;
+        int barLeft = screenWidth / 2 - STAMINA_BAR_WIDTH / 2;
         int barRight = barLeft + STAMINA_BAR_WIDTH;
 
         // Background track (semi-transparent dark).
         graphics.fill(barLeft, barTop, barRight, barBottom, 0x80000000);
 
-        // Filled portion, growing upward from the bottom - matches DayZ's stamina gauge.
-        int filledHeight = Math.round(STAMINA_BAR_HEIGHT * Math.max(0f, Math.min(1f, stamina01)));
-        int fillTop = barBottom - filledHeight;
+        // Filled portion, growing left-to-right.
+        int filledWidth = Math.round(STAMINA_BAR_WIDTH * Math.max(0f, Math.min(1f, stamina01)));
         int fillColor = 0xFF000000 | severityColor(stamina01, false);
-        graphics.fill(barLeft, fillTop, barRight, barBottom, fillColor);
+        graphics.fill(barLeft, barTop, barLeft + filledWidth, barBottom, fillColor);
 
-        // 1px outline for contrast against bright/dark backgrounds alike.
         graphics.renderOutline(barLeft, barTop, STAMINA_BAR_WIDTH, STAMINA_BAR_HEIGHT, 0xFFFFFFFF);
     }
 
