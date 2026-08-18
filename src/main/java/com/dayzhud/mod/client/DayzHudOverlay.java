@@ -7,14 +7,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Pose;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 /**
  * Draws a DayZ-style status row in the bottom-right corner (Temperature, Food, Water,
- * Health - each a thin outline icon + percentage) plus a DayZ-style vertical stamina
- * bar in the bottom-left corner. Icons are outline PNG textures, normalized to a
- * consistent visual center so they line up cleanly against the percentage text
- * regardless of each icon's own silhouette shape.
+ * Health) plus a thin horizontal stamina bar and movement-state icon in the bottom-left.
+ *
+ * Each status icon is drawn as two layers: a thin outline (always fully visible) and a
+ * solid fill clipped to the bottom N% of the icon based on the stat's value - a liquid-
+ * gauge effect so the icon itself visually communicates the level, not just the percentage
+ * text next to it.
  */
 public class DayzHudOverlay implements IGuiOverlay {
 
@@ -22,16 +25,36 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int COLUMN_WIDTH = 36;
     private static final int TEXT_GAP = 3;
     private static final int MARGIN_X = 6;
-    private static final int MARGIN_Y = 6;           // sits right against the hotbar
+    private static final int MARGIN_Y = 6;
 
     private static final int STAMINA_BAR_WIDTH = 130;
     private static final int STAMINA_BAR_HEIGHT = 3;
-    private static final int STAMINA_BAR_LEFT_OFFSET = 70; // distance from left edge - clear of other mods' bottom-left bars
+    private static final int STAMINA_BAR_LEFT_OFFSET = 90;
 
-    private static final ResourceLocation ICON_HEART = rl("icon_heart");
-    private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
-    private static final ResourceLocation ICON_FOOD = rl("icon_food");
-    private static final ResourceLocation ICON_THERMOMETER = rl("icon_thermometer");
+    private static final int MOVEMENT_ICON_SIZE = 12;
+    private static final int MOVEMENT_ICON_GAP = 6;
+
+    private static final int COLOR_NEUTRAL = 0xE6E6E6;
+    private static final int COLOR_LOW = 0xE2A62E;
+    private static final int COLOR_CRITICAL = 0xE23A2E;
+    private static final int COLOR_COLD = 0x4DA6FF;
+    private static final int COLOR_HOT = 0xFF5C33;
+    private static final int COLOR_OUTLINE = 0x9A9A9A; // dimmer than the fill so the gauge reads clearly
+
+    private static final ResourceLocation ICON_HEART_OUTLINE = rl("icon_heart_outline");
+    private static final ResourceLocation ICON_HEART_SOLID = rl("icon_heart_solid");
+    private static final ResourceLocation ICON_DROPLET_OUTLINE = rl("icon_droplet_outline");
+    private static final ResourceLocation ICON_DROPLET_SOLID = rl("icon_droplet_solid");
+    private static final ResourceLocation ICON_FOOD_OUTLINE = rl("icon_food_outline");
+    private static final ResourceLocation ICON_FOOD_SOLID = rl("icon_food_solid");
+    private static final ResourceLocation ICON_THERMOMETER_OUTLINE = rl("icon_thermometer_outline");
+    private static final ResourceLocation ICON_THERMOMETER_SOLID = rl("icon_thermometer_solid");
+
+    private static final ResourceLocation ICON_WALKING = rl("icon_walking");
+    private static final ResourceLocation ICON_SPRINTING = rl("icon_sprinting");
+    private static final ResourceLocation ICON_CROUCHING = rl("icon_crouching");
+    private static final ResourceLocation ICON_CRAWLING = rl("icon_crawling");
+    private static final ResourceLocation ICON_MOUNTED = rl("icon_mounted");
 
     private static ResourceLocation rl(String name) {
         return new ResourceLocation(DayzHudMod.MOD_ID, "textures/gui/" + name + ".png");
@@ -50,7 +73,6 @@ public class DayzHudOverlay implements IGuiOverlay {
         float stamina01 = VitalsTracker.getStamina01();
         float temperature01 = VitalsTracker.getTemperature01();
 
-        // Right-side row: temperature, food, water, health - health closest to the corner.
         int rowY = screenHeight - MARGIN_Y - ICON_SIZE;
         int rightX = screenWidth - MARGIN_X;
 
@@ -59,46 +81,86 @@ public class DayzHudOverlay implements IGuiOverlay {
         int col1 = rightX - COLUMN_WIDTH * 2; // food
         int col0 = rightX - COLUMN_WIDTH * 3; // temperature
 
-        drawStat(graphics, col0, rowY, ICON_THERMOMETER, tempColor(temperature01), tempLabel(temperature01));
-        drawStat(graphics, col1, rowY, ICON_FOOD, severityColor(food01, false), Math.round(food01 * 100) + "%");
-        drawStat(graphics, col2, rowY, ICON_DROPLET, severityColor(water01, false), Math.round(water01 * 100) + "%");
-        drawStat(graphics, col3, rowY, ICON_HEART, severityColor(health01, true), Math.round(health01 * 100) + "%");
+        drawGaugeStat(graphics, col0, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempLabel(temperature01));
+        drawGaugeStat(graphics, col1, rowY, ICON_FOOD_OUTLINE, ICON_FOOD_SOLID, food01, severityColor(food01), Math.round(food01 * 100) + "%");
+        drawGaugeStat(graphics, col2, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
+        drawGaugeStat(graphics, col3, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
 
-        drawStaminaBar(graphics, screenWidth, screenHeight, stamina01);
+        drawStaminaBar(graphics, stamina01, screenHeight);
+        drawMovementIcon(graphics, player, screenHeight);
     }
 
-    /** DayZ-style thin horizontal stamina bar, bottom-left - shares the icon row's bottom margin so both line up at the same height. */
-    private void drawStaminaBar(GuiGraphics graphics, int screenWidth, int screenHeight, float stamina01) {
+    private void drawStaminaBar(GuiGraphics graphics, float stamina01, int screenHeight) {
         int barBottom = screenHeight - MARGIN_Y;
         int barTop = barBottom - STAMINA_BAR_HEIGHT;
         int barLeft = STAMINA_BAR_LEFT_OFFSET;
         int barRight = barLeft + STAMINA_BAR_WIDTH;
 
-        // Background track (semi-transparent dark).
-        graphics.fill(barLeft, barTop, barRight, barBottom, 0x80000000);
+        graphics.fill(barLeft, barTop, barRight, barBottom, 0xC0000000);
 
-        // Filled portion, growing left-to-right.
         int filledWidth = Math.round(STAMINA_BAR_WIDTH * Math.max(0f, Math.min(1f, stamina01)));
-        int fillColor = 0xFF000000 | severityColor(stamina01, false);
+        int fillColor = 0xFF000000 | severityColor(stamina01);
         graphics.fill(barLeft, barTop, barLeft + filledWidth, barBottom, fillColor);
 
         graphics.renderOutline(barLeft, barTop, STAMINA_BAR_WIDTH, STAMINA_BAR_HEIGHT, 0xFFFFFFFF);
     }
 
-    private void drawStat(GuiGraphics graphics, int columnRightX, int y, ResourceLocation icon, int color, String text) {
+    private void drawMovementIcon(GuiGraphics graphics, LocalPlayer player, int screenHeight) {
+        ResourceLocation icon = movementIconFor(player);
+        if (icon == null) return;
+
+        int barBottom = screenHeight - MARGIN_Y;
+        int y = barBottom - MOVEMENT_ICON_SIZE;
+        int x = STAMINA_BAR_LEFT_OFFSET - MOVEMENT_ICON_GAP - MOVEMENT_ICON_SIZE;
+
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        graphics.blit(icon, x, y, 0, 0, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE);
+        RenderSystem.disableBlend();
+    }
+
+    private ResourceLocation movementIconFor(LocalPlayer player) {
+        if (player.isPassenger()) return ICON_MOUNTED;
+
+        boolean crawling = player.getPose() == Pose.SWIMMING && !player.isInWater() && !player.isFallFlying();
+        if (crawling) return ICON_CRAWLING;
+        if (player.isCrouching()) return ICON_CROUCHING;
+        if (player.isSprinting()) return ICON_SPRINTING;
+
+        double speedSq = player.getDeltaMovement().horizontalDistanceSqr();
+        if (speedSq > 1.0E-4) return ICON_WALKING;
+
+        return null;
+    }
+
+    /**
+     * Draws an icon as a liquid-style gauge: the outline layer always shows in full at a
+     * dim tone, and the solid layer is clipped (via scissor) to the bottom value01 portion
+     * of the icon's box and tinted with the severity color - so a low stat visibly "drains"
+     * from the icon itself, not just the percentage text.
+     */
+    private void drawGaugeStat(GuiGraphics graphics, int columnRightX, int y, ResourceLocation outline, ResourceLocation solid, float value01, int color, String text) {
         float textScale = 0.8f;
         int scaledTextWidth = Math.round(Minecraft.getInstance().font.width(text) * textScale);
         int totalWidth = ICON_SIZE + TEXT_GAP + scaledTextWidth;
         int startX = columnRightX - totalWidth;
 
         RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(
-                ((color >> 16) & 0xFF) / 255f,
-                ((color >> 8) & 0xFF) / 255f,
-                (color & 0xFF) / 255f,
-                1f
-        );
-        graphics.blit(icon, startX, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+        // Outline layer - always fully visible, dim neutral tone.
+        setTint(COLOR_OUTLINE);
+        graphics.blit(outline, startX, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+        // Solid fill layer - clipped to the bottom value01 portion (liquid-rising effect).
+        int fillHeight = Math.round(ICON_SIZE * Math.max(0f, Math.min(1f, value01)));
+        if (fillHeight > 0) {
+            int clipTop = y + (ICON_SIZE - fillHeight);
+            graphics.enableScissor(startX, clipTop, startX + ICON_SIZE, y + ICON_SIZE);
+            setTint(color);
+            graphics.blit(solid, startX, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            graphics.disableScissor();
+        }
+
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
 
@@ -112,16 +174,25 @@ public class DayzHudOverlay implements IGuiOverlay {
         graphics.pose().popPose();
     }
 
-    private int severityColor(float value01, boolean isHealth) {
-        if (value01 <= 0.25f) return 0xE23A2E;
-        if (value01 <= 0.5f) return 0xE2A62E;
-        return isHealth ? 0xFFFFFF : 0xCFCFCF;
+    private void setTint(int color) {
+        RenderSystem.setShaderColor(
+                ((color >> 16) & 0xFF) / 255f,
+                ((color >> 8) & 0xFF) / 255f,
+                (color & 0xFF) / 255f,
+                1f
+        );
+    }
+
+    private int severityColor(float value01) {
+        if (value01 <= 0.25f) return COLOR_CRITICAL;
+        if (value01 <= 0.5f) return COLOR_LOW;
+        return COLOR_NEUTRAL;
     }
 
     private int tempColor(float t) {
-        if (t < 0.3f) return 0x4DA6FF;
-        if (t > 0.7f) return 0xFF5C33;
-        return 0xFFFFFF;
+        if (t < 0.3f) return COLOR_COLD;
+        if (t > 0.7f) return COLOR_HOT;
+        return COLOR_NEUTRAL;
     }
 
     private String tempLabel(float t) {
