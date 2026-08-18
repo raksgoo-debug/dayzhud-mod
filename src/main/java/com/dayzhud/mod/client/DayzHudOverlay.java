@@ -24,9 +24,9 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int MARGIN_X = 6;
     private static final int MARGIN_Y = 6;           // sits right against the hotbar
 
-    private static final int STAMINA_BAR_WIDTH = 90;
+    private static final int STAMINA_BAR_WIDTH = 130;
     private static final int STAMINA_BAR_HEIGHT = 3;
-    private static final int STAMINA_BAR_BOTTOM_GAP = 3;  // gap above the hotbar
+    private static final int STAMINA_BAR_LEFT_OFFSET = 70; // distance from left edge - clear of other mods' bottom-left bars
 
     private static final ResourceLocation ICON_HEART = rl("icon_heart");
     private static final ResourceLocation ICON_DROPLET = rl("icon_droplet");
@@ -67,12 +67,11 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawStaminaBar(graphics, screenWidth, screenHeight, stamina01);
     }
 
-    /** DayZ-style thin horizontal stamina bar, bottom-left near the hotbar. */
+    /** DayZ-style thin horizontal stamina bar, bottom-left - shares the icon row's bottom margin so both line up at the same height. */
     private void drawStaminaBar(GuiGraphics graphics, int screenWidth, int screenHeight, float stamina01) {
-        int hotbarHeight = 22; // standard vanilla hotbar height
-        int barBottom = screenHeight - hotbarHeight - STAMINA_BAR_BOTTOM_GAP;
+        int barBottom = screenHeight - MARGIN_Y;
         int barTop = barBottom - STAMINA_BAR_HEIGHT;
-        int barLeft = MARGIN_X + 30; // clear of other mods' bottom-left bars (e.g. First Aid)
+        int barLeft = STAMINA_BAR_LEFT_OFFSET;
         int barRight = barLeft + STAMINA_BAR_WIDTH;
 
         // Background track (semi-transparent dark).
