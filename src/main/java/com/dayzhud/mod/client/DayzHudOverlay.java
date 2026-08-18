@@ -79,13 +79,14 @@ public class DayzHudOverlay implements IGuiOverlay {
         int rowY = screenHeight - MARGIN_Y - ICON_SIZE;
         int rightX = screenWidth - MARGIN_X;
 
-        // Each column's ICON sits at a fixed left position within its slot - text follows
-        // after it. This keeps the icon perfectly still regardless of how many digits the
-        // percentage has (e.g. "100%" vs "99%" no longer nudges the icon sideways).
-        int col3Icon = rightX - COLUMN_WIDTH * 1 + (COLUMN_WIDTH - iconSlotWidth("100%")); // health
-        int col2Icon = rightX - COLUMN_WIDTH * 2 + (COLUMN_WIDTH - iconSlotWidth("100%")); // water
-        int col1Icon = rightX - COLUMN_WIDTH * 3 + (COLUMN_WIDTH - iconSlotWidth("100%")); // food
-        int col0Icon = rightX - COLUMN_WIDTH * 4 + (COLUMN_WIDTH - iconSlotWidth("Overheating")); // temperature
+        // Icon position is purely a function of column index - NOT the width of any label
+        // (worst-case or current). This keeps every gap between icons visually identical
+        // regardless of how long each stat's text happens to be, and also keeps each icon
+        // perfectly still as its own number changes digit count.
+        int col3Icon = rightX - COLUMN_WIDTH * 1; // health
+        int col2Icon = rightX - COLUMN_WIDTH * 2; // water
+        int col1Icon = rightX - COLUMN_WIDTH * 3; // food
+        int col0Icon = rightX - COLUMN_WIDTH * 4; // temperature
 
         drawGaugeStat(graphics, col0Icon, rowY, ICON_THERMOMETER_OUTLINE, ICON_THERMOMETER_SOLID, temperature01, tempColor(temperature01), tempLabel(temperature01));
         drawGaugeStat(graphics, col1Icon, rowY, ICON_FOOD_OUTLINE, ICON_FOOD_SOLID, food01, severityColor(food01), Math.round(food01 * 100) + "%");
@@ -94,13 +95,6 @@ public class DayzHudOverlay implements IGuiOverlay {
 
         drawStaminaBar(graphics, stamina01, screenWidth, screenHeight);
         drawMovementIcon(graphics, player, screenWidth, screenHeight);
-    }
-
-    /** Width reserved for icon+gap+text using the widest expected label for that column, so the icon's slot is stable. */
-    private int iconSlotWidth(String widestLabel) {
-        float textScale = 0.8f;
-        int scaledTextWidth = Math.round(Minecraft.getInstance().font.width(widestLabel) * textScale);
-        return ICON_SIZE + TEXT_GAP + scaledTextWidth;
     }
 
     private void drawStaminaBar(GuiGraphics graphics, float stamina01, int screenWidth, int screenHeight) {
@@ -155,7 +149,7 @@ public class DayzHudOverlay implements IGuiOverlay {
     }
 
     private void drawGaugeStat(GuiGraphics graphics, int startX, int y, ResourceLocation outline, ResourceLocation solid, float value01, int color, String text) {
-        float textScale = 0.8f;
+        float textScale = 0.65f;
 
         RenderSystem.enableBlend();
 
@@ -210,6 +204,6 @@ public class DayzHudOverlay implements IGuiOverlay {
         if (t < 0.35f) return "Cold";
         if (t < 0.65f) return "Normal";
         if (t < 0.85f) return "Hot";
-        return "Overheating";
+        return "Burning";
     }
 }
