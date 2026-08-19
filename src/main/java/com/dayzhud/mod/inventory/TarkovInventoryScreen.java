@@ -73,6 +73,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x + 8, y + 214, x + 352, y + 215, PANEL_BORDER);  // horizontal divider
 
         for (var slot : menu.slots) {
+            if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
             drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
 
@@ -107,15 +108,15 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
         // Sits between the two equipment columns; feet land on the boots row, head on the
         // helmet row, so the flanking slots read as body-part aligned.
-        int pdX = leftPos + 88;
-        int pdY = topPos + 146;
+        int pdX = leftPos + 78;
+        int pdY = topPos + 148;
 
         // Facing mostly forward but turned slightly toward the right of the screen.
         // TUNING NOTE: this helper turns the model by roughly (angleXComponent * 20)
         // degrees off front-facing, so small values give small turns. Flip the sign if it
         // leans the wrong way.
-        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 42,
-                -1.4f, 0.0f, localPlayer);
+        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 50,
+                -0.8f, 0.0f, localPlayer);
     }
 
     private void drawSectionHeaders(GuiGraphics graphics) {
@@ -124,8 +125,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 14, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 100, 40);
         drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 208, 46);
-        if (menu.backpackSlotCount > 0) {
-            drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 132, 50);
+        if (menu.getActiveBackpackSlots() > 0) {
+            drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 136, 50);
         }
     }
 

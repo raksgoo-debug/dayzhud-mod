@@ -11,6 +11,10 @@ import net.minecraftforge.fml.common.Mod;
  * Cancels the vanilla bars/icons this HUD replaces (hunger, hearts, armor, air), plus
  * Thirst Was Taken's own thirst bar overlay (id "thirst:thirst_level", confirmed from that
  * mod's jar) so there's no duplicate thirst display once our HUD is showing it instead.
+ *
+ * The vanilla HOTBAR is cancelled too - DayzHotbarOverlay draws a restyled one that
+ * matches the inventory screen. Note this also removes vanilla's attack-strength
+ * indicator, which rides along with that same overlay.
  */
 @Mod.EventBusSubscriber(modid = "dayzhud", value = Dist.CLIENT)
 public class OverlayCanceller {
@@ -24,6 +28,7 @@ public class OverlayCanceller {
                 || event.getOverlay() == VanillaGuiOverlay.PLAYER_HEALTH.type()
                 || event.getOverlay() == VanillaGuiOverlay.ARMOR_LEVEL.type()
                 || event.getOverlay() == VanillaGuiOverlay.AIR_LEVEL.type()
+                || event.getOverlay() == VanillaGuiOverlay.HOTBAR.type()
                 || THIRST_WAS_TAKEN_OVERLAY_ID.equals(event.getOverlay().id())) {
             event.setCanceled(true);
         }

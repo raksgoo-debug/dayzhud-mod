@@ -103,8 +103,10 @@ public class DayzHudOverlay implements IGuiOverlay {
 
         // Anchored relative to the hotbar/offhand slot so it never overlaps them regardless
         // of resolution or GUI scale, instead of a fixed left-edge offset.
-        int hotbarLeft = screenWidth / 2 - 91;
-        int offhandLeft = hotbarLeft - 29;
+        // Matches DayzHotbarOverlay's geometry (9 slots x 20px, offhand 26px to its left),
+        // not vanilla's - keep these in sync if either changes.
+        int hotbarLeft = screenWidth / 2 - 90;
+        int offhandLeft = hotbarLeft - 26;
         int barRight = offhandLeft - STAMINA_BAR_GAP_FROM_OFFHAND;
         int barLeft = Math.max(STAMINA_BAR_MIN_LEFT, barRight - STAMINA_BAR_WIDTH);
 
@@ -120,8 +122,10 @@ public class DayzHudOverlay implements IGuiOverlay {
     private void drawMovementIcon(GuiGraphics graphics, LocalPlayer player, int screenWidth, int screenHeight) {
         ResourceLocation icon = movementIconFor(player);
 
-        int hotbarLeft = screenWidth / 2 - 91;
-        int offhandLeft = hotbarLeft - 29;
+        // Matches DayzHotbarOverlay's geometry (9 slots x 20px, offhand 26px to its left),
+        // not vanilla's - keep these in sync if either changes.
+        int hotbarLeft = screenWidth / 2 - 90;
+        int offhandLeft = hotbarLeft - 26;
         int barRight = offhandLeft - STAMINA_BAR_GAP_FROM_OFFHAND;
         int barLeft = Math.max(STAMINA_BAR_MIN_LEFT, barRight - STAMINA_BAR_WIDTH);
 

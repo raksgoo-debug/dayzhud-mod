@@ -21,6 +21,7 @@ public class ClientEvents {
 
     @SubscribeEvent
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
+        event.registerAboveAll("dayz_hotbar", new DayzHotbarOverlay());
         event.registerAboveAll("dayz_status_stack", new DayzHudOverlay());
     }
 }
