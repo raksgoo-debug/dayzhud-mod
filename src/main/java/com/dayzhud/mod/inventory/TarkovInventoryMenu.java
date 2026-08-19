@@ -43,22 +43,26 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     };
 
     // Left equipment column, each row vertically aligned with a body part of the model.
-    private static final int EQUIP_COL_X = 14;
-    private static final int[] ARMOR_ROW_Y = {40, 68, 96, 124}; // head, chest, legs, feet
+    private static final int EQUIP_COL_X = 16;
+    private static final int[] ARMOR_ROW_Y = {44, 72, 100, 128}; // head, chest, legs, feet
 
-    // Right-hand column beside the model: offhand + whatever Curios slots exist.
-    private static final int SIDE_COL_X = 104;
-    private static final int SIDE_ROW_START_Y = 40;
+    // Right-hand column beside the model: offhand + the first few Curios slots.
+    private static final int SIDE_COL_X = 140;
+    private static final int SIDE_ROW_START_Y = 44;
     private static final int SIDE_ROW_SPACING = 28;
+    private static final int SIDE_COL_MAX_ROWS = 4;
 
-    // Overflow grid for any Curios slots beyond what fits in the side column.
-    private static final int OVERFLOW_X = 14;
-    private static final int OVERFLOW_Y = 156;
+    // Grid below the model for the remaining Curios slots. With mods installed there can
+    // easily be a dozen of these, so they get a proper grid rather than being crammed
+    // into the columns beside the paperdoll.
+    private static final int OVERFLOW_X = 16;
+    private static final int OVERFLOW_Y = 166;
     private static final int OVERFLOW_COLS = 6;
+    private static final int OVERFLOW_SPACING = 22;
 
-    private static final int INV_X = 155;
-    private static final int INV_Y = 26;
-    private static final int HOTBAR_Y = 108;
+    private static final int INV_X = 186;
+    private static final int INV_Y = 44;
+    private static final int HOTBAR_Y = 116;
 
     public final Player player;
     /** Screen-side info: where each Curios slot landed and what it's called, for labels/tooltips. */
@@ -94,13 +98,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 if (handler == null) continue;
                 for (int slotIdx = 0; slotIdx < handler.getStacks().getSlots(); slotIdx++) {
                     int sx, sy;
-                    if (sideRow < 4) {
+                    if (sideRow < SIDE_COL_MAX_ROWS) {
                         sx = SIDE_COL_X;
                         sy = SIDE_ROW_START_Y + sideRow * SIDE_ROW_SPACING;
                         sideRow++;
                     } else {
-                        sx = OVERFLOW_X + (overflowIndex % OVERFLOW_COLS) * 22;
-                        sy = OVERFLOW_Y + (overflowIndex / OVERFLOW_COLS) * 22;
+                        sx = OVERFLOW_X + (overflowIndex % OVERFLOW_COLS) * OVERFLOW_SPACING;
+                        sy = OVERFLOW_Y + (overflowIndex / OVERFLOW_COLS) * OVERFLOW_SPACING;
                         overflowIndex++;
                     }
                     addSlot(new SlotItemHandler(handler.getStacks(), slotIdx, sx, sy));
