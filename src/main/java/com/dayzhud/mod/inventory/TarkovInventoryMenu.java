@@ -63,24 +63,26 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int EQUIP_SPACING = 26;
 
     private static final int GEAR_X = 18;
-    private static final int GEAR_Y = 166;
+    private static final int GEAR_Y = 170;
     private static final int GEAR_COLS = 6;
     private static final int GEAR_SPACING = 22;
 
     private static final int INV_X = 186;
-    private static final int INV_Y = 44;
+    private static final int INV_Y = 26;
     private static final int HOTBAR_Y = 100;
 
     private static final int BACKPACK_X = 186;
-    private static final int BACKPACK_Y = 140;
+    private static final int BACKPACK_Y = 138;
     private static final int BACKPACK_COLS = 9;
-    /** Fixed allocation; bigger bags are shown up to this many slots. */
-    public static final int BACKPACK_MAX_SLOTS = 45;
+    /** Rows shown at once; anything larger scrolls rather than spilling over the stat strip. */
+    public static final int BACKPACK_VISIBLE_ROWS = 5;
+    public static final int BACKPACK_MAX_SLOTS = BACKPACK_COLS * BACKPACK_VISIBLE_ROWS;
 
     public final Player player;
     public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
     public final int offhandX, offhandY;
     public final BackCurioItemHandler backpackHandler;
+    public final ScrollingBackpackView backpackView;
 
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
@@ -93,6 +95,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         super(TarkovMenuTypes.TARKOV_INVENTORY.get(), windowId);
         this.player = playerInventory.player;
         this.backpackHandler = new BackCurioItemHandler(player);
+        this.backpackView = new ScrollingBackpackView(backpackHandler, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS);
 
         // --- Vanilla armor: evenly spaced left column ---
         for (int i = 0; i < ARMOR_SLOTS.length; i++) {
@@ -131,7 +134,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // --- Offhand, level with the weapon mirror row ---
         this.offhandX = 136;
-        this.offhandY = 256;
+        this.offhandY = 254;
         addSlot(new Slot(playerInventory, 40, offhandX, offhandY));
 
         // --- Inventory (27) + hotbar (9) ---
@@ -148,19 +151,24 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // --- Backpack contents: always allocated, self-disabling when no bag is worn ---
         this.backpackStartIndex = slots.size();
         for (int i = 0; i < BACKPACK_MAX_SLOTS; i++) {
-            addSlot(new BackpackSlot(backpackHandler, i,
+            addSlot(new BackpackSlot(backpackView, i,
                     BACKPACK_X + (i % BACKPACK_COLS) * 18,
                     BACKPACK_Y + (i / BACKPACK_COLS) * 18));
         }
     }
 
-    /** How many backpack slots are live right now (0 when nothing suitable is worn). */
+    /** How many backpack slots are visible right now (0 when nothing suitable is worn). */
     public int getActiveBackpackSlots() {
         int usable = 0;
         for (int i = 0; i < BACKPACK_MAX_SLOTS; i++) {
-            if (backpackHandler.isSlotUsable(i)) usable++;
+            if (backpackView.isVisibleSlotUsable(i)) usable++;
         }
         return usable;
+    }
+
+    /** Applied on both sides via BackpackScrollPacket - never set on one side alone. */
+    public void setBackpackScroll(int row) {
+        backpackView.setScrollRow(row);
     }
 
     private PendingCurio takeExact(List<PendingCurio> pending, String identifier) {
@@ -233,22 +241,22 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return original;
     }
 
-    /** Backpack slot that switches itself off when the worn bag is smaller or absent. */
+    /** Backpack slot that switches itself off when the scrolled-to position has no real slot. */
     private static class BackpackSlot extends SlotItemHandler {
-        private final BackCurioItemHandler bag;
-        private final int slotIndex;
+        private final ScrollingBackpackView view;
+        private final int visibleIndex;
 
-        BackpackSlot(BackCurioItemHandler bag, int index, int x, int y) {
-            super(bag, index, x, y);
-            this.bag = bag;
-            this.slotIndex = index;
+        BackpackSlot(ScrollingBackpackView view, int index, int x, int y) {
+            super(view, index, x, y);
+            this.view = view;
+            this.visibleIndex = index;
         }
 
         @Override
         public boolean isActive() {
-            // Delegates to the handler, which knows each supported mod's real capacity
-            // (e.g. Warborn over-allocates its handler to the max tier size).
-            return bag.isSlotUsable(slotIndex);
+            // Accounts for both the worn bag's real capacity (each mod reports it
+            // differently) and the current scroll position.
+            return view.isVisibleSlotUsable(visibleIndex);
         }
     }
 

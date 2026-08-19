@@ -49,7 +49,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 360;
-        this.imageHeight = 292;
+        this.imageHeight = 288;
         this.inventoryLabelY = -1000;
         this.titleLabelY = -1000;
     }
@@ -62,17 +62,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.renderOutline(x, y, imageWidth, imageHeight, PANEL_BORDER);
 
         // Recessed zone backings so the panel reads as distinct regions.
-        graphics.fill(x + 8, y + 26, x + 172, y + 142, SECTION_BG);     // paperdoll + armor
-        graphics.fill(x + 8, y + 160, x + 172, y + 210, SECTION_BG);    // gear grid
-        graphics.fill(x + 180, y + 26, x + 352, y + 82, SECTION_BG);    // inventory
-        graphics.fill(x + 180, y + 96, x + 352, y + 120, SECTION_BG);   // hotbar
+        graphics.fill(x + 8, y + 26, x + 172, y + 150, SECTION_BG);     // paperdoll + armor
+        graphics.fill(x + 8, y + 164, x + 172, y + 214, SECTION_BG);    // gear grid
+        graphics.fill(x + 180, y + 20, x + 352, y + 84, SECTION_BG);    // inventory
+        graphics.fill(x + 180, y + 94, x + 352, y + 122, SECTION_BG);   // hotbar
         if (menu.getActiveBackpackSlots() > 0) {
-            graphics.fill(x + 180, y + 134, x + 352, y + 234, SECTION_BG); // backpack
+            graphics.fill(x + 180, y + 132, x + 352, y + 232, SECTION_BG); // backpack
         }
-        graphics.fill(x + 8, y + 248, x + 352, y + 284, SECTION_BG);    // weapons + offhand + stats
+        graphics.fill(x + 8, y + 246, x + 352, y + 282, SECTION_BG);    // weapons + offhand + stats
 
-        graphics.fill(x + 176, y + 22, x + 177, y + 238, PANEL_BORDER); // vertical divider
-        graphics.fill(x + 8, y + 242, x + 352, y + 243, PANEL_BORDER);  // horizontal divider
+        graphics.fill(x + 176, y + 16, x + 177, y + 230, PANEL_BORDER); // vertical divider
+        graphics.fill(x + 8, y + 234, x + 352, y + 235, PANEL_BORDER);  // horizontal divider
 
         for (var slot : menu.slots) {
             if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
@@ -80,7 +80,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
 
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 256);
+            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 254);
         }
     }
 
@@ -97,6 +97,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
         drawWeaponMirrors(graphics, mouseX, mouseY);
+        drawBackpackScrollbar(graphics);
         drawStatBar(graphics);
 
         renderTooltip(graphics, mouseX, mouseY);
@@ -122,11 +123,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     private void drawSectionHeaders(GuiGraphics graphics) {
-        drawHeader(graphics, "EQUIPMENT", leftPos + 12, topPos + 14, 54);
-        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 148, 30);
-        drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 14, 54);
-        drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 84, 40);
-        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 244, 46);
+        drawHeader(graphics, "EQUIPMENT", leftPos + 12, topPos + 8, 54);
+        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 156, 30);
+        drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
+        drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
+        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 240, 46);
         if (menu.getActiveBackpackSlots() > 0) {
             drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 124, 50);
         }
@@ -169,7 +170,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 256;
+        int mirrorY = topPos + 254;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
@@ -196,7 +197,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 256;
+        int mirrorY = topPos + 254;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             if (mouseX >= mx && mouseX < mx + 16 && mouseY >= mirrorY && mouseY < mirrorY + 16) {
@@ -221,7 +222,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        int y = topPos + 258;
+        int y = topPos + 256;
         int x = leftPos + 192;
         int spacing = 56;
 
@@ -251,6 +252,51 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (value01 <= 0.25f) return 0xE23A2E;
         if (value01 <= 0.5f) return 0xE2A62E;
         return 0xE6E6E6;
+    }
+
+    /** Thin scrollbar to the right of the backpack grid, only when the bag overflows. */
+    private void drawBackpackScrollbar(GuiGraphics graphics) {
+        var view = menu.backpackView;
+        if (!view.isScrollable()) return;
+
+        int trackX = leftPos + 344;
+        int trackTop = topPos + 138;
+        int trackHeight = TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS * 18;
+
+        graphics.fill(trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF1C1C1C);
+
+        int totalRows = Math.max(1, view.totalRows());
+        int thumbHeight = Math.max(8,
+                trackHeight * TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS / totalRows);
+        int maxScroll = Math.max(1, view.maxScrollRow());
+        int thumbY = trackTop + (trackHeight - thumbHeight) * view.getScrollRow() / maxScroll;
+
+        graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        var view = menu.backpackView;
+        if (view.isScrollable() && isOverBackpackArea(mouseX, mouseY)) {
+            int target = view.getScrollRow() - (int) Math.signum(delta);
+            target = Math.max(0, Math.min(target, view.maxScrollRow()));
+            if (target != view.getScrollRow()) {
+                // Applied locally for instant feedback AND sent to the server, because the
+                // offset decides which real inventory index each slot maps to - if the two
+                // sides disagreed, clicks would hit the wrong item.
+                menu.setBackpackScroll(target);
+                NetworkHandler.CHANNEL.sendToServer(new BackpackScrollPacket(target));
+            }
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    private boolean isOverBackpackArea(double mouseX, double mouseY) {
+        int x1 = leftPos + 180, x2 = leftPos + 352;
+        int y1 = topPos + 132;
+        int y2 = y1 + TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS * 18 + 8;
+        return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
 
     @Override

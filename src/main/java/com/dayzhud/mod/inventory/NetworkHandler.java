@@ -24,5 +24,11 @@ public class NetworkHandler {
                 OpenTarkovInventoryPacket::encode,
                 OpenTarkovInventoryPacket::decode,
                 OpenTarkovInventoryPacket::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                BackpackScrollPacket.class,
+                BackpackScrollPacket::encode,
+                BackpackScrollPacket::decode,
+                BackpackScrollPacket::handle);
     }
 }

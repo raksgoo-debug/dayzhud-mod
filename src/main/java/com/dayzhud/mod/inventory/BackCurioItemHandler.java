@@ -155,9 +155,21 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
         }
     }
 
+    /**
+     * Whether SA Survival's handler is the right one for the bag CURRENTLY worn.
+     *
+     * Critically this is not just "is SA Survival installed" - its handler only resolves
+     * its own backpacks, so with a different mod's bag equipped it reports zero slots. If
+     * we routed on mod presence alone, every other mod's backpack would silently show as
+     * empty whenever SA Survival happened to be in the pack.
+     */
+    private boolean saActive() {
+        return saHandler != null && saHandler.getSlots() > 0;
+    }
+
     /** True if this index should be shown as a usable slot right now. */
     public boolean isSlotUsable(int slot) {
-        if (saHandler != null) {
+        if (saActive()) {
             if (slot >= saHandler.getSlots()) return false;
             if (saIsSlotEnabled != null) {
                 try {
@@ -177,13 +189,13 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public int getSlots() {
-        if (saHandler != null) return saHandler.getSlots();
+        if (saActive()) return saHandler.getSlots();
         return usableCapabilitySlots(capabilityDelegate());
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
-        if (saHandler != null) {
+        if (saActive()) {
             return valid(saHandler, slot) ? saHandler.getStackInSlot(slot) : ItemStack.EMPTY;
         }
         IItemHandler h = capabilityDelegate();
@@ -193,7 +205,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         if (!isSlotUsable(slot)) return stack;
-        if (saHandler != null) {
+        if (saActive()) {
             return valid(saHandler, slot) ? saHandler.insertItem(slot, stack, simulate) : stack;
         }
         IItemHandler h = capabilityDelegate();
@@ -202,7 +214,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
-        if (saHandler != null) {
+        if (saActive()) {
             return valid(saHandler, slot) ? saHandler.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
         }
         IItemHandler h = capabilityDelegate();
@@ -212,7 +224,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     @Override
     public int getSlotLimit(int slot) {
         if (!isSlotUsable(slot)) return 0;
-        if (saHandler != null) {
+        if (saActive()) {
             return valid(saHandler, slot) ? saHandler.getSlotLimit(slot) : 0;
         }
         IItemHandler h = capabilityDelegate();
@@ -222,7 +234,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         if (!isSlotUsable(slot)) return false;
-        if (saHandler != null) {
+        if (saActive()) {
             return valid(saHandler, slot) && saHandler.isItemValid(slot, stack);
         }
         IItemHandler h = capabilityDelegate();
@@ -231,7 +243,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack) {
-        if (saHandler != null) {
+        if (saActive()) {
             if (valid(saHandler, slot)) saHandler.setStackInSlot(slot, stack);
             return;
         }
