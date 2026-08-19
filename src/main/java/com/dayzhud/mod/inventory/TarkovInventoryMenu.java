@@ -59,23 +59,23 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     // Equipment columns - even spacing, aligned to the paperdoll's body parts.
     private static final int EQUIP_COL_X = 18;
     private static final int SIDE_COL_X = 138;
-    private static final int EQUIP_START_Y = 48;
+    private static final int EQUIP_START_Y = 44;
     private static final int EQUIP_SPACING = 26;
 
     private static final int GEAR_X = 18;
-    private static final int GEAR_Y = 168;
+    private static final int GEAR_Y = 166;
     private static final int GEAR_COLS = 6;
     private static final int GEAR_SPACING = 22;
 
     private static final int INV_X = 186;
     private static final int INV_Y = 44;
-    private static final int HOTBAR_Y = 116;
+    private static final int HOTBAR_Y = 100;
 
     private static final int BACKPACK_X = 186;
-    private static final int BACKPACK_Y = 152;
+    private static final int BACKPACK_Y = 140;
     private static final int BACKPACK_COLS = 9;
     /** Fixed allocation; bigger bags are shown up to this many slots. */
-    public static final int BACKPACK_MAX_SLOTS = 27;
+    public static final int BACKPACK_MAX_SLOTS = 45;
 
     public final Player player;
     public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
@@ -131,7 +131,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // --- Offhand, level with the weapon mirror row ---
         this.offhandX = 136;
-        this.offhandY = 226;
+        this.offhandY = 256;
         addSlot(new Slot(playerInventory, 40, offhandX, offhandY));
 
         // --- Inventory (27) + hotbar (9) ---
@@ -156,7 +156,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     /** How many backpack slots are live right now (0 when nothing suitable is worn). */
     public int getActiveBackpackSlots() {
-        return Math.min(backpackHandler.getSlots(), BACKPACK_MAX_SLOTS);
+        int usable = 0;
+        for (int i = 0; i < BACKPACK_MAX_SLOTS; i++) {
+            if (backpackHandler.isSlotUsable(i)) usable++;
+        }
+        return usable;
     }
 
     private PendingCurio takeExact(List<PendingCurio> pending, String identifier) {
@@ -242,7 +246,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean isActive() {
-            return slotIndex < bag.getSlots();
+            // Delegates to the handler, which knows each supported mod's real capacity
+            // (e.g. Warborn over-allocates its handler to the max tier size).
+            return bag.isSlotUsable(slotIndex);
         }
     }
 
