@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.items.SlotItemHandler;
 // Verified against Curios 5.x for 1.20.1: ICuriosItemHandler is under api.type.capability,
-// but ICurioStacksHandler is under api.type.inventory - they're in different subpackages.
+// but ICurioStacksHandler is under api.type.inventory - different subpackages.
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
@@ -22,17 +22,19 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The server/client-synced container behind the Tarkov-style inventory screen. Combines:
- *  - vanilla armor slots (helmet/chestplate/leggings/boots) + offhand
- *  - the three DayZ Curios slots this mod defines (face cover, headset, chest rig)
- *  - any OTHER Curios slot types other installed mods have registered for the player,
- *    laid out automatically so nothing is silently missing (this is the "shows all the
- *    slots available around the character" part)
- *  - the standard 27 main inventory slots + 9 hotbar slots ("Pockets")
+ * Container behind the extraction-shooter style inventory screen. Combines:
+ *  - vanilla armor slots (helmet/chest/legs/feet) + offhand, positioned to line up with
+ *    the corresponding body parts of the paperdoll model
+ *  - every Curios slot registered for this player by any installed mod (mask, backpack,
+ *    uniform, rings, etc.) - this mod no longer registers its own slot types, it just
+ *    surfaces whatever Curios already knows about
+ *  - the standard 27 main inventory slots + 9 hotbar slots
  *
- * Both client and server construct this identically from the same player Inventory, so
- * slot order/count must stay deterministic between the two - don't make slot creation
- * depend on anything that could differ client vs server (e.g. render state).
+ * Slot creation must stay deterministic between client and server, so nothing here may
+ * depend on render-side state.
+ *
+ * LAYOUT NOTE: slot coordinates below are chosen to align with the paperdoll drawn in
+ * TarkovInventoryScreen. If you move the model there, move these to match.
  */
 public class TarkovInventoryMenu extends AbstractContainerMenu {
 
@@ -40,73 +42,83 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
     };
 
+    // Left equipment column, each row vertically aligned with a body part of the model.
+    private static final int EQUIP_COL_X = 14;
+    private static final int[] ARMOR_ROW_Y = {40, 68, 96, 124}; // head, chest, legs, feet
+
+    // Right-hand column beside the model: offhand + whatever Curios slots exist.
+    private static final int SIDE_COL_X = 104;
+    private static final int SIDE_ROW_START_Y = 40;
+    private static final int SIDE_ROW_SPACING = 28;
+
+    // Overflow grid for any Curios slots beyond what fits in the side column.
+    private static final int OVERFLOW_X = 14;
+    private static final int OVERFLOW_Y = 156;
+    private static final int OVERFLOW_COLS = 6;
+
+    private static final int INV_X = 155;
+    private static final int INV_Y = 26;
+    private static final int HOTBAR_Y = 108;
+
     public final Player player;
-    public final Slot chestArmorSlot;
-    public final Slot chestRigSlot;
-    public final List<String> extraCurioIdentifiers = new ArrayList<>();
+    /** Screen-side info: where each Curios slot landed and what it's called, for labels/tooltips. */
+    public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
+
+    private final int inventoryStartIndex;
+
+    public record CurioSlotInfo(String identifier, int x, int y) {}
 
     public TarkovInventoryMenu(int windowId, Inventory playerInventory) {
         super(TarkovMenuTypes.TARKOV_INVENTORY.get(), windowId);
         this.player = playerInventory.player;
 
-        // --- Vanilla armor slots ---
-        Slot chestSlotRef = null;
+        // --- Vanilla armor ---
         for (int i = 0; i < ARMOR_SLOTS.length; i++) {
             EquipmentSlot equipmentSlot = ARMOR_SLOTS[i];
-            int armorIndex = 39 - i; // matches vanilla Inventory armor slot ordering (head=39..feet=36)
-            Slot slot = new ArmorRestrictedSlot(playerInventory, armorIndex, equipmentSlot, 12, 24 + i * 22);
-            addSlot(slot);
-            if (equipmentSlot == EquipmentSlot.CHEST) chestSlotRef = slot;
+            int armorIndex = 39 - i; // vanilla ordering: head=39 .. feet=36
+            addSlot(new ArmorRestrictedSlot(playerInventory, armorIndex, equipmentSlot,
+                    EQUIP_COL_X, ARMOR_ROW_Y[i]));
         }
-        this.chestArmorSlot = chestSlotRef;
 
-        // Offhand
-        addSlot(new Slot(playerInventory, 40, 40, 112));
+        // --- Offhand, top of the side column ---
+        addSlot(new Slot(playerInventory, 40, SIDE_COL_X, SIDE_ROW_START_Y));
 
-        // --- Curios slots (face cover, headset, chest rig + anything else registered) ---
-        Slot chestRig = null;
+        // --- Curios: whatever any installed mod has registered for this player ---
+        int sideRow = 1; // offhand took row 0
+        int overflowIndex = 0;
         Optional<ICuriosItemHandler> curiosOpt = CuriosApi.getCuriosInventory(player).resolve();
         if (curiosOpt.isPresent()) {
-            ICuriosItemHandler curios = curiosOpt.get();
-            Map<String, ICurioStacksHandler> allCurios = new LinkedHashMap<>(curios.getCurios());
-
-            addCurioSlot(allCurios, ModCurios.FACE_COVER, 36, 24);
-            addCurioSlot(allCurios, ModCurios.HEADSET, 36, 46);
-            chestRig = addCurioSlot(allCurios, ModCurios.CHEST_RIG, 36, 68);
-
-            // Anything left over came from another mod's slot type - lay it out automatically
-            // in an overflow row so it's still reachable, rather than silently hidden.
-            int overflowX = 12, overflowY = 134, col = 0;
-            for (String identifier : allCurios.keySet()) {
-                extraCurioIdentifiers.add(identifier);
-                ICurioStacksHandler handler = curios.getCurios().get(identifier);
+            Map<String, ICurioStacksHandler> allCurios = new LinkedHashMap<>(curiosOpt.get().getCurios());
+            for (Map.Entry<String, ICurioStacksHandler> entry : allCurios.entrySet()) {
+                ICurioStacksHandler handler = entry.getValue();
                 if (handler == null) continue;
                 for (int slotIdx = 0; slotIdx < handler.getStacks().getSlots(); slotIdx++) {
-                    addSlot(new SlotItemHandler(handler.getStacks(), slotIdx, overflowX + (col % 6) * 24, overflowY + (col / 6) * 24));
-                    col++;
+                    int sx, sy;
+                    if (sideRow < 4) {
+                        sx = SIDE_COL_X;
+                        sy = SIDE_ROW_START_Y + sideRow * SIDE_ROW_SPACING;
+                        sideRow++;
+                    } else {
+                        sx = OVERFLOW_X + (overflowIndex % OVERFLOW_COLS) * 22;
+                        sy = OVERFLOW_Y + (overflowIndex / OVERFLOW_COLS) * 22;
+                        overflowIndex++;
+                    }
+                    addSlot(new SlotItemHandler(handler.getStacks(), slotIdx, sx, sy));
+                    curioSlotInfos.add(new CurioSlotInfo(entry.getKey(), sx, sy));
                 }
             }
         }
-        this.chestRigSlot = chestRig;
 
-        // --- Pockets: standard player inventory (27 main), then the hotbar row ---
+        // --- Inventory (27) then hotbar (9). Recorded so quickMoveStack knows the range. ---
+        this.inventoryStartIndex = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 140 + col * 18, 24 + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 140 + col * 18, 124));
+            addSlot(new Slot(playerInventory, col, INV_X + col * 18, HOTBAR_Y));
         }
-    }
-
-    /** Adds a Curios slot if that identifier is present for this player, removing it from the map so it isn't double-placed in the overflow pass. */
-    private Slot addCurioSlot(Map<String, ICurioStacksHandler> allCurios, String identifier, int x, int y) {
-        ICurioStacksHandler handler = allCurios.remove(identifier);
-        if (handler == null || handler.getStacks().getSlots() == 0) return null;
-        Slot slot = new SlotItemHandler(handler.getStacks(), 0, x, y);
-        addSlot(slot);
-        return slot;
     }
 
     @Override
@@ -114,43 +126,58 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    /**
+     * Shift-click behaviour.
+     *
+     * IMPORTANT: Minecraft calls this in a loop until it returns EMPTY. Any path that
+     * moves nothing MUST return ItemStack.EMPTY, or the game locks up in an infinite
+     * loop. (An earlier version of this method returned a non-empty stack after failing
+     * to find a destination, which is exactly what caused the shift-click freeze.)
+     */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
-        // Basic shift-click support between Pockets (main inv + hotbar) only for now -
-        // shift-clicking into armor/curios slots isn't wired up yet, matching this being
-        // a visual-first pass. Regular click-drag into any slot still works normally.
         Slot sourceSlot = slots.get(index);
         if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;
 
         ItemStack sourceStack = sourceSlot.getItem();
-        ItemStack result = sourceStack.copy();
+        ItemStack original = sourceStack.copy();
 
-        int pocketsStart = slots.size() - 36;
-        int pocketsEnd = slots.size();
+        int invStart = inventoryStartIndex;
+        int invEnd = slots.size();          // end of hotbar
+        int hotbarStart = invEnd - 9;
+        int equipEnd = invStart;            // armor + offhand + curios occupy [0, invStart)
 
-        if (index >= pocketsStart && index < pocketsEnd) {
-            // From Pockets - try armor slots if it's wearable, otherwise just leave it (no
-            // separate "storage" container in this pass to move it into).
-            EquipmentSlot fittingSlot = LivingEntity.getEquipmentSlotForItem(sourceStack);
-            if (fittingSlot != null && fittingSlot.getType() == EquipmentSlot.Type.ARMOR) {
-                for (int i = 0; i < ARMOR_SLOTS.length; i++) {
-                    if (ARMOR_SLOTS[i] == fittingSlot && !moveItemStackTo(sourceStack, i, i + 1, false)) {
-                        break;
-                    }
+        boolean moved;
+        if (index < equipEnd) {
+            // Equipment -> inventory
+            moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
+        } else {
+            // Inventory/hotbar -> try equipment first (armor, offhand, any valid curio slot),
+            // then fall back to moving between the main inventory and the hotbar.
+            moved = moveItemStackTo(sourceStack, 0, equipEnd, false);
+            if (!moved) {
+                if (index < hotbarStart) {
+                    moved = moveItemStackTo(sourceStack, hotbarStart, invEnd, false);
+                } else {
+                    moved = moveItemStackTo(sourceStack, invStart, hotbarStart, false);
                 }
             }
-        } else {
-            if (!moveItemStackTo(sourceStack, pocketsStart, pocketsEnd, false)) {
-                return ItemStack.EMPTY;
-            }
         }
+
+        if (!moved) return ItemStack.EMPTY; // nothing happened - must report EMPTY
 
         if (sourceStack.isEmpty()) {
             sourceSlot.set(ItemStack.EMPTY);
         } else {
             sourceSlot.setChanged();
         }
-        return result;
+
+        if (sourceStack.getCount() == original.getCount()) {
+            return ItemStack.EMPTY; // no net change - also must report EMPTY
+        }
+
+        sourceSlot.onTake(player, sourceStack);
+        return original;
     }
 
     /** Vanilla-style armor slot: only accepts items that actually fit that equipment slot. */
@@ -160,6 +187,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         ArmorRestrictedSlot(Inventory inventory, int index, EquipmentSlot equipmentSlot, int x, int y) {
             super(inventory, index, x, y);
             this.equipmentSlot = equipmentSlot;
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
         }
 
         @Override

@@ -24,8 +24,9 @@ description='''${mod_description}'''
     ordering="NONE"
     side="BOTH"
 
-# Mandatory: the Tarkov-style inventory screen (face cover/headset/chest rig slots,
-# and any other slots registered by other mods) is built directly on Curios' API.
+# Mandatory: the inventory screen surfaces whatever Curios slots are registered for the
+# player by any installed mod (mask, backpack, uniform, etc). This mod no longer defines
+# its own slot types - it just displays what Curios already knows about.
 [[dependencies.${mod_id}]]
     modId="curios"
     mandatory=true

@@ -12,31 +12,31 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Locale;
+
 /**
- * Dark, panel-based inventory screen in the style of extraction shooters (Tarkov / Arena
- * Breakout): a player paperdoll on the left surrounded by equipment slots, a labelled
- * "Pockets" grid on the right, a weapon-mirror row along the bottom, and a stat strip
- * that reuses the same gauge icons as the in-world HUD so the two match visually.
+ * Extraction-shooter style inventory screen (Tarkov / Arena Breakout): a side-on player
+ * paperdoll flanked by equipment slots that line up with the matching body parts, a
+ * labelled inventory grid, a weapon-mirror row, and a stat strip reusing the same gauge
+ * icons as the in-world HUD.
  *
- * Primary/Secondary/Holster/Sheath are read-only previews of hotbar slots 0-3 - per
- * design they mirror the hotbar rather than being separate storage. Change
- * WEAPON_MIRROR_HOTBAR_INDEX below to remap which hotbar slots they show.
+ * Primary/Secondary/Holster/Sheath mirror hotbar slots 0-3 read-only, per design.
  */
 public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInventoryMenu> {
 
-    private static final int PANEL_BG = 0xE0141414;
+    private static final int PANEL_BG = 0xF0121212;
     private static final int PANEL_BORDER = 0xFF3A3A3A;
+    private static final int SECTION_BG = 0x40000000;
     private static final int SLOT_BG = 0xFF232323;
-    private static final int SLOT_BORDER = 0xFF454545;
-    private static final int SLOT_BORDER_INACTIVE = 0xFF2A2A2A;
-    private static final int HEADER_COLOR = 0xFF8A8A8A;
-    private static final int HEADER_ACCENT = 0xFF5A5A5A;
+    private static final int SLOT_BORDER = 0xFF484848;
+    private static final int HEADER_COLOR = 0xFF9A9A9A;
+    private static final int HEADER_ACCENT = 0xFF4A4A4A;
     private static final int TEXT_COLOR = 0xFFCCCCCC;
+    private static final int LABEL_DIM = 0xFF6A6A6A;
 
     private static final int[] WEAPON_MIRROR_HOTBAR_INDEX = {0, 1, 2, 3};
     private static final String[] WEAPON_MIRROR_LABEL = {"PRIMARY", "SECONDARY", "HOLSTER", "SHEATH"};
 
-    // Reuse the HUD's own gauge icons so the two UIs read as one consistent set.
     private static final ResourceLocation ICON_HEART = rl("icon_heart_solid");
     private static final ResourceLocation ICON_FOOD = rl("icon_food_solid");
     private static final ResourceLocation ICON_WATER = rl("icon_droplet_solid");
@@ -47,9 +47,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 310;
-        this.imageHeight = 222;
-        this.inventoryLabelY = -1000; // hide vanilla labels - we draw our own headers
+        this.imageWidth = 330;
+        this.imageHeight = 236;
+        this.inventoryLabelY = -1000;
         this.titleLabelY = -1000;
     }
 
@@ -60,28 +60,29 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x, y, x + imageWidth, y + imageHeight, PANEL_BG);
         graphics.renderOutline(x, y, imageWidth, imageHeight, PANEL_BORDER);
 
-        // Vertical divider between the equipment side and the pockets side
-        graphics.fill(x + 128, y + 6, x + 129, y + imageHeight - 40, PANEL_BORDER);
-        // Horizontal divider above the weapon row
-        graphics.fill(x + 6, y + imageHeight - 40, x + imageWidth - 6, y + imageHeight - 39, PANEL_BORDER);
+        // Subtle recessed backing behind each functional region, so the panel reads as
+        // distinct zones rather than one flat slab.
+        graphics.fill(x + 8, y + 22, x + 140, y + 180, SECTION_BG);        // equipment zone
+        graphics.fill(x + 149, y + 22, x + 322, y + 82, SECTION_BG);       // inventory zone
+        graphics.fill(x + 149, y + 104, x + 322, y + 126, SECTION_BG);     // hotbar zone
+        graphics.fill(x + 8, y + 196, x + 140, y + 228, SECTION_BG);       // weapons zone
+
+        graphics.fill(x + 145, y + 18, x + 146, y + 190, PANEL_BORDER);    // vertical divider
+        graphics.fill(x + 8, y + 188, x + 322, y + 189, PANEL_BORDER);     // horizontal divider
 
         for (var slot : menu.slots) {
-            drawSlotBackdrop(graphics, x + slot.x, y + slot.y, isChestRigSlotAndInactive(slot));
+            drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
 
-        int mirrorY = y + imageHeight - 26;
+        int mirrorY = y + 206;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            drawSlotBackdrop(graphics, x + 10 + i * 28, mirrorY, false);
+            drawSlotBackdrop(graphics, x + 14 + i * 30, mirrorY);
         }
     }
 
-    private boolean isChestRigSlotAndInactive(net.minecraft.world.inventory.Slot slot) {
-        return slot == menu.chestRigSlot && (menu.chestArmorSlot == null || !menu.chestArmorSlot.hasItem());
-    }
-
-    private void drawSlotBackdrop(GuiGraphics graphics, int x, int y, boolean inactive) {
+    private void drawSlotBackdrop(GuiGraphics graphics, int x, int y) {
         graphics.fill(x - 1, y - 1, x + 17, y + 17, SLOT_BG);
-        graphics.renderOutline(x - 1, y - 1, 18, 18, inactive ? SLOT_BORDER_INACTIVE : SLOT_BORDER);
+        graphics.renderOutline(x - 1, y - 1, 18, 18, SLOT_BORDER);
     }
 
     @Override
@@ -89,30 +90,38 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        LocalPlayer localPlayer = net.minecraft.client.Minecraft.getInstance().player;
-        if (localPlayer != null) {
-            int pdX = leftPos + 96, pdY = topPos + 128;
-            // Fixed pose instead of mouse-following: we pass a constant "virtual mouse"
-            // position offset to the right of and slightly above the model, so the player
-            // holds a steady three-quarter view looking slightly right rather than
-            // swivelling around as the cursor moves.
-            InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, pdX, pdY, 42,
-                    (float) (pdX + 40), (float) (pdY - 70), localPlayer);
-        }
-
+        drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
+        drawCurioLabels(graphics);
         drawWeaponMirrors(graphics, mouseX, mouseY);
         drawStatBar(graphics);
 
         renderTooltip(graphics, mouseX, mouseY);
     }
 
-    /** Small uppercase section headers with a short accent rule underneath. */
+    private void drawPaperdoll(GuiGraphics graphics) {
+        LocalPlayer localPlayer = net.minecraft.client.Minecraft.getInstance().player;
+        if (localPlayer == null) return;
+
+        // Positioned so the model's feet land on the boots-slot row and its head on the
+        // helmet row, making the flanking equipment columns read as body-part aligned.
+        int pdX = leftPos + 62;
+        int pdY = topPos + 148;
+
+        // Straight-right profile view rather than mouse-following.
+        // NOTE ON TUNING: this vanilla helper turns the model by roughly
+        // (angleXComponent * 20) degrees, so ~4.5 gives about a 90-degree turn. If the
+        // model ends up facing the wrong way, flip the sign; if it's not turned far
+        // enough, raise the magnitude.
+        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 44,
+                -4.5f, 0.0f, localPlayer);
+    }
+
     private void drawSectionHeaders(GuiGraphics graphics) {
-        drawHeader(graphics, "EQUIPMENT", leftPos + 10, topPos + 8, 52);
-        drawHeader(graphics, "POCKETS", leftPos + 140, topPos + 8, 46);
-        drawHeader(graphics, "HOTBAR", leftPos + 140, topPos + 108, 40);
-        drawHeader(graphics, "WEAPONS", leftPos + 10, topPos + imageHeight - 38, 46);
+        drawHeader(graphics, "EQUIPMENT", leftPos + 10, topPos + 10, 54);
+        drawHeader(graphics, "INVENTORY", leftPos + 151, topPos + 10, 54);
+        drawHeader(graphics, "HOTBAR", leftPos + 151, topPos + 92, 40);
+        drawHeader(graphics, "WEAPONS", leftPos + 10, topPos + 194, 46);
     }
 
     private void drawHeader(GuiGraphics graphics, String text, int x, int y, int ruleWidth) {
@@ -124,37 +133,53 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x, y + 9, x + ruleWidth, y + 10, HEADER_ACCENT);
     }
 
+    /**
+     * Tiny label beside each Curios slot naming what it is (mask, backpack, uniform...),
+     * pulled straight from the slot identifier Curios reports - so slots added by other
+     * mods get named automatically without this mod hardcoding anything.
+     */
+    private void drawCurioLabels(GuiGraphics graphics) {
+        for (var info : menu.curioSlotInfos) {
+            String label = prettify(info.identifier());
+            graphics.pose().pushPose();
+            graphics.pose().translate(leftPos + info.x() + 19, topPos + info.y() + 5, 0);
+            graphics.pose().scale(0.5f, 0.5f, 1f);
+            graphics.drawString(font, label, 0, 0, LABEL_DIM, false);
+            graphics.pose().popPose();
+        }
+    }
+
+    private String prettify(String identifier) {
+        String cleaned = identifier.replace('_', ' ');
+        return cleaned.toUpperCase(Locale.ROOT);
+    }
+
     private void drawWeaponMirrors(GuiGraphics graphics, int mouseX, int mouseY) {
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + imageHeight - 26;
+        int mirrorY = topPos + 206;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            int mx = leftPos + 10 + i * 28;
+            int mx = leftPos + 14 + i * 30;
             ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
             if (!stack.isEmpty()) {
                 graphics.renderItem(stack, mx, mirrorY);
                 graphics.renderItemDecorations(font, stack, mx, mirrorY);
             }
-            // Tiny label under each mirror box so it's obvious what the row represents.
+
             graphics.pose().pushPose();
             graphics.pose().translate(mx - 1, mirrorY + 18, 0);
             graphics.pose().scale(0.5f, 0.5f, 1f);
-            graphics.drawString(font, WEAPON_MIRROR_LABEL[i], 0, 0, HEADER_ACCENT, false);
+            graphics.drawString(font, WEAPON_MIRROR_LABEL[i], 0, 0, LABEL_DIM, false);
             graphics.pose().popPose();
 
-            // Hover tooltip naming the slot, since these boxes aren't real slots and so
-            // don't get vanilla's own tooltip handling.
             if (mouseX >= mx && mouseX < mx + 16 && mouseY >= mirrorY && mouseY < mirrorY + 16) {
-                if (stack.isEmpty()) {
-                    graphics.renderTooltip(font, Component.literal(WEAPON_MIRROR_LABEL[i]
-                            + " (hotbar slot " + (WEAPON_MIRROR_HOTBAR_INDEX[i] + 1) + ")"), mouseX, mouseY);
-                }
+                graphics.renderTooltip(font, Component.literal(WEAPON_MIRROR_LABEL[i]
+                        + " - mirrors hotbar slot " + (WEAPON_MIRROR_HOTBAR_INDEX[i] + 1)), mouseX, mouseY);
             }
         }
     }
 
-    /** Bottom-right stat strip: each value gets the same icon the in-world HUD uses. */
     private void drawStatBar(GuiGraphics graphics) {
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
@@ -164,9 +189,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        int y = topPos + imageHeight - 24;
-        int x = leftPos + 148;
-        int spacing = 58;
+        int y = topPos + 206;
+        int x = leftPos + 162;
+        int spacing = 56;
 
         drawStatEntry(graphics, ICON_HEART, health01, x, y);
         drawStatEntry(graphics, ICON_FOOD, food01, x + spacing, y);
@@ -174,7 +199,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     private void drawStatEntry(GuiGraphics graphics, ResourceLocation icon, float value01, int x, int y) {
-        int size = 11;
+        int size = 12;
         int color = severityColor(value01);
 
         RenderSystem.enableBlend();
@@ -187,8 +212,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
 
-        String text = Math.round(value01 * 100) + "%";
-        graphics.drawString(font, text, x + size + 4, y + 2, TEXT_COLOR, false);
+        graphics.drawString(font, Math.round(value01 * 100) + "%", x + size + 4, y + 2, TEXT_COLOR, false);
     }
 
     private int severityColor(float value01) {
@@ -199,6 +223,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        // Intentionally empty - replaced by drawSectionHeaders().
+        // Replaced by drawSectionHeaders().
     }
 }
