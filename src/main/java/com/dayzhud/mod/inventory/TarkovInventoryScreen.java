@@ -78,15 +78,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         super.render(graphics, mouseX, mouseY, partialTick);
 
         // Player paperdoll, roughly centered over the armor/curios cluster.
-        // Risk area: this vanilla helper's exact parameter list has changed across MC
-        // versions historically. If it fails to compile, open
-        // InventoryScreen.class (via your IDE's "go to declaration" on
-        // renderEntityInInventoryFollowsMouse, or decompile it) to see the real signature
-        // for your exact Forge/mappings version and adjust the call below.
+        // 1.20.1 signature: (graphics, x, y, scale, angleXComponent, mouseX, mouseY, entity).
+        // Note the four-corner (x1,y1,x2,y2) variant is 1.20.2+ only - don't use it here.
         LocalPlayer localPlayer = net.minecraft.client.Minecraft.getInstance().player;
         if (localPlayer != null) {
-            int pdX1 = leftPos + 92, pdY1 = topPos + 30, pdX2 = leftPos + 122, pdY2 = topPos + 150;
-            InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, pdX1, pdY1, pdX2, pdY2, 30,
+            int pdX = leftPos + 107, pdY = topPos + 140;
+            InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, pdX, pdY, 45,
                     0.0625f, mouseX, mouseY, localPlayer);
         }
 

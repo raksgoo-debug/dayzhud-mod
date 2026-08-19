@@ -9,15 +9,11 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.items.SlotItemHandler;
-// If the build fails on these two imports specifically, Curios has likely moved these
-// interfaces to a different package in a newer release than the version pinned in
-// gradle.properties (curios_version) - check the "api" sources jar for
-// top.theillusivec4.curios:curios-forge on https://maven.theillusivec4.top/ to find their
-// current location, or match gradle.properties to whatever Curios version is actually
-// installed in your instance.
+// Verified against Curios 5.x for 1.20.1: ICuriosItemHandler is under api.type.capability,
+// but ICurioStacksHandler is under api.type.inventory - they're in different subpackages.
 import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.type.capability.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
+import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
