@@ -78,13 +78,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         super.render(graphics, mouseX, mouseY, partialTick);
 
         // Player paperdoll, roughly centered over the armor/curios cluster.
-        // 1.20.1 signature: (graphics, x, y, scale, angleXComponent, mouseX, mouseY, entity).
-        // Note the four-corner (x1,y1,x2,y2) variant is 1.20.2+ only - don't use it here.
+        // Exact 1.20.1 signature (confirmed from the compiler's own error output):
+        //   (GuiGraphics, int x, int y, int scale, float mouseX, float mouseY, LivingEntity)
+        // No angleXComponent parameter here, and the mouse coords are floats.
         LocalPlayer localPlayer = net.minecraft.client.Minecraft.getInstance().player;
         if (localPlayer != null) {
             int pdX = leftPos + 107, pdY = topPos + 140;
             InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, pdX, pdY, 45,
-                    0.0625f, mouseX, mouseY, localPlayer);
+                    (float) mouseX, (float) mouseY, localPlayer);
         }
 
         drawWeaponMirrors(graphics);
