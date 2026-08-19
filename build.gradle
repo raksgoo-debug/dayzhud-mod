@@ -45,10 +45,23 @@ minecraft {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Curios"
+        url = "https://maven.theillusivec4.top/"
+        content {
+            includeGroup "top.theillusivec4.curios"
+        }
+    }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // Required for the Tarkov-style inventory screen's dynamic equipment slots.
+    // If Curios updates and this version number goes stale, check
+    // https://maven.theillusivec4.top/top/theillusivec4/curios/curios-forge/ for the
+    // latest 1.20.1 release and swap it in here.
+    implementation fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
 
     // Compile-time only, optional: lets you reference Thirst Was Taken's classes directly
     // if you decide to swap the reflection-based compat for a hard compile dependency.

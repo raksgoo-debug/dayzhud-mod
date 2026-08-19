@@ -39,8 +39,8 @@ crashing - see the top-of-file comment in that class for where to look if that h
 dayzhud/
 ├── build.gradle, settings.gradle, gradle.properties   - ForgeGradle build config
 ├── src/main/resources/
-│   ├── META-INF/mods.toml                             - mod metadata + soft dep on "thirst"
-│   └── assets/dayzhud/textures/gui/*.png               - the 5 status icons
+│   ├── META-INF/mods.toml                             - mod metadata + deps (Curios mandatory, "thirst" soft)
+│   └── assets/dayzhud/textures/gui/*.png               - HUD icons
 └── src/main/java/com/dayzhud/mod/
     ├── DayzHudMod.java              - mod entrypoint
     ├── client/
@@ -48,9 +48,48 @@ dayzhud/
     │   ├── DayzHudOverlay.java      - all the actual HUD drawing
     │   ├── OverlayCanceller.java    - hides vanilla hunger/health/armor/air bars
     │   └── VitalsTracker.java       - stamina + temperature tracking
-    └── compat/
-        └── ThirstWasTakenCompat.java - thirst API hookup (see above)
+    ├── compat/
+    │   └── ThirstWasTakenCompat.java - thirst API hookup (see above)
+    └── inventory/                   - the Tarkov-style inventory screen (see below)
 ```
+
+## The Tarkov-style inventory screen
+
+Pressing E (in Survival/Adventure - Creative keeps the normal screen) opens a custom dark
+paperdoll-style inventory instead of vanilla's: armor slots, three new Curios slots this
+mod defines (**Face Cover**, **Headset**, **Chest Rig** - the chest rig slot only shows/
+works once a chestplate is equipped), a live 3D player preview, read-only previews of
+hotbar slots 0-3 as **Primary/Secondary/Holster/Sheath** (these mirror the hotbar rather
+than being separate storage - dragging items happens via the hotbar as normal), the
+standard inventory as a **Pockets** grid, and a bottom stat strip reusing this mod's own
+health/food/water tracking.
+
+It also automatically lays out **any other Curios slot type** other installed mods
+register (e.g. rings, belts, backpacks from content packs) in an overflow row, so nothing
+new another mod adds is silently hidden - it just shows up.
+
+**This required adding Curios as a mandatory dependency** (`curios_version` in
+gradle.properties, currently `5.12.1+1.20.1`) - the mod won't load without it. If your
+instance is on a different Curios version, this number probably needs updating to match.
+
+### Honest risk areas for this feature specifically
+
+This is a much bigger, more architecturally involved feature than the HUD (custom
+Menu/Screen, real client-server networking, a third-party API). A few spots are genuinely
+uncertain until it's actually compiled and I've marked them in-code with `// Risk area`
+style comments explaining exactly what to check if the build fails there:
+
+- **`TarkovInventoryMenu.java`** - the two Curios interface imports
+  (`ICuriosItemHandler`, `ICurioStacksHandler`) - package path may have shifted between
+  Curios versions.
+- **`TarkovInventoryScreen.java`** - the `InventoryScreen.renderEntityInInventoryFollowsMouse(...)`
+  call for the player paperdoll - this vanilla helper's exact parameter list has changed
+  across Minecraft versions before.
+- **`TarkovInventoryClientEvents.java`** - `ScreenEvent.Opening`'s accessor method names
+  for the incoming screen.
+
+If the build fails, paste me the error the same way you have been - these are contained,
+fixable spots, not a sign the overall approach is wrong.
 
 ## Building
 
@@ -63,6 +102,10 @@ pull the Forge MDK). Output lands in `build/libs/dayzhud-1.0.0.jar`.
 
 ## Tweaking the look
 
-Position, size, spacing, and colors are plain constants near the top of
+HUD position, size, spacing, and colors are plain constants near the top of
 `DayzHudOverlay.java` - no config system needed, just edit and rebuild. To change an
 icon's shape, replace its PNG under `src/main/resources/assets/dayzhud/textures/gui/`.
+
+Inventory screen slot positions, panel colors, and which hotbar slots map to
+Primary/Secondary/Holster/Sheath are all plain constants near the top of
+`TarkovInventoryScreen.java` and in `TarkovInventoryMenu.java`'s constructor.
