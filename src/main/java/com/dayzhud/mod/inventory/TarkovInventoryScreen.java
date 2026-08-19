@@ -49,7 +49,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 360;
-        this.imageHeight = 252;
+        this.imageHeight = 268;
         this.inventoryLabelY = -1000;
         this.titleLabelY = -1000;
     }
@@ -62,21 +62,22 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.renderOutline(x, y, imageWidth, imageHeight, PANEL_BORDER);
 
         // Recessed zone backings so the panel reads as distinct regions.
-        graphics.fill(x + 8, y + 26, x + 172, y + 152, SECTION_BG);    // paperdoll + armor
-        graphics.fill(x + 8, y + 158, x + 172, y + 206, SECTION_BG);    // curios grid
+        graphics.fill(x + 8, y + 26, x + 172, y + 158, SECTION_BG);     // paperdoll + armor
+        graphics.fill(x + 8, y + 162, x + 172, y + 208, SECTION_BG);    // gear grid
         graphics.fill(x + 180, y + 26, x + 352, y + 106, SECTION_BG);   // inventory
         graphics.fill(x + 180, y + 112, x + 352, y + 136, SECTION_BG);  // hotbar
-        graphics.fill(x + 8, y + 218, x + 172, y + 246, SECTION_BG);    // weapons
+        graphics.fill(x + 180, y + 144, x + 352, y + 208, SECTION_BG);  // backpack
+        graphics.fill(x + 8, y + 218, x + 172, y + 250, SECTION_BG);    // weapons + offhand
 
-        graphics.fill(x + 176, y + 22, x + 177, y + 208, PANEL_BORDER); // vertical divider
-        graphics.fill(x + 8, y + 212, x + 352, y + 213, PANEL_BORDER);  // horizontal divider
+        graphics.fill(x + 176, y + 22, x + 177, y + 210, PANEL_BORDER); // vertical divider
+        graphics.fill(x + 8, y + 214, x + 352, y + 215, PANEL_BORDER);  // horizontal divider
 
         for (var slot : menu.slots) {
             drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
 
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 224);
+            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 226);
         }
     }
 
@@ -109,20 +110,23 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int pdX = leftPos + 88;
         int pdY = topPos + 146;
 
-        // Right-facing profile. TUNING NOTE: this helper turns the model by roughly
-        // (angleXComponent * 20) degrees off front-facing, so +/-4.5 is about a quarter
-        // turn. If it faces the wrong way, flip the sign; if it's under-rotated, increase
-        // the magnitude.
+        // Facing mostly forward but turned slightly toward the right of the screen.
+        // TUNING NOTE: this helper turns the model by roughly (angleXComponent * 20)
+        // degrees off front-facing, so small values give small turns. Flip the sign if it
+        // leans the wrong way.
         InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 42,
-                4.5f, 0.0f, localPlayer);
+                -1.4f, 0.0f, localPlayer);
     }
 
     private void drawSectionHeaders(GuiGraphics graphics) {
         drawHeader(graphics, "EQUIPMENT", leftPos + 12, topPos + 14, 54);
-        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 146, 30);
+        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 150, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 14, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 100, 40);
-        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 206, 46);
+        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 208, 46);
+        if (menu.backpackSlotCount > 0) {
+            drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 132, 50);
+        }
     }
 
     private void drawHeader(GuiGraphics graphics, String text, int x, int y, int ruleWidth) {
@@ -162,7 +166,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 224;
+        int mirrorY = topPos + 226;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
@@ -176,13 +180,20 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             graphics.drawString(font, WEAPON_MIRROR_LABEL[i], 0, 0, LABEL_DIM, false);
             graphics.pose().popPose();
         }
+
+        // The offhand is a real slot (drawn by vanilla), so it just needs its label here.
+        graphics.pose().pushPose();
+        graphics.pose().translate(leftPos + menu.offhandX - 2, topPos + menu.offhandY + 18, 0);
+        graphics.pose().scale(0.5f, 0.5f, 1f);
+        graphics.drawString(font, "OFFHAND", 0, 0, LABEL_DIM, false);
+        graphics.pose().popPose();
     }
 
     private void drawWeaponHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 224;
+        int mirrorY = topPos + 226;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             if (mouseX >= mx && mouseX < mx + 16 && mouseY >= mirrorY && mouseY < mirrorY + 16) {
@@ -207,7 +218,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        int y = topPos + 226;
+        int y = topPos + 228;
         int x = leftPos + 192;
         int spacing = 56;
 
