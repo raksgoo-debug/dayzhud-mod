@@ -54,14 +54,14 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         for (int i = 0; i < ARMOR_SLOTS.length; i++) {
             EquipmentSlot equipmentSlot = ARMOR_SLOTS[i];
             int armorIndex = 39 - i; // matches vanilla Inventory armor slot ordering (head=39..feet=36)
-            Slot slot = new ArmorRestrictedSlot(playerInventory, armorIndex, equipmentSlot, 20, 20 + i * 24);
+            Slot slot = new ArmorRestrictedSlot(playerInventory, armorIndex, equipmentSlot, 12, 24 + i * 22);
             addSlot(slot);
             if (equipmentSlot == EquipmentSlot.CHEST) chestSlotRef = slot;
         }
         this.chestArmorSlot = chestSlotRef;
 
         // Offhand
-        addSlot(new Slot(playerInventory, 40, 68, 92));
+        addSlot(new Slot(playerInventory, 40, 40, 112));
 
         // --- Curios slots (face cover, headset, chest rig + anything else registered) ---
         Slot chestRig = null;
@@ -70,13 +70,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             ICuriosItemHandler curios = curiosOpt.get();
             Map<String, ICurioStacksHandler> allCurios = new LinkedHashMap<>(curios.getCurios());
 
-            addCurioSlot(allCurios, ModCurios.FACE_COVER, 44, 20);
-            addCurioSlot(allCurios, ModCurios.HEADSET, 68, 44);
-            chestRig = addCurioSlot(allCurios, ModCurios.CHEST_RIG, 44, 44);
+            addCurioSlot(allCurios, ModCurios.FACE_COVER, 36, 24);
+            addCurioSlot(allCurios, ModCurios.HEADSET, 36, 46);
+            chestRig = addCurioSlot(allCurios, ModCurios.CHEST_RIG, 36, 68);
 
             // Anything left over came from another mod's slot type - lay it out automatically
             // in an overflow row so it's still reachable, rather than silently hidden.
-            int overflowX = 20, overflowY = 120, col = 0;
+            int overflowX = 12, overflowY = 134, col = 0;
             for (String identifier : allCurios.keySet()) {
                 extraCurioIdentifiers.add(identifier);
                 ICurioStacksHandler handler = curios.getCurios().get(identifier);
@@ -89,14 +89,14 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         }
         this.chestRigSlot = chestRig;
 
-        // --- Pockets: standard player inventory (27 main + 9 hotbar) ---
+        // --- Pockets: standard player inventory (27 main), then the hotbar row ---
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 140 + col * 18, 20 + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, 140 + col * 18, 24 + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 140 + col * 18, 132));
+            addSlot(new Slot(playerInventory, col, 140 + col * 18, 124));
         }
     }
 
