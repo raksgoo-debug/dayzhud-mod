@@ -1,9 +1,7 @@
 package com.dayzhud.mod.inventory;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -20,13 +18,13 @@ import java.util.Locale;
  * background art and labels are replaced, and the panel is sized around whatever slots
  * exist. That's why one class covers every chest size and most modded containers.
  *
- * The whole window is shifted right to leave room for LoadoutSidePanel, so your gear stays
- * visible while looting.
+ * Simple storage containers never reach this class - ContainerOpenRedirect turns those into
+ * the merged inventory+container view instead. This handles the rest (crafting tables and
+ * any modded grid GUIs).
  */
 public class StyledContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
 
     private static final int PAD = 10;
-    private static final int SIDE_PANEL_GAP = 8;
 
     private final int firstSlotY;
     private final int playerInvTop;
@@ -52,14 +50,6 @@ public class StyledContainerScreen<T extends AbstractContainerMenu> extends Abst
         this.imageHeight = maxY + PAD;
         this.titleLabelY = -1000;      // headers are drawn manually
         this.inventoryLabelY = -1000;
-    }
-
-    @Override
-    protected void init() {
-        super.init();
-        // Shift right so the loadout panel has room on the left, but never off-screen.
-        int shift = (LoadoutSidePanel.WIDTH + SIDE_PANEL_GAP) / 2;
-        this.leftPos = Math.max(LoadoutSidePanel.WIDTH + SIDE_PANEL_GAP + 4, this.leftPos + shift);
     }
 
     @Override
@@ -100,41 +90,11 @@ public class StyledContainerScreen<T extends AbstractContainerMenu> extends Abst
         }
     }
 
-    private int sidePanelX() {
-        return leftPos - LoadoutSidePanel.WIDTH - SIDE_PANEL_GAP;
-    }
-
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        int panelX = sidePanelX();
-        if (player != null && panelX >= 0) {
-            LoadoutSidePanel.Hit hit = LoadoutSidePanel.hitTest(player, panelX, topPos, mouseX, mouseY);
-            if (hit != null) {
-                // Server does the actual swap against the menu's carried stack.
-                NetworkHandler.CHANNEL.sendToServer(new LoadoutClickPacket(hit.kind(), hit.index()));
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        LocalPlayer player = Minecraft.getInstance().player;
-        int panelX = sidePanelX();
-        int panelY = topPos;
-        if (player != null && panelX >= 0) {
-            LoadoutSidePanel.render(graphics, font, player, panelX, panelY, mouseX, mouseY);
-        }
-
         renderTooltip(graphics, mouseX, mouseY);
-
-        if (player != null && panelX >= 0) {
-            LoadoutSidePanel.renderTooltip(graphics, font, player, panelX, panelY, mouseX, mouseY);
-        }
     }
 }

@@ -50,6 +50,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         super(menu, playerInventory, title);
         this.imageWidth = 360;
         this.imageHeight = 322;
+        if (menu.hasContainer()) {
+            // Grow rightwards to fit the container grid; the loadout side keeps its layout.
+            this.imageWidth = TarkovInventoryMenu.CONTAINER_X
+                    + TarkovInventoryMenu.CONTAINER_COLS * 18 + 12;
+        }
         this.inventoryLabelY = -1000;
         this.titleLabelY = -1000;
     }
@@ -71,6 +76,15 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             graphics.fill(x + 180, y + 132, x + 352, y + 214, SECTION_BG); // backpack
         }
         graphics.fill(x + 8, y + 288, x + 352, y + 316, SECTION_BG);    // weapons + offhand + stats
+
+        if (menu.hasContainer()) {
+            int cx = TarkovInventoryMenu.CONTAINER_X;
+            int cy = TarkovInventoryMenu.CONTAINER_Y;
+            int cw = TarkovInventoryMenu.CONTAINER_COLS * 18;
+            int ch = menu.containerRows * 18;
+            graphics.fill(x + 360, y + 16, x + 361, y + imageHeight - 16, PANEL_BORDER); // divider
+            graphics.fill(x + cx - 6, y + cy - 6, x + cx + cw + 6, y + cy + ch + 6, SECTION_BG);
+        }
 
         graphics.fill(x + 176, y + 16, x + 177, y + 274, PANEL_BORDER); // vertical divider
         graphics.fill(x + 8, y + 280, x + 352, y + 281, PANEL_BORDER);  // horizontal divider
@@ -130,6 +144,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "GEAR", leftPos + 12, topPos + 156, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
+        if (menu.hasContainer()) {
+            drawHeader(graphics, "CONTAINER", leftPos + TarkovInventoryMenu.CONTAINER_X,
+                    topPos + TarkovInventoryMenu.CONTAINER_Y - 18, 54);
+        }
         drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 220, 48);
         drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 282, 46);
         if (menu.getActiveBackpackSlots() > 0) {

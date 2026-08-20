@@ -13,6 +13,7 @@ import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
@@ -83,6 +84,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int CRAFT_RESULT_X = 92;
     public static final int CRAFT_RESULT_Y = 243;
 
+    // Right-hand container grid, present only when a chest/crate was opened.
+    public static final int CONTAINER_X = 372;
+    public static final int CONTAINER_Y = 26;
+    public static final int CONTAINER_COLS = 9;
+
     private static final int INV_X = 186;
     private static final int INV_Y = 26;
     private static final int HOTBAR_Y = 100;
@@ -98,11 +104,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
     public final int offhandX, offhandY;
     public final BackCurioItemHandler backpackHandler;
+    /** The opened chest/crate, or null when this is just the player inventory screen. */
+    public final Container openedContainer;
+    public final int containerRows;
     public final ScrollingBackpackView backpackView;
 
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
     private final int craftStartIndex;
+    private final int containerStartIndex;
 
     private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
     private final ResultContainer resultSlots = new ResultContainer();
@@ -112,8 +122,22 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private record PendingCurio(String identifier, ICurioStacksHandler handler, int slotIndex) {}
 
     public TarkovInventoryMenu(int windowId, Inventory playerInventory) {
+        this(windowId, playerInventory, null);
+    }
+
+    /**
+     * @param container the chest/crate being viewed, or null for the plain inventory screen.
+     *                  Client and server MUST build this menu with the same slot count, so
+     *                  the client passes a SimpleContainer of the size sent in the open packet.
+     */
+    public TarkovInventoryMenu(int windowId, Inventory playerInventory, Container container) {
         super(TarkovMenuTypes.TARKOV_INVENTORY.get(), windowId);
         this.player = playerInventory.player;
+        this.openedContainer = container;
+        this.containerRows = container == null ? 0 : Math.max(1, container.getContainerSize() / CONTAINER_COLS);
+        if (container != null) {
+            container.startOpen(player);
+        }
         this.backpackHandler = new BackCurioItemHandler(player);
         this.backpackView = new ScrollingBackpackView(backpackHandler, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS);
 
@@ -184,6 +208,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 addSlot(new Slot(craftSlots, col + row * 2, CRAFT_X + col * 18, CRAFT_Y + row * 18));
             }
         }
+
+        // --- Opened container, laid out to the right of everything else ---
+        this.containerStartIndex = slots.size();
+        if (container != null) {
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                addSlot(new Slot(container, i,
+                        CONTAINER_X + (i % CONTAINER_COLS) * 18,
+                        CONTAINER_Y + (i / CONTAINER_COLS) * 18));
+            }
+        }
+    }
+
+    public boolean hasContainer() {
+        return openedContainer != null;
     }
 
     /** Recompute the crafting result whenever the 2x2 grid changes. */
@@ -231,6 +269,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
+        if (openedContainer != null) {
+            openedContainer.stopOpen(player);
+        }
         resultSlots.clearContent();
         if (!player.level().isClientSide) {
             clearContainer(player, craftSlots);
@@ -293,6 +334,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         int craftResult = craftStartIndex;
         int craftGridStart = craftStartIndex + 1;
         int craftGridEnd = craftGridStart + 4;
+        int containerStart = containerStartIndex;
+        int containerEnd = slots.size();
+        boolean hasContainer = containerEnd > containerStart;
 
         boolean moved;
         if (index == craftResult) {
@@ -305,10 +349,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         } else if (index < equipEnd) {
             moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
             if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
+        } else if (hasContainer && index >= containerStart && index < containerEnd) {
+            // Container -> inventory, then backpack.
+            moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
+            if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
         } else if (index >= bagStart && index < bagEnd) {
             moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
+            if (!moved && hasContainer) {
+                moved = moveItemStackTo(sourceStack, containerStart, containerEnd, false);
+            }
         } else {
-            moved = moveItemStackTo(sourceStack, 0, equipEnd, false);
+            // With a container open, shift-click should send loot there first - that's the
+            // action players expect while looting, ahead of auto-equipping.
+            moved = hasContainer && moveItemStackTo(sourceStack, containerStart, containerEnd, false);
+            if (!moved) moved = moveItemStackTo(sourceStack, 0, equipEnd, false);
             if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
             if (!moved) {
                 moved = index < hotbarStart
