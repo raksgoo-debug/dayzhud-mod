@@ -36,5 +36,11 @@ public class NetworkHandler {
                 OpenCraftingPacket::encode,
                 OpenCraftingPacket::decode,
                 OpenCraftingPacket::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                LoadoutClickPacket.class,
+                LoadoutClickPacket::encode,
+                LoadoutClickPacket::decode,
+                LoadoutClickPacket::handle);
     }
 }

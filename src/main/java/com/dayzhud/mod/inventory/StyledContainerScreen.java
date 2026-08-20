@@ -1,57 +1,65 @@
 package com.dayzhud.mod.inventory;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.Slot;
 
+import java.util.Locale;
+
 /**
- * Drop-in restyle for any vanilla container whose UI is essentially "a grid of slots":
- * chests, barrels, shulker boxes, dispensers/droppers, hoppers, crafting tables and so on.
+ * Restyle for containers whose UI is essentially a grid of slots: chests, barrels,
+ * shulkers, dispensers, hoppers, crafting tables, and most modded storage.
  *
- * It deliberately does NOT move any slots - slot coordinates come from the server-side
- * menu and must not be second-guessed - it only replaces the background art with this
- * mod's dark panel styling and sizes the panel from the slots that are actually there.
- * That's why one class can cover every chest size and most simple containers.
+ * Slot coordinates come from the server-side menu and are never moved - only the
+ * background art and labels are replaced, and the panel is sized around whatever slots
+ * exist. That's why one class covers every chest size and most modded containers.
  *
- * Containers with extra moving parts (furnace progress arrows, anvil text fields,
- * enchanting buttons) need their own subclass or are left vanilla; see StyledScreens.
+ * The whole window is shifted right to leave room for LoadoutSidePanel, so your gear stays
+ * visible while looting.
  */
 public class StyledContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
 
-    private static final int PAD = 8;
-    private static final int TITLE_H = 18;
+    private static final int PAD = 10;
+    private static final int SIDE_PANEL_GAP = 8;
 
-    private final int playerInvSplitY;
+    private final int firstSlotY;
+    private final int playerInvTop;
 
     public StyledContainerScreen(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
 
-        // Size the panel around whatever slots this menu actually has.
         int maxX = 0, maxY = 0, minY = Integer.MAX_VALUE;
         for (Slot slot : menu.slots) {
             maxX = Math.max(maxX, slot.x + 16);
             maxY = Math.max(maxY, slot.y + 16);
             minY = Math.min(minY, slot.y);
         }
-        if (minY == Integer.MAX_VALUE) minY = 0;
+        this.firstSlotY = (minY == Integer.MAX_VALUE) ? 18 : minY;
+
+        // Vanilla always places the player's 4 inventory rows last.
+        int invTop = Integer.MAX_VALUE;
+        int count = menu.slots.size();
+        if (count >= 36) invTop = menu.slots.get(count - 36).y;
+        this.playerInvTop = invTop;
 
         this.imageWidth = maxX + PAD;
         this.imageHeight = maxY + PAD;
+        this.titleLabelY = -1000;      // headers are drawn manually
+        this.inventoryLabelY = -1000;
+    }
 
-        // Vanilla always puts the player's 4 inventory rows at the bottom; find where that
-        // block starts so we can draw a divider above it.
-        int inventoryTop = Integer.MAX_VALUE;
-        int slotCount = menu.slots.size();
-        if (slotCount >= 36) {
-            inventoryTop = menu.slots.get(slotCount - 36).y;
-        }
-        this.playerInvSplitY = inventoryTop;
-
-        this.titleLabelY = 6;
-        this.inventoryLabelY = -1000; // we draw our own captions
+    @Override
+    protected void init() {
+        super.init();
+        // Shift right so the loadout panel has room on the left, but never off-screen.
+        int shift = (LoadoutSidePanel.WIDTH + SIDE_PANEL_GAP) / 2;
+        this.leftPos = Math.max(LoadoutSidePanel.WIDTH + SIDE_PANEL_GAP + 4, this.leftPos + shift);
     }
 
     @Override
@@ -59,30 +67,74 @@ public class StyledContainerScreen<T extends AbstractContainerMenu> extends Abst
         int x = leftPos, y = topPos;
         StyledTheme.panel(graphics, x, y, imageWidth, imageHeight);
 
-        if (playerInvSplitY != Integer.MAX_VALUE) {
-            int dividerY = y + playerInvSplitY - 6;
-            graphics.fill(x + 6, dividerY, x + imageWidth - 6, dividerY + 1, StyledTheme.PANEL_BORDER);
+        // Zone behind the container's own slots (everything above the player inventory).
+        if (playerInvTop != Integer.MAX_VALUE && playerInvTop > firstSlotY) {
+            StyledTheme.zone(graphics, x + 6, y + firstSlotY - 6, x + imageWidth - 6, y + playerInvTop - 14);
+            StyledTheme.zone(graphics, x + 6, y + playerInvTop - 6, x + imageWidth - 6, y + imageHeight - 6);
         }
 
         for (Slot slot : menu.slots) {
             if (!slot.isActive()) continue;
             StyledTheme.slot(graphics, x + slot.x, y + slot.y);
         }
+
+        // Crafting tables get an arrow so the gap between grid and result reads deliberately.
+        if (menu instanceof CraftingMenu) {
+            int ax = x + 97, ay = y + 39;
+            graphics.fill(ax, ay, ax + 16, ay + 2, StyledTheme.HEADER_ACCENT);
+            graphics.fill(ax + 12, ay - 3, ax + 14, ay + 5, StyledTheme.HEADER_ACCENT);
+            graphics.fill(ax + 14, ay - 1, ax + 16, ay + 3, StyledTheme.HEADER_ACCENT);
+        }
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        StyledTheme.header(graphics, font, title.getString().toUpperCase(java.util.Locale.ROOT),
-                8, 8, Math.max(30, font.width(title.getString()) - 4));
-        if (playerInvSplitY != Integer.MAX_VALUE) {
-            StyledTheme.header(graphics, font, "INVENTORY", 8, playerInvSplitY - 16, 54);
+        // Title sits in the top padding, above the first slot row - never overlapping it.
+        String heading = title.getString().toUpperCase(Locale.ROOT);
+        int ruleWidth = Math.max(34, Math.round(font.width(heading) * 0.8f));
+        StyledTheme.header(graphics, font, heading, 8, Math.max(6, firstSlotY - 16), ruleWidth);
+
+        if (playerInvTop != Integer.MAX_VALUE) {
+            // Rule tucked just above the inventory rows so it can't clash with the grid above.
+            StyledTheme.header(graphics, font, "INVENTORY", 8, playerInvTop - 13, 54);
         }
+    }
+
+    private int sidePanelX() {
+        return leftPos - LoadoutSidePanel.WIDTH - SIDE_PANEL_GAP;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        int panelX = sidePanelX();
+        if (player != null && panelX >= 0) {
+            LoadoutSidePanel.Hit hit = LoadoutSidePanel.hitTest(player, panelX, topPos, mouseX, mouseY);
+            if (hit != null) {
+                // Server does the actual swap against the menu's carried stack.
+                NetworkHandler.CHANNEL.sendToServer(new LoadoutClickPacket(hit.kind(), hit.index()));
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
+
+        LocalPlayer player = Minecraft.getInstance().player;
+        int panelX = sidePanelX();
+        int panelY = topPos;
+        if (player != null && panelX >= 0) {
+            LoadoutSidePanel.render(graphics, font, player, panelX, panelY, mouseX, mouseY);
+        }
+
         renderTooltip(graphics, mouseX, mouseY);
+
+        if (player != null && panelX >= 0) {
+            LoadoutSidePanel.renderTooltip(graphics, font, player, panelX, panelY, mouseX, mouseY);
+        }
     }
 }
