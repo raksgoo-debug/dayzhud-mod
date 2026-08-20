@@ -41,7 +41,11 @@ public class OpenTarkovInventoryPacket {
                     return new TarkovInventoryMenu(windowId, inv);
                 }
             };
-            NetworkHooks.openScreen((net.minecraft.server.level.ServerPlayer) player, provider);
+            // MUST write the container size (0 = no container). The client-side menu
+            // factory reads this VarInt first; without it the buffer is empty, the factory
+            // throws, and the screen silently never opens.
+            NetworkHooks.openScreen((net.minecraft.server.level.ServerPlayer) player, provider,
+                    buf -> buf.writeVarInt(0));
         });
         ctx.setPacketHandled(true);
     }

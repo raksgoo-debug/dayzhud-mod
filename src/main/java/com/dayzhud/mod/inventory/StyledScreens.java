@@ -4,6 +4,8 @@ import com.dayzhud.mod.DayzHudMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -41,9 +43,14 @@ public class StyledScreens {
         Screen incoming = event.getNewScreen();
         if (!(incoming instanceof AbstractContainerScreen<?> containerScreen)) return;
 
-        // Don't re-wrap our own screens (that would recurse) or the player inventory,
-        // which TarkovInventoryClientEvents already handles.
+        // Don't re-wrap our own screens (that would recurse).
         if (incoming instanceof StyledContainerScreen<?> || incoming instanceof TarkovInventoryScreen) return;
+
+        // The creative menu and the vanilla survival inventory are tabbed screens with their
+        // own widgets - swapping in a plain slot grid destroys the tabs and item list, which
+        // is exactly what broke creative mode. TarkovInventoryClientEvents handles the
+        // survival inventory separately; in creative both are intentionally left alone.
+        if (incoming instanceof CreativeModeInventoryScreen || incoming instanceof InventoryScreen) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
@@ -67,7 +74,9 @@ public class StyledScreens {
     private static final Set<String> EXCLUDED_MENU_CLASSES = Set.of(
             "AnvilMenu", "EnchantmentMenu", "BeaconMenu", "LoomMenu", "StonecutterMenu",
             "CartographyTableMenu", "SmithingMenu", "GrindstoneMenu", "MerchantMenu",
-            "HorseInventoryMenu", "BrewingStandMenu", "CrafterMenu"
+            "HorseInventoryMenu", "BrewingStandMenu", "CrafterMenu",
+            "ItemPickerMenu",  // creative inventory's menu
+            "InventoryMenu"    // vanilla survival inventory
     );
 
     /**
