@@ -5,6 +5,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.items.ItemStackHandler;
+
+import java.util.function.IntSupplier;
 
 import java.util.List;
 import java.util.Locale;
@@ -38,14 +41,36 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
 
     private static final String BACK_ID = "back";
 
+    private static final int BAG_MIRROR_SIZE = 64;
+
     private final Container corpse;
     private final List<String> curioIds;
     private final int curioStart;
+    private final boolean clientSide;
 
-    public CorpseLootHandler(Container corpse, List<String> curioIds, int curioStart) {
+    /**
+     * Client stand-in for the bag portion. The corpse's own 36 slots sync fine (they're
+     * backed by the menu's container), but bag contents held in an ItemStack capability
+     * never reach the client - same Forge limitation documented in BackCurioItemHandler.
+     */
+    private final ItemStackHandler bagMirror = new ItemStackHandler(BAG_MIRROR_SIZE);
+    private IntSupplier syncedBagSlots = () -> 0;
+
+    public CorpseLootHandler(Container corpse, List<String> curioIds, int curioStart, boolean clientSide) {
         this.corpse = corpse;
         this.curioIds = curioIds;
         this.curioStart = curioStart;
+        this.clientSide = clientSide;
+    }
+
+    public void setSyncedBagSlots(IntSupplier supplier) {
+        this.syncedBagSlots = supplier;
+    }
+
+    /** Server-side true bag size, used to drive the synced count. */
+    public int serverBagSlots() {
+        IItemHandler h = bagHandler();
+        return h == null ? 0 : Math.min(h.getSlots(), BAG_MIRROR_SIZE);
     }
 
     /** The bag worn on the corpse's back, or EMPTY. */
@@ -73,8 +98,8 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
     }
 
     public int bagSlots() {
-        IItemHandler h = bagHandler();
-        return h == null ? 0 : h.getSlots();
+        if (clientSide) return Math.min(BAG_MIRROR_SIZE, syncedBagSlots.getAsInt());
+        return serverBagSlots();
     }
 
     /** Maps our flat index onto the corpse container's own indexing. */
@@ -95,8 +120,11 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
             int idx = containerIndex(slot);
             return idx < corpse.getContainerSize() ? corpse.getItem(idx) : ItemStack.EMPTY;
         }
-        IItemHandler bag = bagHandler();
         int bagSlot = slot - BASE_COUNT;
+        if (clientSide) {
+            return bagSlot < BAG_MIRROR_SIZE ? bagMirror.getStackInSlot(bagSlot) : ItemStack.EMPTY;
+        }
+        IItemHandler bag = bagHandler();
         return (bag != null && bagSlot < bag.getSlots()) ? bag.getStackInSlot(bagSlot) : ItemStack.EMPTY;
     }
 
@@ -111,8 +139,12 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
             }
             return;
         }
-        IItemHandler bag = bagHandler();
         int bagSlot = slot - BASE_COUNT;
+        if (clientSide) {
+            if (bagSlot < BAG_MIRROR_SIZE) bagMirror.setStackInSlot(bagSlot, stack);
+            return;
+        }
+        IItemHandler bag = bagHandler();
         if (bag instanceof IItemHandlerModifiable mod && bagSlot < bag.getSlots()) {
             mod.setStackInSlot(bagSlot, stack);
         }
@@ -128,8 +160,11 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
             if (!simulate) setStackInSlot(slot, stack.copy());
             return ItemStack.EMPTY;
         }
-        IItemHandler bag = bagHandler();
         int bagSlot = slot - BASE_COUNT;
+        if (clientSide) {
+            return bagSlot < BAG_MIRROR_SIZE ? bagMirror.insertItem(bagSlot, stack, simulate) : stack;
+        }
+        IItemHandler bag = bagHandler();
         return (bag != null && bagSlot < bag.getSlots())
                 ? bag.insertItem(bagSlot, stack, simulate) : stack;
     }
@@ -151,8 +186,12 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
             }
             return result;
         }
-        IItemHandler bag = bagHandler();
         int bagSlot = slot - BASE_COUNT;
+        if (clientSide) {
+            return bagSlot < BAG_MIRROR_SIZE
+                    ? bagMirror.extractItem(bagSlot, amount, simulate) : ItemStack.EMPTY;
+        }
+        IItemHandler bag = bagHandler();
         return (bag != null && bagSlot < bag.getSlots())
                 ? bag.extractItem(bagSlot, amount, simulate) : ItemStack.EMPTY;
     }

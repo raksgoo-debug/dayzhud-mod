@@ -21,6 +21,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.items.SlotItemHandler;
+import net.minecraftforge.items.IItemHandler;
 // Verified against Curios 5.x for 1.20.1: ICuriosItemHandler is under api.type.capability,
 // but ICurioStacksHandler is under api.type.inventory - different subpackages.
 import top.theillusivec4.curios.api.CuriosApi;
@@ -100,8 +101,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int CORPSE_GEAR_COLS = 6;
     public static final int CORPSE_GEAR_SPACING = 22;
     public static final int CORPSE_INV_X = 380;
-    public static final int CORPSE_INV_Y = 234;
-    public static final int CORPSE_HOTBAR_Y = 296;
+    public static final int CORPSE_LOOT_Y = 234;
+    public static final int CORPSE_LOOT_COLS = 9;
+    /** Rows shown at once; the rest (hotbar, then bag contents) scroll into view. */
+    public static final int CORPSE_LOOT_VISIBLE_ROWS = 5;
+    public static final int CORPSE_LOOT_SLOTS = CORPSE_LOOT_COLS * CORPSE_LOOT_VISIBLE_ROWS;
 
     /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
     private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
@@ -130,6 +134,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public final int containerRows;
     /** Non-empty only for corpses; drives the gear-style layout instead of a flat grid. */
     public final List<String> corpseCurioIds;
+    public CorpseLootHandler corpseLoot;
+    public ScrollingBackpackView corpseLootView;
+    private final DataSlot corpseBagSlots = DataSlot.standalone();
     public final ScrollingBackpackView backpackView;
 
     private final int inventoryStartIndex;
@@ -299,16 +306,37 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
 
-        // Corpse main inventory (27) then its hotbar (9).
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
-                        CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
-            }
+        // One scrollable loot list: inventory rows, then the hotbar row, then the worn
+        // bag's contents - matching how the reference layout scrolls.
+        this.corpseLoot = new CorpseLootHandler(corpse, corpseCurioIds, CORPSE_CURIO_START,
+                player.level().isClientSide);
+        this.corpseLoot.setSyncedBagSlots(corpseBagSlots::get);
+        addDataSlot(corpseBagSlots);
+
+        this.corpseLootView = new ScrollingBackpackView(corpseLoot, CORPSE_LOOT_COLS,
+                CORPSE_LOOT_VISIBLE_ROWS);
+
+        for (int i = 0; i < CORPSE_LOOT_SLOTS; i++) {
+            addSlot(new CorpseLootSlot(corpseLootView, i,
+                    CORPSE_INV_X + (i % CORPSE_LOOT_COLS) * 18,
+                    CORPSE_LOOT_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
-        for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
-                    CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
+    }
+
+    /** Loot slot that switches off past the end of the corpse's contents. */
+    private static class CorpseLootSlot extends SlotItemHandler {
+        private final ScrollingBackpackView view;
+        private final int visibleIndex;
+
+        CorpseLootSlot(ScrollingBackpackView view, int index, int x, int y) {
+            super(view, index, x, y);
+            this.view = view;
+            this.visibleIndex = index;
+        }
+
+        @Override
+        public boolean isActive() {
+            return view.isVisibleSlotUsable(visibleIndex);
         }
     }
 
@@ -323,6 +351,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 if (backpackHandler.isSlotUsable(i)) count = i + 1;
             }
             backpackSlotCount.set(count);
+
+            if (corpseLoot != null) {
+                corpseBagSlots.set(corpseLoot.serverBagSlots());
+            }
         }
         super.broadcastChanges();
     }

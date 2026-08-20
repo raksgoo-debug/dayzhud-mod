@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
 /**
@@ -16,16 +17,33 @@ import net.minecraftforge.items.IItemHandlerModifiable;
  */
 public class ScrollingBackpackView implements IItemHandlerModifiable {
 
-    private final BackCurioItemHandler backing;
+    private final IItemHandlerModifiable backing;
+    /** Optional per-slot usability test; falls back to a plain size check. */
+    private final SlotUsable usable;
+
+    public interface SlotUsable {
+        boolean test(int slot);
+    }
     private final int columns;
     private final int visibleRows;
 
     private int scrollRow = 0;
 
     public ScrollingBackpackView(BackCurioItemHandler backing, int columns, int visibleRows) {
+        this(backing, columns, visibleRows, backing::isSlotUsable);
+    }
+
+    /** Generic form, so the corpse loot list can reuse the same scrolling logic. */
+    public ScrollingBackpackView(IItemHandlerModifiable backing, int columns, int visibleRows) {
+        this(backing, columns, visibleRows, slot -> slot < backing.getSlots());
+    }
+
+    private ScrollingBackpackView(IItemHandlerModifiable backing, int columns, int visibleRows,
+                                  SlotUsable usable) {
         this.backing = backing;
         this.columns = columns;
         this.visibleRows = visibleRows;
+        this.usable = usable;
     }
 
     public int visibleSlots() {
@@ -59,7 +77,7 @@ public class ScrollingBackpackView implements IItemHandlerModifiable {
         int total = 0;
         // The backing handler reports its own true capacity (already corrected per mod).
         for (int i = 0; i < backing.getSlots(); i++) {
-            if (backing.isSlotUsable(i)) total = i + 1;
+            if (usable.test(i)) total = i + 1;
         }
         return total;
     }
@@ -71,7 +89,7 @@ public class ScrollingBackpackView implements IItemHandlerModifiable {
 
     public boolean isVisibleSlotUsable(int visibleIndex) {
         int real = mapIndex(visibleIndex);
-        return real < backing.getSlots() && backing.isSlotUsable(real);
+        return real < backing.getSlots() && usable.test(real);
     }
 
     @Override

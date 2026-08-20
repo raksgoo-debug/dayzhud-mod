@@ -16,17 +16,21 @@ import java.util.function.Supplier;
 public class BackpackScrollPacket {
 
     private final int scrollRow;
+    /** false = the player's own backpack grid, true = the corpse loot list. */
+    private final boolean corpse;
 
-    public BackpackScrollPacket(int scrollRow) {
+    public BackpackScrollPacket(int scrollRow, boolean corpse) {
         this.scrollRow = scrollRow;
+        this.corpse = corpse;
     }
 
     public static void encode(BackpackScrollPacket packet, FriendlyByteBuf buf) {
         buf.writeVarInt(packet.scrollRow);
+        buf.writeBoolean(packet.corpse);
     }
 
     public static BackpackScrollPacket decode(FriendlyByteBuf buf) {
-        return new BackpackScrollPacket(buf.readVarInt());
+        return new BackpackScrollPacket(buf.readVarInt(), buf.readBoolean());
     }
 
     public static void handle(BackpackScrollPacket packet, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -35,7 +39,11 @@ public class BackpackScrollPacket {
             ServerPlayer sender = ctx.getSender();
             if (sender == null) return;
             if (sender.containerMenu instanceof TarkovInventoryMenu menu) {
-                menu.setBackpackScroll(packet.scrollRow);
+                if (packet.corpse) {
+                    if (menu.corpseLootView != null) menu.corpseLootView.setScrollRow(packet.scrollRow);
+                } else {
+                    menu.setBackpackScroll(packet.scrollRow);
+                }
             }
         });
         ctx.setPacketHandled(true);

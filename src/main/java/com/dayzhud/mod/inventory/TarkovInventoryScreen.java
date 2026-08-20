@@ -138,6 +138,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             graphics.renderTooltip(font, Component.literal("Open 3x3 crafting"), mouseX, mouseY);
         }
         drawBackpackScrollbar(graphics);
+        drawCorpseScrollbar(graphics);
         drawStatBar(graphics);
 
         renderTooltip(graphics, mouseX, mouseY);
@@ -173,10 +174,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             drawHeader(graphics, name, leftPos + TarkovInventoryMenu.CORPSE_ARMOR_X, topPos + 8, rule);
             drawHeader(graphics, "GEAR", leftPos + TarkovInventoryMenu.CORPSE_GEAR_X,
                     topPos + TarkovInventoryMenu.CORPSE_GEAR_Y - 14, 30);
-            drawHeader(graphics, "INVENTORY", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
-                    topPos + TarkovInventoryMenu.CORPSE_INV_Y - 14, 54);
-            drawHeader(graphics, "HOTBAR", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
-                    topPos + TarkovInventoryMenu.CORPSE_HOTBAR_Y - 14, 40);
+            // One scrolling list: inventory, then hotbar, then the worn bag's contents.
+            drawHeader(graphics, "LOOT", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
+                    topPos + TarkovInventoryMenu.CORPSE_LOOT_Y - 14, 34);
         } else if (menu.hasContainer()) {
             // The menu title carries the opened block's own display name (e.g. "Chest",
             // "Barrel", or a renamed container), sent from the server when it opened.
@@ -318,8 +318,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x + 364, y + 16, x + 365, y + imageHeight - 16, PANEL_BORDER);
         graphics.fill(x + 372, y + 26, x + 536, y + 150, SECTION_BG);   // armor + paperdoll
         graphics.fill(x + 372, y + 164, x + 536, y + 214, SECTION_BG);  // gear
-        graphics.fill(x + 372, y + 228, x + 536, y + 292, SECTION_BG);  // inventory
-        graphics.fill(x + 372, y + 290, x + 536, y + 314, SECTION_BG);  // hotbar
+        graphics.fill(x + 372, y + 228, x + 536, y + 330, SECTION_BG);  // scrolling loot list
     }
 
     /** Arrow between the 2x2 grid and its result slot. */
@@ -374,6 +373,23 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    /** Scrollbar for the corpse loot list. */
+    private void drawCorpseScrollbar(GuiGraphics graphics) {
+        if (!menu.isCorpse() || menu.corpseLootView == null || !menu.corpseLootView.isScrollable()) return;
+        var view = menu.corpseLootView;
+
+        int trackX = leftPos + TarkovInventoryMenu.CORPSE_INV_X + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 2;
+        int trackTop = topPos + TarkovInventoryMenu.CORPSE_LOOT_Y;
+        int trackHeight = TarkovInventoryMenu.CORPSE_LOOT_VISIBLE_ROWS * 18;
+
+        graphics.fill(trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF1C1C1C);
+        int totalRows = Math.max(1, view.totalRows());
+        int thumbHeight = Math.max(8, trackHeight * TarkovInventoryMenu.CORPSE_LOOT_VISIBLE_ROWS / totalRows);
+        int maxScroll = Math.max(1, view.maxScrollRow());
+        int thumbY = trackTop + (trackHeight - thumbHeight) * view.getScrollRow() / maxScroll;
+        graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
+    }
+
     /** Thin scrollbar to the right of the backpack grid, only when the bag overflows. */
     private void drawBackpackScrollbar(GuiGraphics graphics) {
         var view = menu.backpackView;
@@ -394,8 +410,27 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
     }
 
+    private boolean isOverCorpseLoot(double mouseX, double mouseY) {
+        int x1 = leftPos + TarkovInventoryMenu.CORPSE_INV_X - 6;
+        int x2 = x1 + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 12;
+        int y1 = topPos + TarkovInventoryMenu.CORPSE_LOOT_Y - 6;
+        int y2 = y1 + TarkovInventoryMenu.CORPSE_LOOT_VISIBLE_ROWS * 18 + 12;
+        return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
+    }
+
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (menu.isCorpse() && menu.corpseLootView != null
+                && menu.corpseLootView.isScrollable() && isOverCorpseLoot(mouseX, mouseY)) {
+            var cv = menu.corpseLootView;
+            int target = cv.getScrollRow() - (int) Math.signum(delta);
+            target = Math.max(0, Math.min(target, cv.maxScrollRow()));
+            if (target != cv.getScrollRow()) {
+                cv.setScrollRow(target);
+                NetworkHandler.CHANNEL.sendToServer(new BackpackScrollPacket(target, true));
+            }
+            return true;
+        }
         var view = menu.backpackView;
         if (view.isScrollable() && isOverBackpackArea(mouseX, mouseY)) {
             int target = view.getScrollRow() - (int) Math.signum(delta);
@@ -405,7 +440,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 // offset decides which real inventory index each slot maps to - if the two
                 // sides disagreed, clicks would hit the wrong item.
                 menu.setBackpackScroll(target);
-                NetworkHandler.CHANNEL.sendToServer(new BackpackScrollPacket(target));
+                NetworkHandler.CHANNEL.sendToServer(new BackpackScrollPacket(target, false));
             }
             return true;
         }
