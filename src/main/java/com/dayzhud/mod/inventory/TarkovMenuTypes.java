@@ -2,6 +2,9 @@ package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
 import net.minecraft.world.SimpleContainer;
+
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -23,7 +26,20 @@ public class TarkovMenuTypes {
             MENU_TYPES.register("tarkov_inventory",
                     () -> IForgeMenuType.create((windowId, inv, buf) -> {
                         int containerSize = buf.readVarInt();
+                        // Corpse opens also send a curio count; plain inventory/chest opens
+                        // don't, so only read it when there's payload left.
+                        int curioCount = buf.isReadable() ? buf.readVarInt() : 0;
+                        if (containerSize <= 0) {
+                            return new TarkovInventoryMenu(windowId, inv, null);
+                        }
+                        List<String> curioIds = new ArrayList<>();
+                        for (int i = 0; i < curioCount; i++) {
+                            // Only the COUNT matters client-side - identifiers are used for
+                            // layout decisions the server already made. Placeholders keep the
+                            // slot count identical on both sides, which is what must match.
+                            curioIds.add("curio" + i);
+                        }
                         return new TarkovInventoryMenu(windowId, inv,
-                                containerSize > 0 ? new SimpleContainer(containerSize) : null);
+                                new SimpleContainer(containerSize), curioIds);
                     }));
 }

@@ -89,6 +89,26 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int CONTAINER_Y = 26;
     public static final int CONTAINER_COLS = 9;
 
+    // --- Corpse view (Ragdollified). Mirrors the player panel's shape on the right. ---
+    public static final int CORPSE_ARMOR_X = 380;
+    public static final int CORPSE_SIDE_X = 502;
+    public static final int CORPSE_EQUIP_START_Y = 44;
+    public static final int CORPSE_EQUIP_SPACING = 26;
+    public static final int CORPSE_GEAR_X = 380;
+    public static final int CORPSE_GEAR_Y = 170;
+    public static final int CORPSE_GEAR_COLS = 6;
+    public static final int CORPSE_GEAR_SPACING = 22;
+    public static final int CORPSE_INV_X = 380;
+    public static final int CORPSE_INV_Y = 234;
+    public static final int CORPSE_HOTBAR_Y = 296;
+
+    /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
+    private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
+    private static final int CORPSE_HOTBAR_START = 0; // 0..8 hotbar
+    private static final int CORPSE_ARMOR_FEET = 36;  // 36 feet .. 39 head
+    private static final int CORPSE_OFFHAND = 40;
+    private static final int CORPSE_CURIO_START = 41;
+
     private static final int INV_X = 186;
     private static final int INV_Y = 26;
     private static final int HOTBAR_Y = 100;
@@ -104,9 +124,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
     public final int offhandX, offhandY;
     public final BackCurioItemHandler backpackHandler;
-    /** The opened chest/crate, or null when this is just the player inventory screen. */
+    /** The opened chest/crate/corpse, or null when this is just the player inventory screen. */
     public final Container openedContainer;
     public final int containerRows;
+    /** Non-empty only for corpses; drives the gear-style layout instead of a flat grid. */
+    public final List<String> corpseCurioIds;
     public final ScrollingBackpackView backpackView;
 
     private final int inventoryStartIndex;
@@ -131,9 +153,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      *                  the client passes a SimpleContainer of the size sent in the open packet.
      */
     public TarkovInventoryMenu(int windowId, Inventory playerInventory, Container container) {
+        this(windowId, playerInventory, container, List.of());
+    }
+
+    /**
+     * @param curioIds when non-empty, {@code container} is treated as a Ragdollified corpse
+     *                 and laid out as armor/gear/inventory/hotbar instead of a plain grid.
+     */
+    public TarkovInventoryMenu(int windowId, Inventory playerInventory, Container container,
+                               List<String> curioIds) {
         super(TarkovMenuTypes.TARKOV_INVENTORY.get(), windowId);
         this.player = playerInventory.player;
         this.openedContainer = container;
+        this.corpseCurioIds = List.copyOf(curioIds);
         this.containerRows = container == null ? 0 : Math.max(1, container.getContainerSize() / CONTAINER_COLS);
         if (container != null) {
             container.startOpen(player);
@@ -212,16 +244,70 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // --- Opened container, laid out to the right of everything else ---
         this.containerStartIndex = slots.size();
         if (container != null) {
-            for (int i = 0; i < container.getContainerSize(); i++) {
-                addSlot(new Slot(container, i,
-                        CONTAINER_X + (i % CONTAINER_COLS) * 18,
-                        CONTAINER_Y + (i / CONTAINER_COLS) * 18));
+            if (isCorpse()) {
+                addCorpseSlots(container);
+            } else {
+                for (int i = 0; i < container.getContainerSize(); i++) {
+                    addSlot(new Slot(container, i,
+                            CONTAINER_X + (i % CONTAINER_COLS) * 18,
+                            CONTAINER_Y + (i / CONTAINER_COLS) * 18));
+                }
             }
+        }
+    }
+
+    /**
+     * Corpse layout: armor column + offhand/curio side column beside a paperdoll, a gear
+     * grid, then the corpse's own inventory and hotbar - mirroring the player's own panel
+     * so both sides of the screen read the same way.
+     */
+    private void addCorpseSlots(Container corpse) {
+        // Armor, head at the top (container stores feet-first, so count down).
+        for (int i = 0; i < 4; i++) {
+            addSlot(new Slot(corpse, CORPSE_ARMOR_FEET + 3 - i,
+                    CORPSE_ARMOR_X, CORPSE_EQUIP_START_Y + i * CORPSE_EQUIP_SPACING));
+        }
+        // Offhand at the top of the side column.
+        addSlot(new Slot(corpse, CORPSE_OFFHAND, CORPSE_SIDE_X, CORPSE_EQUIP_START_Y));
+
+        // Curios: first two beside the paperdoll, the rest in the gear grid.
+        int curioCount = corpseCurioIds.size();
+        int sideRow = 1;
+        int gearIndex = 0;
+        for (int i = 0; i < curioCount; i++) {
+            int slotIndex = CORPSE_CURIO_START + i;
+            if (slotIndex >= corpse.getContainerSize()) break;
+            if (sideRow < 3) {
+                addSlot(new Slot(corpse, slotIndex, CORPSE_SIDE_X,
+                        CORPSE_EQUIP_START_Y + sideRow * CORPSE_EQUIP_SPACING));
+                sideRow++;
+            } else {
+                addSlot(new Slot(corpse, slotIndex,
+                        CORPSE_GEAR_X + (gearIndex % CORPSE_GEAR_COLS) * CORPSE_GEAR_SPACING,
+                        CORPSE_GEAR_Y + (gearIndex / CORPSE_GEAR_COLS) * CORPSE_GEAR_SPACING));
+                gearIndex++;
+            }
+        }
+
+        // Corpse main inventory (27) then its hotbar (9).
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
+                        CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
+                    CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
         }
     }
 
     public boolean hasContainer() {
         return openedContainer != null;
+    }
+
+    public boolean isCorpse() {
+        return openedContainer != null && !corpseCurioIds.isEmpty();
     }
 
     /** Recompute the crafting result whenever the 2x2 grid changes. */

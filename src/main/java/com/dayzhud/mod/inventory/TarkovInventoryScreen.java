@@ -50,7 +50,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         super(menu, playerInventory, title);
         this.imageWidth = 360;
         this.imageHeight = 322;
-        if (menu.hasContainer()) {
+        if (menu.isCorpse()) {
+            this.imageWidth = TarkovInventoryMenu.CORPSE_INV_X + 9 * 18 + 12;
+        } else if (menu.hasContainer()) {
             // Grow rightwards to fit the container grid; the loadout side keeps its layout.
             this.imageWidth = TarkovInventoryMenu.CONTAINER_X
                     + TarkovInventoryMenu.CONTAINER_COLS * 18 + 12;
@@ -62,6 +64,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     /** Widest the window ever gets - used to anchor the layout so it never jumps. */
     private static final int FULL_LAYOUT_WIDTH =
             TarkovInventoryMenu.CONTAINER_X + TarkovInventoryMenu.CONTAINER_COLS * 18 + 12;
+    private static final int CORPSE_LAYOUT_WIDTH =
+            TarkovInventoryMenu.CORPSE_INV_X + 9 * 18 + 12;
 
     @Override
     protected void init() {
@@ -69,7 +73,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // Centre on the FULL layout width (inventory + container) even when no container is
         // open, so the loadout panel sits in exactly the same spot either way and the UI
         // doesn't jump sideways as you open and close chests.
-        this.leftPos = (this.width - FULL_LAYOUT_WIDTH) / 2;
+        int anchorWidth = menu.isCorpse() ? CORPSE_LAYOUT_WIDTH : FULL_LAYOUT_WIDTH;
+        this.leftPos = (this.width - anchorWidth) / 2;
     }
 
     @Override
@@ -90,7 +95,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
         graphics.fill(x + 8, y + 288, x + 352, y + 316, SECTION_BG);    // weapons + offhand + stats
 
-        if (menu.hasContainer()) {
+        if (menu.isCorpse()) {
+            drawCorpseZones(graphics, x, y);
+        } else if (menu.hasContainer()) {
             int cx = TarkovInventoryMenu.CONTAINER_X;
             int cy = TarkovInventoryMenu.CONTAINER_Y;
             int cw = TarkovInventoryMenu.CONTAINER_COLS * 18;
@@ -160,7 +167,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "GEAR", leftPos + 12, topPos + 156, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
-        if (menu.hasContainer()) {
+        if (menu.isCorpse()) {
+            String name = title.getString().toUpperCase(Locale.ROOT);
+            int rule = Math.max(40, Math.round(font.width(name) * 0.8f));
+            drawHeader(graphics, name, leftPos + TarkovInventoryMenu.CORPSE_ARMOR_X, topPos + 8, rule);
+            drawHeader(graphics, "GEAR", leftPos + TarkovInventoryMenu.CORPSE_GEAR_X,
+                    topPos + TarkovInventoryMenu.CORPSE_GEAR_Y - 14, 30);
+            drawHeader(graphics, "INVENTORY", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
+                    topPos + TarkovInventoryMenu.CORPSE_INV_Y - 14, 54);
+            drawHeader(graphics, "HOTBAR", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
+                    topPos + TarkovInventoryMenu.CORPSE_HOTBAR_Y - 14, 40);
+        } else if (menu.hasContainer()) {
             // The menu title carries the opened block's own display name (e.g. "Chest",
             // "Barrel", or a renamed container), sent from the server when it opened.
             String name = title.getString().toUpperCase(Locale.ROOT);
@@ -296,6 +313,15 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         return 0xE6E6E6;
     }
 
+    /** Recessed zones for the corpse side, matching the player panel's structure. */
+    private void drawCorpseZones(GuiGraphics graphics, int x, int y) {
+        graphics.fill(x + 364, y + 16, x + 365, y + imageHeight - 16, PANEL_BORDER);
+        graphics.fill(x + 372, y + 26, x + 536, y + 150, SECTION_BG);   // armor + paperdoll
+        graphics.fill(x + 372, y + 164, x + 536, y + 214, SECTION_BG);  // gear
+        graphics.fill(x + 372, y + 228, x + 536, y + 292, SECTION_BG);  // inventory
+        graphics.fill(x + 372, y + 290, x + 536, y + 314, SECTION_BG);  // hotbar
+    }
+
     /** Arrow between the 2x2 grid and its result slot. */
     private void drawCraftingArrow(GuiGraphics graphics) {
         int ax = leftPos + 68;
@@ -325,9 +351,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.renderOutline(bx, by, CRAFT_BTN_W, CRAFT_BTN_H,
                 hovered ? StyledTheme.ACCENT : SLOT_BORDER);
 
-        // 3x3 grid glyph: nine 2x2 cells with 1px gutters, centred in the button.
+        // 3x3 grid glyph, centred. Visible extent is 3 cells of 2px plus 2 gutters of 1px
+        // = 8px (the trailing gutter isn't drawn), so the origin is (16-8)/2 = 4, not 3.
         int cell = 3;
-        int gridOrigin = 3;
+        int gridOrigin = 4;
         int glyphColor = hovered ? 0xFFFFFFFF : HEADER_COLOR;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
