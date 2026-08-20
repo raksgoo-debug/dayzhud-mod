@@ -4,14 +4,18 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.items.SlotItemHandler;
@@ -185,11 +189,42 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** Recompute the crafting result whenever the 2x2 grid changes. */
     @Override
     public void slotsChanged(Container container) {
-        if (player.level() != null && container == craftSlots) {
-            CraftingMenu.slotChangedCraftingGrid(this, player.level(), player, craftSlots, resultSlots);
+        if (container == craftSlots) {
+            updateCraftingResult();
         } else {
             super.slotsChanged(container);
         }
+    }
+
+    /**
+     * Resolves the current 2x2 recipe and pushes the result to the client.
+     *
+     * This duplicates what CraftingMenu.slotChangedCraftingGrid does, because that method
+     * is protected and so can't be called from a menu outside its package. Runs
+     * server-side only; the explicit slot packet is what makes the result appear on the
+     * client, since the result slot isn't backed by normal container sync.
+     */
+    private void updateCraftingResult() {
+        Level level = player.level();
+        if (level.isClientSide || !(player instanceof ServerPlayer serverPlayer)) return;
+
+        ItemStack result = ItemStack.EMPTY;
+        var recipeOpt = level.getServer().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, craftSlots, level);
+        if (recipeOpt.isPresent()) {
+            CraftingRecipe recipe = recipeOpt.get();
+            if (resultSlots.setRecipeUsed(level, serverPlayer, recipe)) {
+                ItemStack assembled = recipe.assemble(craftSlots, level.registryAccess());
+                if (assembled.isItemEnabled(level.enabledFeatures())) {
+                    result = assembled;
+                }
+            }
+        }
+
+        resultSlots.setItem(0, result);
+        setRemoteSlot(craftStartIndex, result);
+        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
+                containerId, incrementStateId(), craftStartIndex, result));
     }
 
     /** Don't let items vanish if the screen closes with something still on the grid. */
