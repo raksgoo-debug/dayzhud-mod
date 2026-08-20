@@ -49,7 +49,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 360;
-        this.imageHeight = 288;
+        this.imageHeight = 322;
         this.inventoryLabelY = -1000;
         this.titleLabelY = -1000;
     }
@@ -64,15 +64,16 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // Recessed zone backings so the panel reads as distinct regions.
         graphics.fill(x + 8, y + 26, x + 172, y + 150, SECTION_BG);     // paperdoll + armor
         graphics.fill(x + 8, y + 164, x + 172, y + 214, SECTION_BG);    // gear grid
+        graphics.fill(x + 8, y + 228, x + 172, y + 274, SECTION_BG);    // crafting
         graphics.fill(x + 180, y + 20, x + 352, y + 84, SECTION_BG);    // inventory
         graphics.fill(x + 180, y + 94, x + 352, y + 122, SECTION_BG);   // hotbar
         if (menu.getActiveBackpackSlots() > 0) {
-            graphics.fill(x + 180, y + 132, x + 352, y + 232, SECTION_BG); // backpack
+            graphics.fill(x + 180, y + 132, x + 352, y + 214, SECTION_BG); // backpack
         }
-        graphics.fill(x + 8, y + 246, x + 352, y + 282, SECTION_BG);    // weapons + offhand + stats
+        graphics.fill(x + 8, y + 288, x + 352, y + 316, SECTION_BG);    // weapons + offhand + stats
 
-        graphics.fill(x + 176, y + 16, x + 177, y + 230, PANEL_BORDER); // vertical divider
-        graphics.fill(x + 8, y + 234, x + 352, y + 235, PANEL_BORDER);  // horizontal divider
+        graphics.fill(x + 176, y + 16, x + 177, y + 274, PANEL_BORDER); // vertical divider
+        graphics.fill(x + 8, y + 280, x + 352, y + 281, PANEL_BORDER);  // horizontal divider
 
         for (var slot : menu.slots) {
             if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
@@ -80,7 +81,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
 
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 254);
+            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 296);
         }
     }
 
@@ -97,6 +98,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
         drawWeaponMirrors(graphics, mouseX, mouseY);
+        drawCraftingArrow(graphics);
+        drawCraftTableButton(graphics, mouseX, mouseY);
         drawBackpackScrollbar(graphics);
         drawStatBar(graphics);
 
@@ -127,7 +130,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "GEAR", leftPos + 12, topPos + 156, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
-        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 240, 46);
+        drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 220, 48);
+        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 282, 46);
         if (menu.getActiveBackpackSlots() > 0) {
             drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 124, 50);
         }
@@ -170,7 +174,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 254;
+        int mirrorY = topPos + 296;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
@@ -197,7 +201,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
 
-        int mirrorY = topPos + 254;
+        int mirrorY = topPos + 296;
         for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
             int mx = leftPos + 16 + i * 30;
             if (mouseX >= mx && mouseX < mx + 16 && mouseY >= mirrorY && mouseY < mirrorY + 16) {
@@ -222,7 +226,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        int y = topPos + 256;
+        int y = topPos + 298;
         int x = leftPos + 192;
         int spacing = 56;
 
@@ -252,6 +256,51 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (value01 <= 0.25f) return 0xE23A2E;
         if (value01 <= 0.5f) return 0xE2A62E;
         return 0xE6E6E6;
+    }
+
+    /** Arrow between the 2x2 grid and its result slot. */
+    private void drawCraftingArrow(GuiGraphics graphics) {
+        int ax = leftPos + 68;
+        int ay = topPos + TarkovInventoryMenu.CRAFT_RESULT_Y + 4;
+        graphics.fill(ax, ay, ax + 16, ay + 2, HEADER_ACCENT);
+        graphics.fill(ax + 12, ay - 3, ax + 14, ay + 5, HEADER_ACCENT);
+        graphics.fill(ax + 14, ay - 1, ax + 16, ay + 3, HEADER_ACCENT);
+    }
+
+    // --- Crafting-table button, sits beside the INVENTORY header ---
+    private static final int CRAFT_BTN_W = 44;
+    private static final int CRAFT_BTN_H = 12;
+
+    private int craftBtnX() { return leftPos + 300; }
+    private int craftBtnY() { return topPos + 6; }
+
+    private boolean isOverCraftButton(double mouseX, double mouseY) {
+        return mouseX >= craftBtnX() && mouseX <= craftBtnX() + CRAFT_BTN_W
+                && mouseY >= craftBtnY() && mouseY <= craftBtnY() + CRAFT_BTN_H;
+    }
+
+    private void drawCraftTableButton(GuiGraphics graphics, int mouseX, int mouseY) {
+        boolean hovered = isOverCraftButton(mouseX, mouseY);
+        int bx = craftBtnX(), by = craftBtnY();
+        graphics.fill(bx, by, bx + CRAFT_BTN_W, by + CRAFT_BTN_H,
+                hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
+        graphics.renderOutline(bx, by, CRAFT_BTN_W, CRAFT_BTN_H,
+                hovered ? StyledTheme.ACCENT : SLOT_BORDER);
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(bx + 6, by + 3, 0);
+        graphics.pose().scale(0.7f, 0.7f, 1f);
+        graphics.drawString(font, "CRAFT 3x3", 0, 0, hovered ? 0xFFFFFFFF : HEADER_COLOR, false);
+        graphics.pose().popPose();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && isOverCraftButton(mouseX, mouseY)) {
+            NetworkHandler.CHANNEL.sendToServer(new OpenCraftingPacket());
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     /** Thin scrollbar to the right of the backpack grid, only when the bag overflows. */

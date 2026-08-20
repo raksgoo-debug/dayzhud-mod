@@ -56,6 +56,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     private static boolean warbornResolved = false;
     private static Method warbornGetTier;
     private static Method warbornGetSlotsForTier;
+    private static Method warbornGetVisibleRowsForTier;
     private static Class<?> warbornBackpackItemClass;
 
     private final Player player;
@@ -123,7 +124,13 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
         if (bag.isEmpty()) return 0;
 
         Integer tiered = warbornTierCapacity(bag);
-        if (tiered != null) return Math.min(reported, Math.max(0, tiered));
+        // Only trust the tier lookup when it returns something positive. A base-tier bag
+        // can report tier 0, and if getSlotsForTier(0) yields 0 we'd blank the whole bag -
+        // which is exactly how Fracture Point backpacks ended up showing nothing. Falling
+        // back to the handler's own size is always safe: it's the real allocation.
+        if (tiered != null && tiered > 0) {
+            return Math.min(reported, tiered);
+        }
         return reported;
     }
 
@@ -135,10 +142,17 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
                 warbornBackpackItemClass = Class.forName(WARBORN_ITEM_CLASS);
                 warbornGetTier = warbornBackpackItemClass.getMethod("getTier", ItemStack.class);
                 warbornGetSlotsForTier = warbornBackpackItemClass.getMethod("getSlotsForTier", int.class);
+                try {
+                    warbornGetVisibleRowsForTier =
+                            warbornBackpackItemClass.getMethod("getVisibleRowsForTier", int.class);
+                } catch (NoSuchMethodException ignored) {
+                    warbornGetVisibleRowsForTier = null;
+                }
             } catch (Exception ignored) {
                 warbornBackpackItemClass = null;
                 warbornGetTier = null;
                 warbornGetSlotsForTier = null;
+                warbornGetVisibleRowsForTier = null;
             }
         }
         if (warbornBackpackItemClass == null || warbornGetTier == null || warbornGetSlotsForTier == null) {
@@ -148,7 +162,15 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
         try {
             int tier = (int) warbornGetTier.invoke(null, bag);
-            return (int) warbornGetSlotsForTier.invoke(null, tier);
+            int slots = (int) warbornGetSlotsForTier.invoke(null, tier);
+            if (slots > 0) return slots;
+
+            // Some tiers express capacity as visible rows instead; 9 columns per row.
+            if (warbornGetVisibleRowsForTier != null) {
+                int rows = (int) warbornGetVisibleRowsForTier.invoke(null, tier);
+                if (rows > 0) return rows * 9;
+            }
+            return null; // let the caller fall back to the handler's own size
         } catch (Exception e) {
             DayzHudMod.LOGGER.debug("[dayzhud] Warborn backpack tier lookup failed.", e);
             return null;

@@ -30,5 +30,11 @@ public class NetworkHandler {
                 BackpackScrollPacket::encode,
                 BackpackScrollPacket::decode,
                 BackpackScrollPacket::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                OpenCraftingPacket.class,
+                OpenCraftingPacket::encode,
+                OpenCraftingPacket::decode,
+                OpenCraftingPacket::handle);
     }
 }
