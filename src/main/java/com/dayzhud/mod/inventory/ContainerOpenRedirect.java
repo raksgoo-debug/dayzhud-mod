@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -53,9 +54,7 @@ public class ContainerOpenRedirect {
         Container backing = findBackingContainer(menu, serverPlayer);
         if (backing == null || backing.getContainerSize() == 0) return;
 
-        Component title = menu instanceof ChestMenu
-                ? Component.literal("Container")
-                : Component.literal("Container");
+        Component title = containerName(backing);
 
         REDIRECTING.add(serverPlayer);
         try {
@@ -76,6 +75,21 @@ public class ContainerOpenRedirect {
         } finally {
             REDIRECTING.remove(serverPlayer);
         }
+    }
+
+    /**
+     * The opened block's own display name, so the header reads "Chest" / "Barrel" / whatever
+     * the player renamed it to, rather than a generic label.
+     *
+     * Most container block entities implement Nameable and already handle custom anvil names.
+     * Double chests use CompoundContainer, which doesn't, hence the fallback.
+     */
+    private static Component containerName(Container backing) {
+        if (backing instanceof Nameable nameable) {
+            Component name = nameable.getDisplayName();
+            if (name != null) return name;
+        }
+        return Component.literal("Container");
     }
 
     private static boolean isSimpleStorage(AbstractContainerMenu menu) {

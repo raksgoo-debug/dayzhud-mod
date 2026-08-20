@@ -59,6 +59,19 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         this.titleLabelY = -1000;
     }
 
+    /** Widest the window ever gets - used to anchor the layout so it never jumps. */
+    private static final int FULL_LAYOUT_WIDTH =
+            TarkovInventoryMenu.CONTAINER_X + TarkovInventoryMenu.CONTAINER_COLS * 18 + 12;
+
+    @Override
+    protected void init() {
+        super.init();
+        // Centre on the FULL layout width (inventory + container) even when no container is
+        // open, so the loadout panel sits in exactly the same spot either way and the UI
+        // doesn't jump sideways as you open and close chests.
+        this.leftPos = (this.width - FULL_LAYOUT_WIDTH) / 2;
+    }
+
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = leftPos, y = topPos;
@@ -114,6 +127,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawWeaponMirrors(graphics, mouseX, mouseY);
         drawCraftingArrow(graphics);
         drawCraftTableButton(graphics, mouseX, mouseY);
+        if (isOverCraftButton(mouseX, mouseY)) {
+            graphics.renderTooltip(font, Component.literal("Open 3x3 crafting"), mouseX, mouseY);
+        }
         drawBackpackScrollbar(graphics);
         drawStatBar(graphics);
 
@@ -145,8 +161,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
         if (menu.hasContainer()) {
-            drawHeader(graphics, "CONTAINER", leftPos + TarkovInventoryMenu.CONTAINER_X,
-                    topPos + TarkovInventoryMenu.CONTAINER_Y - 18, 54);
+            // The menu title carries the opened block's own display name (e.g. "Chest",
+            // "Barrel", or a renamed container), sent from the server when it opened.
+            String name = title.getString().toUpperCase(Locale.ROOT);
+            int rule = Math.max(40, Math.round(font.width(name) * 0.8f));
+            drawHeader(graphics, name, leftPos + TarkovInventoryMenu.CONTAINER_X,
+                    topPos + TarkovInventoryMenu.CONTAINER_Y - 18, rule);
         }
         drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 220, 48);
         drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 282, 46);
@@ -286,11 +306,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     // --- Crafting-table button, sits beside the INVENTORY header ---
-    private static final int CRAFT_BTN_W = 44;
-    private static final int CRAFT_BTN_H = 12;
+    private static final int CRAFT_BTN_W = 16;
+    private static final int CRAFT_BTN_H = 16;
 
-    private int craftBtnX() { return leftPos + 300; }
-    private int craftBtnY() { return topPos + 6; }
+    private int craftBtnX() { return leftPos + 330; }
+    private int craftBtnY() { return topPos + 4; }
 
     private boolean isOverCraftButton(double mouseX, double mouseY) {
         return mouseX >= craftBtnX() && mouseX <= craftBtnX() + CRAFT_BTN_W
@@ -305,11 +325,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.renderOutline(bx, by, CRAFT_BTN_W, CRAFT_BTN_H,
                 hovered ? StyledTheme.ACCENT : SLOT_BORDER);
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(bx + 6, by + 3, 0);
-        graphics.pose().scale(0.7f, 0.7f, 1f);
-        graphics.drawString(font, "CRAFT 3x3", 0, 0, hovered ? 0xFFFFFFFF : HEADER_COLOR, false);
-        graphics.pose().popPose();
+        // 3x3 grid glyph: nine 2x2 cells with 1px gutters, centred in the button.
+        int cell = 3;
+        int gridOrigin = 3;
+        int glyphColor = hovered ? 0xFFFFFFFF : HEADER_COLOR;
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                int gx = bx + gridOrigin + col * cell;
+                int gy = by + gridOrigin + row * cell;
+                graphics.fill(gx, gy, gx + 2, gy + 2, glyphColor);
+            }
+        }
     }
 
     @Override
