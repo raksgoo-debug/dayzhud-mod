@@ -1,76 +1,73 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
-import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AbstractFurnaceMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.DispenserMenu;
 import net.minecraft.world.inventory.HopperMenu;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 /**
- * Re-registers vanilla menu types against this mod's styled screens, so the whole game's
- * common container UIs match the inventory.
+ * Swaps vanilla container screens for this mod's styled equivalents, so the game's common
+ * UIs match the inventory.
  *
- * Registering a MenuType a second time simply replaces the existing screen factory, which
- * is how a mod can restyle vanilla screens without mixins.
+ * IMPLEMENTATION NOTE: this intentionally does NOT use MenuScreens.register. That method
+ * throws "Duplicate registration" if a MenuType already has a screen - it can only add
+ * mappings, never replace vanilla ones. Instead we let vanilla build its screen, then
+ * substitute ours at open time, reusing the SAME menu instance. That's important: the menu
+ * is already synced with the server, so no extra networking is involved and slot indices
+ * stay valid.
  *
  * DELIBERATELY NOT COVERED:
- *  - Creative inventory, recipe book, pause/options/title screens: these are custom widget
- *    layouts rather than slot grids, so a generic restyle can't handle them.
- *  - Anvil, enchanting table, beacon, loom, stonecutter, cartography, smithing: each has
- *    bespoke widgets (text fields, buttons, recipe lists). They keep the vanilla look for
- *    now - restyling them properly means one custom screen per type.
- *  - Other mods' screens (JEI, backpack GUIs, etc): those belong to their own mods and
- *    can't be safely overridden from here.
+ *  - Creative inventory, recipe book, pause/options/title screens: custom widget layouts
+ *    rather than slot grids, so a generic restyle can't handle them.
+ *  - Anvil, enchanting, beacon, loom, stonecutter, cartography, smithing: bespoke widgets
+ *    (text fields, buttons, recipe lists) that need one custom screen each.
+ *  - Other mods' screens: those belong to their own mods and can't be safely swapped here.
  */
-@Mod.EventBusSubscriber(modid = DayzHudMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = DayzHudMod.MOD_ID, value = Dist.CLIENT)
 public class StyledScreens {
 
     @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            // NOTE: the explicit <Menu, Screen> type witnesses are required. Because
-            // StyledContainerScreen is generic, javac can't infer the two type variables
-            // from a bare constructor reference and the call fails to compile.
+    public static void onScreenOpening(ScreenEvent.Opening event) {
+        Screen incoming = event.getNewScreen();
+        if (!(incoming instanceof AbstractContainerScreen<?> containerScreen)) return;
 
-            // Chests, barrels, ender chests and anything using the generic sizes.
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x1, StyledContainerScreen::new);
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x2, StyledContainerScreen::new);
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x3, StyledContainerScreen::new);
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x4, StyledContainerScreen::new);
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x5, StyledContainerScreen::new);
-            MenuScreens.<ChestMenu, StyledContainerScreen<ChestMenu>>register(
-                    MenuType.GENERIC_9x6, StyledContainerScreen::new);
-            MenuScreens.<DispenserMenu, StyledContainerScreen<DispenserMenu>>register(
-                    MenuType.GENERIC_3x3, StyledContainerScreen::new); // dispenser/dropper
-            MenuScreens.<HopperMenu, StyledContainerScreen<HopperMenu>>register(
-                    MenuType.HOPPER, StyledContainerScreen::new);
-            MenuScreens.<ShulkerBoxMenu, StyledContainerScreen<ShulkerBoxMenu>>register(
-                    MenuType.SHULKER_BOX, StyledContainerScreen::new);
-            MenuScreens.<CraftingMenu, StyledContainerScreen<CraftingMenu>>register(
-                    MenuType.CRAFTING, StyledContainerScreen::new);
+        // Don't re-wrap our own screens (that would recurse) or the player inventory,
+        // which TarkovInventoryClientEvents already handles.
+        if (incoming instanceof StyledContainerScreen<?> || incoming instanceof TarkovInventoryScreen) return;
 
-            // Furnace family needs the progress/burn indicators.
-            MenuScreens.<AbstractFurnaceMenu, StyledFurnaceScreen>register(
-                    MenuType.FURNACE, StyledFurnaceScreen::new);
-            MenuScreens.<AbstractFurnaceMenu, StyledFurnaceScreen>register(
-                    MenuType.BLAST_FURNACE, StyledFurnaceScreen::new);
-            MenuScreens.<AbstractFurnaceMenu, StyledFurnaceScreen>register(
-                    MenuType.SMOKER, StyledFurnaceScreen::new);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
 
-            DayzHudMod.LOGGER.info("[dayzhud] Restyled vanilla container screens registered.");
-        });
+        AbstractContainerMenu menu = containerScreen.getMenu();
+        Inventory inventory = mc.player.getInventory();
+        Component title = incoming.getTitle();
+
+        if (menu instanceof AbstractFurnaceMenu furnaceMenu) {
+            event.setNewScreen(new StyledFurnaceScreen(furnaceMenu, inventory, title));
+        } else if (isSimpleSlotGrid(menu)) {
+            event.setNewScreen(new StyledContainerScreen<>(menu, inventory, title));
+        }
+    }
+
+    /** Containers whose UI is purely a grid of slots, so the generic restyle is safe. */
+    private static boolean isSimpleSlotGrid(AbstractContainerMenu menu) {
+        return menu instanceof ChestMenu          // chests, barrels, ender chests
+                || menu instanceof ShulkerBoxMenu
+                || menu instanceof DispenserMenu  // dispenser + dropper
+                || menu instanceof HopperMenu
+                || menu instanceof CraftingMenu;
     }
 }
