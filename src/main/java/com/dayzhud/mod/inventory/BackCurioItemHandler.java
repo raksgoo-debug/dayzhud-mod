@@ -7,6 +7,9 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.items.ItemStackHandler;
+
+import java.util.function.IntSupplier;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
@@ -37,6 +40,16 @@ import java.util.Optional;
  *
  * All accessors are bounds-checked and fail soft, because the backing size legitimately
  * changes underneath callers mid-session.
+ *
+ * CLIENT/SERVER SPLIT - the important part. Forge does NOT sync ItemStack capability data
+ * to the client unless the item overrides getShareTag/readShareTag, and several backpack
+ * mods (Fracture Point/Warborn among them) don't. Resolving the bag on the client
+ * therefore finds an empty handler and the whole section silently disappears.
+ *
+ * So the SERVER resolves the real bag, and the CLIENT uses a plain mirror buffer that the
+ * menu's normal slot sync fills in - exactly how vanilla container screens work. The
+ * client also takes its slot count from a synced DataSlot rather than trying to work it
+ * out itself.
  */
 public class BackCurioItemHandler implements IItemHandlerModifiable {
 
@@ -59,8 +72,24 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     private static Method warbornGetVisibleRowsForTier;
     private static Class<?> warbornBackpackItemClass;
 
+    /** Upper bound on displayable slots; must match the menu's allocation. */
+    private static final int MIRROR_SIZE = 64;
+
     private final Player player;
     private final IItemHandlerModifiable saHandler; // null unless SA Survival is installed
+
+    /** Client-side stand-in, populated by the menu's slot sync. */
+    private final ItemStackHandler clientMirror = new ItemStackHandler(MIRROR_SIZE);
+    /** Slot count as told by the server, used client-side. */
+    private IntSupplier syncedSlotCount = () -> 0;
+
+    public void setSyncedSlotCount(IntSupplier supplier) {
+        this.syncedSlotCount = supplier;
+    }
+
+    private boolean isClient() {
+        return player.level().isClientSide;
+    }
 
     public BackCurioItemHandler(Player player) {
         this.player = player;
@@ -109,6 +138,12 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     private IItemHandler capabilityDelegate() {
         ItemStack bag = getBagStack();
         if (bag.isEmpty()) return null;
+
+        // Last-resort path for SA Survival bags if their Player-based handler didn't
+        // resolve (e.g. an unusual equip state) - uses SA's own inventory class.
+        IItemHandler sa = SaSurvivalBackpackAccess.open(bag);
+        if (sa != null) return sa;
+
         return bag.getCapability(ForgeCapabilities.ITEM_HANDLER).resolve().orElse(null);
     }
 
@@ -191,6 +226,9 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     /** True if this index should be shown as a usable slot right now. */
     public boolean isSlotUsable(int slot) {
+        if (isClient()) {
+            return slot >= 0 && slot < syncedSlotCount.getAsInt();
+        }
         if (saActive()) {
             if (slot >= saHandler.getSlots()) return false;
             if (saIsSlotEnabled != null) {
@@ -205,18 +243,24 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
         return slot < usableCapabilitySlots(capabilityDelegate());
     }
 
+    private boolean inMirror(int slot) {
+        return slot >= 0 && slot < MIRROR_SIZE;
+    }
+
     private boolean valid(IItemHandler h, int slot) {
         return h != null && slot >= 0 && slot < h.getSlots();
     }
 
     @Override
     public int getSlots() {
+        if (isClient()) return Math.min(MIRROR_SIZE, syncedSlotCount.getAsInt());
         if (saActive()) return saHandler.getSlots();
         return usableCapabilitySlots(capabilityDelegate());
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
+        if (isClient()) return inMirror(slot) ? clientMirror.getStackInSlot(slot) : ItemStack.EMPTY;
         if (saActive()) {
             return valid(saHandler, slot) ? saHandler.getStackInSlot(slot) : ItemStack.EMPTY;
         }
@@ -226,6 +270,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+        if (isClient()) return inMirror(slot) ? clientMirror.insertItem(slot, stack, simulate) : stack;
         if (!isSlotUsable(slot)) return stack;
         if (saActive()) {
             return valid(saHandler, slot) ? saHandler.insertItem(slot, stack, simulate) : stack;
@@ -236,6 +281,7 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
+        if (isClient()) return inMirror(slot) ? clientMirror.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
         if (saActive()) {
             return valid(saHandler, slot) ? saHandler.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
         }
@@ -265,6 +311,10 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
 
     @Override
     public void setStackInSlot(int slot, ItemStack stack) {
+        if (isClient()) {
+            if (inMirror(slot)) clientMirror.setStackInSlot(slot, stack);
+            return;
+        }
         if (saActive()) {
             if (valid(saHandler, slot)) saHandler.setStackInSlot(slot, stack);
             return;

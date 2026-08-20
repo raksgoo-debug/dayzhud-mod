@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
@@ -136,6 +137,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private final int craftStartIndex;
     private final int containerStartIndex;
 
+    /**
+     * Backpack slot count, computed server-side and synced. The client can't work this out
+     * itself because some mods' bag capabilities never reach the client (see
+     * BackCurioItemHandler's class notes).
+     */
+    private final DataSlot backpackSlotCount = DataSlot.standalone();
+
     private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
     private final ResultContainer resultSlots = new ResultContainer();
 
@@ -172,6 +180,8 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         }
         this.backpackHandler = new BackCurioItemHandler(player);
         this.backpackView = new ScrollingBackpackView(backpackHandler, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS);
+        this.backpackHandler.setSyncedSlotCount(backpackSlotCount::get);
+        addDataSlot(backpackSlotCount);
 
         // --- Vanilla armor: evenly spaced left column ---
         for (int i = 0; i < ARMOR_SLOTS.length; i++) {
@@ -300,6 +310,21 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
                     CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
         }
+    }
+
+    @Override
+    public void broadcastChanges() {
+        // Refresh the synced count before the data slots go out, so the client's view of
+        // how many backpack slots exist is always up to date - including the moment a bag
+        // is equipped or removed.
+        if (!player.level().isClientSide) {
+            int count = 0;
+            for (int i = 0; i < BACKPACK_MAX_SLOTS; i++) {
+                if (backpackHandler.isSlotUsable(i)) count = i + 1;
+            }
+            backpackSlotCount.set(count);
+        }
+        super.broadcastChanges();
     }
 
     public boolean hasContainer() {
