@@ -104,10 +104,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
     public static final int CORPSE_INV_Y = 198;
     public static final int CORPSE_LOOT_COLS = 9;
-    /** Corpse's worn backpack, in its own section below - scrolls if the bag is large. */
-    public static final int CORPSE_BAG_Y = 292;
-    public static final int CORPSE_BAG_VISIBLE_ROWS = 3;
-    public static final int CORPSE_BAG_SLOTS = CORPSE_LOOT_COLS * CORPSE_BAG_VISIBLE_ROWS;
+    /**
+     * Rows in the tabbed loot region. Four covers the corpse's whole 36-slot inventory
+     * with no scrolling; bigger backpacks scroll within those same four rows.
+     */
+    public static final int CORPSE_TAB_VISIBLE_ROWS = 4;
+    public static final int CORPSE_TAB_SLOTS = CORPSE_LOOT_COLS * CORPSE_TAB_VISIBLE_ROWS;
 
     /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
     private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
@@ -310,31 +312,22 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
 
-        // Corpse's own inventory: main rows then its hotbar row, as one fixed block.
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
-                        CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
-                    CORPSE_INV_X + col * 18, CORPSE_INV_Y + 3 * 18));
-        }
-
-        // Corpse's worn backpack, separate scrollable section.
+        // ONE tabbed region shows either the corpse's own inventory or its backpack.
+        // Both share these slots - the tab only changes which range of the loot handler
+        // they map onto - so there is deliberately no separate fixed inventory block.
         this.corpseLoot = new CorpseLootHandler(corpse, corpseCurioIds, CORPSE_CURIO_START,
                 player.level().isClientSide);
         this.corpseLoot.setSyncedBagSlots(corpseBagSlots::get);
         addDataSlot(corpseBagSlots);
 
         this.corpseLootView = new ScrollingBackpackView(corpseLoot, CORPSE_LOOT_COLS,
-                CORPSE_BAG_VISIBLE_ROWS);
+                CORPSE_TAB_VISIBLE_ROWS);
+        applyCorpseTab();
 
-        for (int i = 0; i < CORPSE_BAG_SLOTS; i++) {
+        for (int i = 0; i < CORPSE_TAB_SLOTS; i++) {
             addSlot(new CorpseLootSlot(corpseLootView, i,
                     CORPSE_INV_X + (i % CORPSE_LOOT_COLS) * 18,
-                    CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
+                    CORPSE_INV_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
     }
 

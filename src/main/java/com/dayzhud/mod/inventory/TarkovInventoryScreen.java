@@ -38,6 +38,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int[] WEAPON_MIRROR_HOTBAR_INDEX = {0, 1, 2, 3};
     private static final String[] WEAPON_MIRROR_LABEL = {"PRIMARY", "SECONDARY", "HOLSTER", "SHEATH"};
 
+    private static final ResourceLocation CORPSE_FIGURE = rl("corpse_figure");
     private static final ResourceLocation ICON_HEART = rl("icon_heart_solid");
     private static final ResourceLocation ICON_FOOD = rl("icon_food_solid");
     private static final ResourceLocation ICON_WATER = rl("icon_droplet_solid");
@@ -98,6 +99,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
         if (menu.isCorpse()) {
             drawCorpseZones(graphics, x, y);
+            drawCorpseFigure(graphics);
+            drawCorpseTabs(graphics);
         } else if (menu.hasContainer()) {
             int cx = TarkovInventoryMenu.CONTAINER_X;
             int cy = TarkovInventoryMenu.CONTAINER_Y;
@@ -177,10 +180,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                     topPos + TarkovInventoryMenu.CORPSE_GEAR_Y - 14, 30);
             drawHeader(graphics, "INVENTORY", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
                     topPos + TarkovInventoryMenu.CORPSE_INV_Y - 14, 54);
-            if (menu.corpseLootView != null && menu.corpseLootView.totalRows() > 0) {
-                drawHeader(graphics, "BACKPACK", leftPos + TarkovInventoryMenu.CORPSE_INV_X,
-                        topPos + TarkovInventoryMenu.CORPSE_BAG_Y - 14, 50);
-            }
+
         } else if (menu.hasContainer()) {
             // The menu title carries the opened block's own display name (e.g. "Chest",
             // "Barrel", or a renamed container), sent from the server when it opened.
@@ -317,6 +317,26 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         return 0xE6E6E6;
     }
 
+    /**
+     * Stand-in figure for the corpse.
+     *
+     * A live paperdoll isn't possible here: rendering one needs the actual corpse entity,
+     * and this screen only receives its inventory container - the entity itself isn't
+     * available client-side inside the menu. So we draw the outline figure instead, which
+     * also keeps the panel readable regardless of what the corpse was wearing.
+     */
+    private void drawCorpseFigure(GuiGraphics graphics) {
+        int size = 96;
+        int cx = leftPos + (TarkovInventoryMenu.CORPSE_ARMOR_X + TarkovInventoryMenu.CORPSE_SIDE_X) / 2
+                + 8 - size / 2;
+        int cy = topPos + 34;
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 0.85f);
+        graphics.blit(CORPSE_FIGURE, cx, cy, 0, 0, size, size, size, size);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
+    }
+
     /** Recessed zones for the corpse side, matching the player panel's structure. */
     private void drawCorpseZones(GuiGraphics graphics, int x, int y) {
         graphics.fill(x + 364, y + 16, x + 365, y + imageHeight - 16, PANEL_BORDER);
@@ -433,12 +453,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         var view = menu.corpseLootView;
 
         int trackX = leftPos + TarkovInventoryMenu.CORPSE_INV_X + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 2;
-        int trackTop = topPos + TarkovInventoryMenu.CORPSE_BAG_Y;
-        int trackHeight = TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18;
+        // Track spans the whole corpse column - level with the figure at the top down to
+        // the bottom of the loot region - as in the reference, even though it only drives
+        // the loot list's scroll.
+        int trackTop = topPos + TarkovInventoryMenu.CORPSE_EQUIP_START_Y;
+        int trackBottom = topPos + TarkovInventoryMenu.CORPSE_INV_Y
+                + TarkovInventoryMenu.CORPSE_TAB_VISIBLE_ROWS * 18;
+        int trackHeight = trackBottom - trackTop;
 
         graphics.fill(trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF1C1C1C);
         int totalRows = Math.max(1, view.totalRows());
-        int thumbHeight = Math.max(8, trackHeight * TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS / totalRows);
+        int thumbHeight = Math.max(8, trackHeight * TarkovInventoryMenu.CORPSE_TAB_VISIBLE_ROWS / totalRows);
         int maxScroll = Math.max(1, view.maxScrollRow());
         int thumbY = trackTop + (trackHeight - thumbHeight) * view.getScrollRow() / maxScroll;
         graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
@@ -467,8 +492,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private boolean isOverCorpseLoot(double mouseX, double mouseY) {
         int x1 = leftPos + TarkovInventoryMenu.CORPSE_INV_X - 6;
         int x2 = x1 + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 12;
-        int y1 = topPos + TarkovInventoryMenu.CORPSE_BAG_Y - 6;
-        int y2 = y1 + TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18 + 12;
+        int y1 = topPos + TarkovInventoryMenu.CORPSE_INV_Y - 6;
+        int y2 = y1 + TarkovInventoryMenu.CORPSE_TAB_VISIBLE_ROWS * 18 + 12;
         return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
 
