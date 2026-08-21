@@ -29,6 +29,20 @@ public class ScrollingBackpackView implements IItemHandlerModifiable {
 
     private int scrollRow = 0;
 
+    /** Optional window onto part of the backing handler, used for the corpse's tabs. */
+    private int rangeStart = 0;
+    private java.util.function.IntSupplier rangeCount = null;
+
+    /**
+     * Restrict this view to a sub-range of the backing handler, so one set of slots can
+     * present either the corpse's own inventory or its backpack depending on the tab.
+     */
+    public void setRange(int start, java.util.function.IntSupplier count) {
+        this.rangeStart = start;
+        this.rangeCount = count;
+        setScrollRow(0);
+    }
+
     public ScrollingBackpackView(BackCurioItemHandler backing, int columns, int visibleRows) {
         this(backing, columns, visibleRows, backing::isSlotUsable);
     }
@@ -74,6 +88,7 @@ public class ScrollingBackpackView implements IItemHandlerModifiable {
     }
 
     private int totalUsableSlots() {
+        if (rangeCount != null) return Math.max(0, rangeCount.getAsInt());
         int total = 0;
         // The backing handler reports its own true capacity (already corrected per mod).
         for (int i = 0; i < backing.getSlots(); i++) {
@@ -84,11 +99,12 @@ public class ScrollingBackpackView implements IItemHandlerModifiable {
 
     /** Maps a visible slot index to the underlying handler index for the current scroll. */
     public int mapIndex(int visibleIndex) {
-        return visibleIndex + scrollRow * columns;
+        return rangeStart + visibleIndex + scrollRow * columns;
     }
 
     public boolean isVisibleSlotUsable(int visibleIndex) {
         int real = mapIndex(visibleIndex);
+        if (rangeCount != null && real >= rangeStart + rangeCount.getAsInt()) return false;
         return real < backing.getSlots() && usable.test(real);
     }
 

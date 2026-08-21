@@ -44,6 +44,18 @@ public class BackpackScrollPacket {
                 } else {
                     menu.setBackpackScroll(packet.scrollRow);
                 }
+                // Scrolling remaps EVERY slot to a different underlying index at once.
+                // broadcastChanges() only sends slots whose contents it believes changed,
+                // which leaves stale items rendered in rows that were remapped - the
+                // "duplicated items that vanish when touched" effect. A full resend is the
+                // correct response to a wholesale remap.
+                menu.broadcastFullState();
+
+                // Scrolling changes WHICH underlying item each slot points at, but normal
+                // sync only sends slots whose contents changed - so the client keeps
+                // drawing its stale cached stacks and items appear duplicated in the rows
+                // above until you touch them. Forcing a full resend fixes that.
+                menu.sendAllDataToRemote();
             }
         });
         ctx.setPacketHandled(true);
