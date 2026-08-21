@@ -414,15 +414,19 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         var view = menu.corpseLootView;
 
         int trackX = leftPos + TarkovInventoryMenu.CORPSE_INV_X + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 2;
-        // Track spans the whole corpse column - level with the figure at the top down to
-        // the bottom of the loot region - as in the reference, even though it only drives
-        // the loot list's scroll.
-        int trackTop = topPos + TarkovInventoryMenu.CORPSE_BAG_Y;
-        int trackHeight = TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18;
+        // Track runs the FULL height of the corpse column - level with the figure at the
+        // top down to the bottom of the backpack rows - as in the reference. It still only
+        // drives the backpack's scroll (that's the only part with hidden content), but it
+        // reads as the column's scrollbar rather than one section's.
+        int trackTop = topPos + TarkovInventoryMenu.CORPSE_EQUIP_START_Y;
+        int trackBottom = topPos + TarkovInventoryMenu.CORPSE_BAG_Y
+                + TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18;
+        int trackHeight = trackBottom - trackTop;
 
-        graphics.fill(trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF1C1C1C);
+        graphics.fill(trackX, trackTop, trackX + 4, trackBottom, 0xFF1C1C1C);
         int totalRows = Math.max(1, view.totalRows());
-        int thumbHeight = Math.max(8, trackHeight * TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS / totalRows);
+        int thumbHeight = Math.max(10,
+                trackHeight * TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS / totalRows);
         int maxScroll = Math.max(1, view.maxScrollRow());
         int thumbY = trackTop + (trackHeight - thumbHeight) * view.getScrollRow() / maxScroll;
         graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
@@ -448,11 +452,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(trackX, thumbY, trackX + 4, thumbY + thumbHeight, 0xFF6A6A6A);
     }
 
+    /**
+     * Anywhere over the corpse column counts, not just the backpack rows - the scrollbar
+     * spans the whole column, so the wheel should work wherever the cursor is on that side.
+     */
     private boolean isOverCorpseLoot(double mouseX, double mouseY) {
-        int x1 = leftPos + TarkovInventoryMenu.CORPSE_INV_X - 6;
-        int x2 = x1 + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 12;
-        int y1 = topPos + TarkovInventoryMenu.CORPSE_BAG_Y - 6;
-        int y2 = y1 + TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18 + 12;
+        int x1 = leftPos + TarkovInventoryMenu.CORPSE_ARMOR_X - 10;
+        int x2 = leftPos + TarkovInventoryMenu.CORPSE_INV_X
+                + TarkovInventoryMenu.CORPSE_LOOT_COLS * 18 + 10;
+        int y1 = topPos + TarkovInventoryMenu.CORPSE_EQUIP_START_Y - 8;
+        int y2 = topPos + TarkovInventoryMenu.CORPSE_BAG_Y
+                + TarkovInventoryMenu.CORPSE_BAG_VISIBLE_ROWS * 18 + 8;
         return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
 
