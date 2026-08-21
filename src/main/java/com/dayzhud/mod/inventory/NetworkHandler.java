@@ -37,10 +37,5 @@ public class NetworkHandler {
                 OpenCraftingPacket::decode,
                 OpenCraftingPacket::handle);
 
-        CHANNEL.registerMessage(packetId++,
-                CorpseTabPacket.class,
-                CorpseTabPacket::encode,
-                CorpseTabPacket::decode,
-                CorpseTabPacket::handle);
     }
 }
