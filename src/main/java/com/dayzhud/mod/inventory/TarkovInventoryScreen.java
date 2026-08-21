@@ -414,7 +414,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int TAB_W = 62;
     private static final int TAB_H = 13;
 
-    private int tabY() { return topPos + TarkovInventoryMenu.CORPSE_LOOT_Y - 17; }
+    private int tabY() { return topPos + TarkovInventoryMenu.CORPSE_INV_Y - 17; }
     private int tabX(int i) { return leftPos + TarkovInventoryMenu.CORPSE_INV_X + i * (TAB_W + 4); }
 
     private void drawCorpseTabs(GuiGraphics graphics) {

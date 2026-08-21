@@ -7,30 +7,40 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
 
-import java.util.function.IntSupplier;
-
 import java.util.List;
 import java.util.Locale;
+import java.util.function.IntSupplier;
 
 /**
- * Exposes the contents of the backpack worn in a corpse's "back" curio slot.
+ * Presents a Ragdollified corpse's loot as one flat, ordered handler:
  *
- * The corpse's own inventory is NOT included - that gets its own fixed section in the UI.
- * This covers only the bag, because its size isn't known when the menu is built and
- * changes if the bag itself is looted, so it has to be resolved live and scrolled.
+ *   0..26    the corpse's main inventory   (container indices 9..35)
+ *   27..35   the corpse's hotbar           (container indices 0..8)
+ *   36..     contents of the backpack worn in its "back" curio slot, if any
  *
- * Two ways of getting at the worn bag's contents, tried in order:
- *   1. SA Survival bags, via SaSurvivalBackpackAccess - it builds the mod's own
- *      BackpackInventory from the ItemStack, since SA's normal handler needs a live Player
- *      that a corpse can't provide.
- *   2. Everything else, via Forge's standard ITEM_HANDLER capability on the stack.
+ * The UI's INVENTORY / BACKPACK tabs are just two windows onto this one handler: the
+ * inventory tab covers 0..BASE_COUNT, the backpack tab covers BASE_COUNT onwards. Keeping
+ * both behind a single handler is what lets the same slots serve both tabs.
  *
- * Both go through the owning mod's own code, so nothing here parses another mod's NBT.
+ * The hotbar is remapped to sit AFTER the main inventory because the corpse container
+ * stores it first (vanilla Inventory order), which reads backwards in a looting UI.
+ *
+ * Bag contents are reached through the owning mod's own code - SA Survival via
+ * SaSurvivalBackpackAccess, everything else via Forge's ITEM_HANDLER capability - so
+ * nothing here parses another mod's NBT.
+ *
+ * CLIENT/SERVER: the corpse's own 36 slots sync normally (they're backed by the menu's
+ * container), but bag contents held in an ItemStack capability never reach the client.
+ * So the bag portion uses a mirror buffer client-side, filled by the menu's slot sync,
+ * with its size driven by a synced value - same approach as BackCurioItemHandler.
  */
 public class CorpseLootHandler implements IItemHandlerModifiable {
 
-    private static final String BACK_ID = "back";
+    public static final int MAIN_COUNT = 27;
+    public static final int HOTBAR_COUNT = 9;
+    public static final int BASE_COUNT = MAIN_COUNT + HOTBAR_COUNT;
 
+    private static final String BACK_ID = "back";
     private static final int BAG_MIRROR_SIZE = 64;
 
     private final Container corpse;
@@ -38,11 +48,6 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
     private final int curioStart;
     private final boolean clientSide;
 
-    /**
-     * Client stand-in for the bag portion. The corpse's own 36 slots sync fine (they're
-     * backed by the menu's container), but bag contents held in an ItemStack capability
-     * never reach the client - same Forge limitation documented in BackCurioItemHandler.
-     */
     private final ItemStackHandler bagMirror = new ItemStackHandler(BAG_MIRROR_SIZE);
     private IntSupplier syncedBagSlots = () -> 0;
 
@@ -57,20 +62,12 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
         this.syncedBagSlots = supplier;
     }
 
-    /** Server-side true bag size, used to drive the synced count. */
-    public int serverBagSlots() {
-        IItemHandler h = bagHandler();
-        return h == null ? 0 : Math.min(h.getSlots(), BAG_MIRROR_SIZE);
-    }
-
     /** The bag worn on the corpse's back, or EMPTY. */
     public ItemStack getBagStack() {
         for (int i = 0; i < curioIds.size(); i++) {
             if (!curioIds.get(i).toLowerCase(Locale.ROOT).equals(BACK_ID)) continue;
             int idx = curioStart + i;
-            if (idx < corpse.getContainerSize()) {
-                return corpse.getItem(idx);
-            }
+            if (idx < corpse.getContainerSize()) return corpse.getItem(idx);
         }
         return ItemStack.EMPTY;
     }
@@ -79,12 +76,16 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
         ItemStack bag = getBagStack();
         if (bag.isEmpty()) return null;
 
-        // SA Survival deliberately exposes no item-handler capability, so use its own
-        // inventory class against the stack instead.
         IItemHandler sa = SaSurvivalBackpackAccess.open(bag);
         if (sa != null) return sa;
 
         return bag.getCapability(ForgeCapabilities.ITEM_HANDLER).resolve().orElse(null);
+    }
+
+    /** Server-side true bag size, used to drive the synced count. */
+    public int serverBagSlots() {
+        IItemHandler h = bagHandler();
+        return h == null ? 0 : Math.min(h.getSlots(), BAG_MIRROR_SIZE);
     }
 
     public int bagSlots() {
@@ -92,15 +93,25 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
         return serverBagSlots();
     }
 
+    /** Maps our flat index onto the corpse container's own indexing. */
+    private int containerIndex(int slot) {
+        if (slot < MAIN_COUNT) return 9 + slot; // main inventory
+        return slot - MAIN_COUNT;               // hotbar (0..8)
+    }
+
     @Override
     public int getSlots() {
-        return bagSlots();
+        return BASE_COUNT + bagSlots();
     }
 
     @Override
     public ItemStack getStackInSlot(int slot) {
         if (slot < 0) return ItemStack.EMPTY;
-        int bagSlot = slot;
+        if (slot < BASE_COUNT) {
+            int idx = containerIndex(slot);
+            return idx < corpse.getContainerSize() ? corpse.getItem(idx) : ItemStack.EMPTY;
+        }
+        int bagSlot = slot - BASE_COUNT;
         if (clientSide) {
             return bagSlot < BAG_MIRROR_SIZE ? bagMirror.getStackInSlot(bagSlot) : ItemStack.EMPTY;
         }
@@ -111,7 +122,15 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
     @Override
     public void setStackInSlot(int slot, ItemStack stack) {
         if (slot < 0) return;
-        int bagSlot = slot;
+        if (slot < BASE_COUNT) {
+            int idx = containerIndex(slot);
+            if (idx < corpse.getContainerSize()) {
+                corpse.setItem(idx, stack);
+                corpse.setChanged();
+            }
+            return;
+        }
+        int bagSlot = slot - BASE_COUNT;
         if (clientSide) {
             if (bagSlot < BAG_MIRROR_SIZE) bagMirror.setStackInSlot(bagSlot, stack);
             return;
@@ -125,7 +144,14 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         if (slot < 0 || slot >= getSlots() || stack.isEmpty()) return stack;
-        int bagSlot = slot;
+
+        if (slot < BASE_COUNT) {
+            ItemStack existing = getStackInSlot(slot);
+            if (!existing.isEmpty()) return stack; // only fill empty slots
+            if (!simulate) setStackInSlot(slot, stack.copy());
+            return ItemStack.EMPTY;
+        }
+        int bagSlot = slot - BASE_COUNT;
         if (clientSide) {
             return bagSlot < BAG_MIRROR_SIZE ? bagMirror.insertItem(bagSlot, stack, simulate) : stack;
         }
@@ -137,7 +163,21 @@ public class CorpseLootHandler implements IItemHandlerModifiable {
     @Override
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         if (slot < 0 || slot >= getSlots() || amount <= 0) return ItemStack.EMPTY;
-        int bagSlot = slot;
+
+        if (slot < BASE_COUNT) {
+            ItemStack existing = getStackInSlot(slot);
+            if (existing.isEmpty()) return ItemStack.EMPTY;
+            int taken = Math.min(amount, existing.getCount());
+            ItemStack result = existing.copy();
+            result.setCount(taken);
+            if (!simulate) {
+                ItemStack remainder = existing.copy();
+                remainder.shrink(taken);
+                setStackInSlot(slot, remainder.isEmpty() ? ItemStack.EMPTY : remainder);
+            }
+            return result;
+        }
+        int bagSlot = slot - BASE_COUNT;
         if (clientSide) {
             return bagSlot < BAG_MIRROR_SIZE
                     ? bagMirror.extractItem(bagSlot, amount, simulate) : ItemStack.EMPTY;
