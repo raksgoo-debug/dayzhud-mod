@@ -341,7 +341,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                     CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
     }
-    }
 
     /** True when the corpse is wearing a bag we can look inside. */
     public boolean corpseHasBackpack() {
