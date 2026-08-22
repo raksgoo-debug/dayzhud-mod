@@ -104,12 +104,17 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
     public static final int CORPSE_INV_Y = 196;
     public static final int CORPSE_LOOT_COLS = 9;
-    /** Corpse's own hotbar row, directly under its inventory rows. */
-    public static final int CORPSE_HOTBAR_Y = 268;
-    /** Corpse's worn backpack: its own section at the bottom, scrolled if the bag is big. */
-    public static final int CORPSE_BAG_Y = 306;
-    public static final int CORPSE_BAG_VISIBLE_ROWS = 2;
-    public static final int CORPSE_BAG_SLOTS = CORPSE_LOOT_COLS * CORPSE_BAG_VISIBLE_ROWS;
+    /**
+     * The corpse's loot is ONE continuous scrolling list: inventory rows, then its hotbar
+     * row, then the worn backpack's contents. Slot positions can't move (Slot's x/y are
+     * final), so scrolling works by remapping which item each fixed slot shows - which
+     * only works if the whole region is a single uniform grid, hence one list rather than
+     * separate fixed sections.
+     */
+    public static final int CORPSE_LOOT_VISIBLE_ROWS = 6;
+    public static final int CORPSE_LOOT_SLOTS = CORPSE_LOOT_COLS * CORPSE_LOOT_VISIBLE_ROWS;
+    /** Row within the list where the backpack's contents begin. */
+    public static final int CORPSE_BAG_START_ROW = CorpseLootHandler.BASE_COUNT / CORPSE_LOOT_COLS;
 
     /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
     private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
@@ -310,35 +315,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
 
-        // Corpse's own inventory and hotbar, fixed sections - mirrors how the player's
-        // own panel is laid out.
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
-                        CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
-                    CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
-        }
-
-        // The worn backpack gets its own section underneath, scrolled independently -
-        // its size isn't known up front and changes if the bag itself is looted.
+        // One continuous scrolling list over inventory -> hotbar -> backpack.
         this.corpseLoot = new CorpseLootHandler(corpse, corpseCurioIds, CORPSE_CURIO_START,
                 player.level().isClientSide);
         this.corpseLoot.setSyncedBagSlots(corpseBagSlots::get);
         addDataSlot(corpseBagSlots);
 
         this.corpseLootView = new ScrollingBackpackView(corpseLoot, CORPSE_LOOT_COLS,
-                CORPSE_BAG_VISIBLE_ROWS);
-        // Window onto the bag portion only; the inventory rows above are real slots.
-        this.corpseLootView.setRange(CorpseLootHandler.BASE_COUNT, () -> corpseLoot.bagSlots());
+                CORPSE_LOOT_VISIBLE_ROWS);
 
-        for (int i = 0; i < CORPSE_BAG_SLOTS; i++) {
+        for (int i = 0; i < CORPSE_LOOT_SLOTS; i++) {
             addSlot(new CorpseLootSlot(corpseLootView, i,
                     CORPSE_INV_X + (i % CORPSE_LOOT_COLS) * 18,
-                    CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
+                    CORPSE_INV_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
     }
 
