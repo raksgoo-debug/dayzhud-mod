@@ -15,11 +15,16 @@ import net.minecraft.world.inventory.HopperMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.NetworkHooks;
 
+import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -42,13 +47,73 @@ public class ContainerOpenRedirect {
 
     private static final Set<ServerPlayer> REDIRECTING = new LinkedHashSet<>();
 
-    @SubscribeEvent
+    /**
+     * Mods that manage container contents around the open/close lifecycle. Redirecting
+     * breaks them, so their containers keep the vanilla flow (styled, but not merged).
+     *
+     * WHY: this redirect works by letting vanilla open its menu, then immediately opening
+     * ours over the top. Opening a menu closes the previous one - and a mod that fills
+     * loot in PlayerContainerEvent.Open and saves/clears it in PlayerContainerEvent.Close
+     * will therefore have its loot written back and wiped the instant we swap menus. The
+     * player then sees an empty container. sa_decor does exactly this via
+     * DecorLootContainerEvents + DecorLootSessionManager's per-player loot sessions.
+     *
+     * There's no general way to detect "this mod cares about open/close", so this is an
+     * explicit list. Add a modid here if another loot/container mod goes empty.
+     */
+    private static final List<String> LOOT_SESSION_MODS = List.of("sa_decor");
+
+    private static Boolean lootSessionModPresent = null;
+
+    private static boolean lootSessionModInstalled() {
+        if (lootSessionModPresent == null) {
+            lootSessionModPresent = LOOT_SESSION_MODS.stream().anyMatch(id -> ModList.get().isLoaded(id));
+        }
+        return lootSessionModPresent;
+    }
+
+    /**
+     * True only when a loot mod actually has a live per-player session for this player.
+     *
+     * Verified against sa_decor: its session machinery is gated behind usesPerPlayerLoot(),
+     * so with per-player loot turned OFF in its config there is no session to break and the
+     * merged view is safe. Checking for a live session - rather than merely "is the mod
+     * installed" - means players only lose the merged container view in the exact
+     * configuration where it would actually empty their loot.
+     */
+    private static boolean hasActiveLootSession(ServerPlayer player) {
+        if (!lootSessionModInstalled()) return false;
+        try {
+            Class<?> mgr = Class.forName("com.ogaba.sa_decor.common.loot.DecorLootSessionManager");
+            Field pending = mgr.getDeclaredField("PENDING_PER_PLAYER_CONTAINERS");
+            pending.setAccessible(true);
+            Object map = pending.get(null);
+            if (map instanceof Map<?, ?> m && m.containsKey(player.getUUID())) return true;
+        } catch (Exception e) {
+            // Can't tell - assume a session exists so we never risk wiping loot.
+            DayzHudMod.LOGGER.debug("[dayzhud] Couldn't inspect sa_decor loot sessions; "
+                    + "skipping the merged container view to be safe.", e);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * LOWEST priority so every other mod's PlayerContainerEvent.Open handler runs first.
+     * Some mods populate the container at open time (sa_decor generates per-player loot
+     * here), and redirecting before they've run would show an unfilled container.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onContainerOpen(PlayerContainerEvent.Open event) {
         if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) return;
 
         AbstractContainerMenu menu = event.getContainer();
         if (menu instanceof TarkovInventoryMenu) return;      // already ours
         if (REDIRECTING.contains(serverPlayer)) return;       // re-entrancy guard
+        // Only skip when a per-player loot session is actually live - see
+        // hasActiveLootSession. With sa_decor's per_player setting off there's no session,
+        // so the merged view works normally.
+        if (hasActiveLootSession(serverPlayer)) return;
         if (!isSimpleStorage(menu)) return;
 
         Container backing = findBackingContainer(menu, serverPlayer);
