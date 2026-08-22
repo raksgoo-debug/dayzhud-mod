@@ -94,15 +94,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     // --- Corpse view (Ragdollified). Mirrors the player panel's shape on the right. ---
     public static final int CORPSE_ARMOR_X = 380;
     public static final int CORPSE_SIDE_X = 502;
-    public static final int CORPSE_EQUIP_START_Y = 30;
-    public static final int CORPSE_EQUIP_SPACING = 22;
+    public static final int CORPSE_EQUIP_START_Y = 28;
+    public static final int CORPSE_EQUIP_SPACING = 20;
     public static final int CORPSE_GEAR_X = 380;
-    public static final int CORPSE_GEAR_Y = 132;
+    public static final int CORPSE_GEAR_Y = 122;
     public static final int CORPSE_GEAR_COLS = 6;
     public static final int CORPSE_GEAR_SPACING = 22;
     public static final int CORPSE_INV_X = 380;
     /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
-    public static final int CORPSE_INV_Y = 196;
+    public static final int CORPSE_INV_Y = 178;
     public static final int CORPSE_LOOT_COLS = 9;
     /**
      * The corpse's loot is ONE continuous scrolling list: inventory rows, then its hotbar
@@ -111,10 +111,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * only works if the whole region is a single uniform grid, hence one list rather than
      * separate fixed sections.
      */
-    public static final int CORPSE_LOOT_VISIBLE_ROWS = 6;
-    public static final int CORPSE_LOOT_SLOTS = CORPSE_LOOT_COLS * CORPSE_LOOT_VISIBLE_ROWS;
-    /** Row within the list where the backpack's contents begin. */
-    public static final int CORPSE_BAG_START_ROW = CorpseLootHandler.BASE_COUNT / CORPSE_LOOT_COLS;
+    /** Corpse's own hotbar row, its own labelled section under the inventory rows. */
+    public static final int CORPSE_HOTBAR_Y = 250;
+    /**
+     * Backpack section. Everything else on the corpse side is sized to be fully visible;
+     * only the bag can genuinely overflow (bags run up to 42 slots), so it alone scrolls.
+     */
+    public static final int CORPSE_BAG_Y = 288;
+    public static final int CORPSE_BAG_VISIBLE_ROWS = 3;
+    public static final int CORPSE_BAG_SLOTS = CORPSE_LOOT_COLS * CORPSE_BAG_VISIBLE_ROWS;
 
     /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
     private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
@@ -315,20 +320,37 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
 
-        // One continuous scrolling list over inventory -> hotbar -> backpack.
+        // The corpse's own inventory and hotbar are fixed, labelled sections - they always
+        // fit, so there's nothing to gain from scrolling them.
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
+                        CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
+                    CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
+        }
+
+        // The worn backpack is the one part that can overflow, so it gets its own
+        // scrollable section underneath.
         this.corpseLoot = new CorpseLootHandler(corpse, corpseCurioIds, CORPSE_CURIO_START,
                 player.level().isClientSide);
         this.corpseLoot.setSyncedBagSlots(corpseBagSlots::get);
         addDataSlot(corpseBagSlots);
 
         this.corpseLootView = new ScrollingBackpackView(corpseLoot, CORPSE_LOOT_COLS,
-                CORPSE_LOOT_VISIBLE_ROWS);
+                CORPSE_BAG_VISIBLE_ROWS);
+        // Window onto the bag portion only - the inventory rows above are real slots.
+        this.corpseLootView.setRange(CorpseLootHandler.BASE_COUNT, () -> corpseLoot.bagSlots());
 
-        for (int i = 0; i < CORPSE_LOOT_SLOTS; i++) {
+        for (int i = 0; i < CORPSE_BAG_SLOTS; i++) {
             addSlot(new CorpseLootSlot(corpseLootView, i,
                     CORPSE_INV_X + (i % CORPSE_LOOT_COLS) * 18,
-                    CORPSE_INV_Y + (i / CORPSE_LOOT_COLS) * 18));
+                    CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
+
     }
 
     /** True when the corpse is wearing a bag we can look inside. */
