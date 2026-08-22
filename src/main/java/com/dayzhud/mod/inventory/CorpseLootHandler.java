@@ -12,7 +12,13 @@ import java.util.Locale;
 import java.util.function.IntSupplier;
 
 /**
- * Presents a Ragdollified corpse's loot as one flat, ordered handler:
+ * Presents a Ragdollified corpse's loot as one flat, ordered handler.
+ *
+ * (Since Ragdollified 1.0.0-RELEASE the corpse belongs to the separate "ragdollifiedpc"
+ * addon rather than the core mod - see CorpseOpenRedirect. Nothing here needed to change:
+ * this class only ever sees a plain Container, and its layout is identical either way.)
+ *
+ * The mapping:
  *
  *   0..26    the corpse's main inventory   (container indices 9..35)
  *   27..35   the corpse's hotbar           (container indices 0..8)

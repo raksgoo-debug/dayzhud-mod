@@ -91,6 +91,41 @@ style comments explaining exactly what to check if the build fails there:
 If the build fails, paste me the error the same way you have been - these are contained,
 fixable spots, not a sign the overall approach is wrong.
 
+## Corpse looting (Ragdollified)
+
+When a Ragdollified player corpse is opened, `CorpseOpenRedirect` swaps its looting screen
+for the merged view - your own loadout panel on the left, the corpse's armor, curios, gear,
+inventory, hotbar and backpack laid out down the right-hand column.
+
+**Ragdollified 1.0.0-RELEASE split the corpse feature into its own addon.** The looting
+code is no longer part of `ragdollified`; it now lives in **Ragdollified Player Corpse**
+(`ragdollifiedpc`), which depends on the core mod. That moved the menu class:
+
+| build | modid | menu class |
+|---|---|---|
+| 0.9.x-BETA and earlier | `ragdollified` | `com.raiiiden.ragdollified.menu.CorpseMenu` |
+| 1.0.0-RELEASE and later | `ragdollifiedpc` | `com.raiiiden.ragdollifiedpc.menu.CorpseMenu` |
+
+The redirect matches **both** class names, so it works on either. Both mods stay optional -
+nothing here compiles against them; the menu is matched by name and its `corpse` /
+`curioIds` / `corpseSlots` fields are read reflectively.
+
+The corpse container's slot layout was re-verified against the new addon's jar and is
+**unchanged** by the split: `41 + curioCount` slots, laid out `0-8` hotbar, `9-35` main
+inventory, `36-39` armor (feet-first), `40` offhand, `41+` one per curio slot. The redirect
+compares the container's real size against that layout before touching anything and stands
+down if they disagree, so a future layout change degrades to Ragdollified's own screen
+rather than misplacing loot.
+
+The loot column's header now shows the corpse's own name ("STEVE'S CORPSE") - recovered by
+matching the open container against the nearby corpse entity, since the open event hands us
+the menu rather than the provider that named it. It falls back to "CORPSE" if the entity
+can't be read.
+
+**Not carried over:** the addon's own screen has `TAKE ALL` and `SWAP` buttons that the
+merged view doesn't reproduce - replacing the menu replaces its buttons too. Everything is
+still reachable by hand (and by shift-click).
+
 ## Building
 
 Recommended: push this to a GitHub repo and let `.github/workflows/build.yml` build it

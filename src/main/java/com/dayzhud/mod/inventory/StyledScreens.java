@@ -76,7 +76,17 @@ public class StyledScreens {
             "CartographyTableMenu", "SmithingMenu", "GrindstoneMenu", "MerchantMenu",
             "HorseInventoryMenu", "BrewingStandMenu", "CrafterMenu",
             "ItemPickerMenu",  // creative inventory's menu
-            "InventoryMenu"    // vanilla survival inventory
+            "InventoryMenu",   // vanilla survival inventory
+
+            // Ragdollified's corpse menu. Normally CorpseOpenRedirect has already replaced
+            // this server-side and it never reaches the client at all - but when the redirect
+            // stands down (unrecognised layout, or the addon moved again), restyling it here
+            // gives the worst of both worlds: the addon's slot layout wearing our skin, minus
+            // its TAKE ALL / SWAP buttons, which any screen swap discards. Excluding it means
+            // a stood-down redirect falls back to the addon's real, fully working screen -
+            // and that visible difference is also the quickest way to tell, in game, whether
+            // the redirect fired at all.
+            "CorpseMenu"
     );
 
     /**

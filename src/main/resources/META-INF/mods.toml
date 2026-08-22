@@ -34,6 +34,19 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# Soft dependency: corpse looting. Ragdollified 1.0.0-RELEASE split its player-corpse
+# feature out of the core mod into a separate addon, "Ragdollified Player Corpse"
+# (modid ragdollifiedpc) - so that, not "ragdollified", is what owns the corpse menu now.
+# When it's installed, CorpseOpenRedirect replaces its looting screen with the merged
+# Tarkov view. Loading AFTER it keeps our redirect behind its own registration. The
+# redirect still recognises the pre-split core class name, so old packs keep working.
+[[dependencies.${mod_id}]]
+    modId="ragdollifiedpc"
+    mandatory=false
+    versionRange="[0.1.0-BETA,)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Soft dependency: loads fine with or without Thirst Was Taken installed.
 # If present, the mod reads its thirst value via reflection for the HUD's water gauge.
 # (Note: the mod's actual id is "thirst" - the jar is just named ThirstWasTaken-*.jar.)
