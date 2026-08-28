@@ -1,8 +1,6 @@
 package com.dayzhud.mod.client;
 
 import com.dayzhud.mod.skill.ClientSkillState;
-import com.dayzhud.mod.skill.Skill;
-import com.dayzhud.mod.skill.TemperatureSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.level.biome.Biome;
@@ -14,46 +12,28 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * Client-side stamina model, and the client's view of temperature.
+ * The HUD's view of stamina and temperature.
  *
- * STAMINA is still simulated locally: it drains on sprinting and jumping, regenerates when
- * idle, and cuts your sprint off at zero. Endurance deepens the pool and slows the burn.
- * Being local means it's trivially cheatable on a server - acceptable while nothing but the
- * HUD and your own sprinting depends on it, but worth knowing before this ever gates
- * anything that matters.
+ * This class used to SIMULATE both. It no longer simulates anything: stamina lives in
+ * StaminaSystem and temperature in TemperatureSystem, both server-side, both pushed down via
+ * SkillStatePacket. What's left here is presentation.
  *
- * TEMPERATURE is NOT computed here any more. It's owned by TemperatureSystem on the server
- * (because it now does real damage, which has to be authoritative) and arrives via
- * SkillStatePacket. The local biome estimate below survives only as a stand-in for the few
- * ticks between joining a world and the first sync landing, so the gauge never opens on a
- * visibly wrong reading.
+ * The one job it still does is smoothing. Syncs land every few ticks, not every tick, so
+ * feeding the raw value straight to the bar makes it advance in visible steps; this eases the
+ * drawn value toward the last synced one so the bar moves continuously. That's cosmetic only -
+ * the smoothed number is never sent anywhere or used for a decision.
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = "dayzhud", value = Dist.CLIENT)
 public class VitalsTracker {
 
-    private static final float BASE_MAX_STAMINA = 100f;
+    /** How much of the gap to the synced value to close each tick. */
+    private static final float DISPLAY_SMOOTHING = 0.35f;
 
-    private static float stamina = BASE_MAX_STAMINA;
-    /** Fallback only - see the class note. Overwritten by the server's value once synced. */
+    private static float displayedStamina01 = 1f;
+
+    /** Fallback until the first sync arrives - see updateLocalTemperatureFallback. */
     private static float localTemperature01 = 0.5f;
-
-    private static final float DRAIN_PER_TICK_SPRINT = 0.45f;
-    private static final float DRAIN_PER_JUMP = 6f;
-    private static final float REGEN_PER_TICK = 0.25f;
-
-    /** Fraction of sprint drain removed per Endurance level (0.04 = 40% cheaper at cap). */
-    private static final float ENDURANCE_DRAIN_RELIEF = 0.04f;
-
-    /** Stamina regenerates this much slower while you're below the cold threshold. */
-    private static final float COLD_REGEN_PENALTY = 0.5f;
-
-    private static boolean wasOnGroundLastTick = true;
-
-    /** Max stamina including Endurance. Never below the base value. */
-    public static float getMaxStamina() {
-        return BASE_MAX_STAMINA + Skill.ENDURANCE.magnitudeAt(ClientSkillState.level(Skill.ENDURANCE));
-    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -62,53 +42,14 @@ public class VitalsTracker {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null) {
-            stamina = getMaxStamina();
+            displayedStamina01 = 1f;
             return;
         }
 
-        float maxStamina = getMaxStamina();
-        // Buying Endurance mid-session raises the ceiling; without this the bar would sit
-        // at its old value and look permanently part-full.
-        if (stamina > maxStamina) stamina = maxStamina;
-
-        // --- Stamina ---
-        boolean sprinting = player.isSprinting();
-        boolean justJumped = !player.onGround() && wasOnGroundLastTick
-                && player.getDeltaMovement().y > 0.1;
-        wasOnGroundLastTick = player.onGround();
-
-        int endurance = ClientSkillState.level(Skill.ENDURANCE);
-        float drainMultiplier = Math.max(0.2f, 1f - endurance * ENDURANCE_DRAIN_RELIEF);
-
-        if (justJumped) {
-            stamina = Math.max(0f, stamina - DRAIN_PER_JUMP * drainMultiplier);
-        }
-
-        boolean actuallyMoving = player.isSwimming() || player.horizontalCollision
-                || player.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4;
-
-        if (sprinting && actuallyMoving) {
-            stamina = Math.max(0f, stamina - DRAIN_PER_TICK_SPRINT * drainMultiplier);
-            if (stamina <= 0f) {
-                // The one real consequence stamina has: out of breath means you stop running.
-                player.setSprinting(false);
-            }
-        } else if (!sprinting) {
-            stamina = Math.min(maxStamina, stamina + REGEN_PER_TICK * regenMultiplier());
-        }
+        float target = ClientSkillState.isSynced() ? ClientSkillState.stamina01() : 1f;
+        displayedStamina01 += (target - displayedStamina01) * DISPLAY_SMOOTHING;
 
         updateLocalTemperatureFallback(player);
-    }
-
-    /**
-     * Cold makes you recover more slowly - the first thing you notice when your temperature
-     * drops, well before it starts doing damage. Acclimation moves the threshold, so a
-     * trained player stops feeling it.
-     */
-    private static float regenMultiplier() {
-        float temperature = getTemperature01();
-        float coldEdge = TemperatureSystem.coldEdgeFor(ClientSkillState.level(Skill.ACCLIMATION));
-        return temperature < coldEdge ? COLD_REGEN_PENALTY : 1f;
     }
 
     /**
@@ -127,10 +68,9 @@ public class VitalsTracker {
 
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        // Otherwise the last world's skills would linger and mis-size the stamina bar on the
-        // next world you join.
+        // Otherwise the last world's readings linger into the next one you join.
         ClientSkillState.reset();
-        stamina = BASE_MAX_STAMINA;
+        displayedStamina01 = 1f;
         localTemperature01 = 0.5f;
     }
 
@@ -138,9 +78,9 @@ public class VitalsTracker {
         return Math.max(0f, Math.min(1f, v));
     }
 
+    /** Smoothed stamina for the bar. Authoritative value lives on the server. */
     public static float getStamina01() {
-        float max = getMaxStamina();
-        return max <= 0f ? 0f : clamp01(stamina / max);
+        return clamp01(displayedStamina01);
     }
 
     /** 0 = freezing, 1 = scorching. The server's value once it has arrived. */

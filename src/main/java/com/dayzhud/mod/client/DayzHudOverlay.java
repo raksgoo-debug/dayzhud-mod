@@ -12,7 +12,8 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 /**
  * Draws a DayZ-style status row in the bottom-right corner (Temperature, Food, Water,
- * Health) plus a thin horizontal stamina bar and movement-state icon in the bottom-left.
+ * Health), a thin horizontal stamina bar and movement-state icon in the bottom-left, and a
+ * matching XP bar mirrored on the other side of the hotbar.
  *
  * Each status icon is drawn as two layers: a thin outline (always fully visible) and a
  * solid fill clipped to the bottom N% of the icon based on the stat's value - a liquid-
@@ -32,6 +33,7 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int STAMINA_BAR_HEIGHT = 3;
     private static final int STAMINA_BAR_GAP_FROM_OFFHAND = 10; // clearance from the offhand slot
     private static final int STAMINA_BAR_MIN_LEFT = 70;          // never sit closer to the left edge than this (clears other mods' bottom-left UI)
+    private static final int XP_BAR_GAP_FROM_HOTBAR = 10;        // mirrors STAMINA_BAR_GAP_FROM_OFFHAND on the other side
 
     private static final int MOVEMENT_ICON_SIZE = 12;
     private static final int MOVEMENT_ICON_GAP = 6;
@@ -42,6 +44,8 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int COLOR_COLD = 0x4DA6FF;
     private static final int COLOR_HOT = 0xFF5C33;
     private static final int COLOR_OUTLINE = 0x9A9A9A;
+    /** XP fill. Deliberately not a severity colour - a level count has no "low" state. */
+    private static final int COLOR_XP = 0x7FA650;
 
     private static final ResourceLocation ICON_HEART_OUTLINE = rl("icon_heart_outline");
     private static final ResourceLocation ICON_HEART_SOLID = rl("icon_heart_solid");
@@ -94,6 +98,7 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
 
         drawStaminaBar(graphics, stamina01, screenWidth, screenHeight);
+        drawXpBar(graphics, player, screenWidth, screenHeight);
         drawMovementIcon(graphics, player, screenWidth, screenHeight);
     }
 
@@ -117,6 +122,40 @@ public class DayzHudOverlay implements IGuiOverlay {
         int filledWidth = Math.round((barRight - barLeft) * Math.max(0f, Math.min(1f, stamina01)));
         int fillColor = 0xFF000000 | severityColor(stamina01);
         graphics.fill(barLeft, barTop, barLeft + filledWidth, barBottom, fillColor);
+    }
+
+    /**
+     * XP bar, mirroring the stamina bar on the opposite side of the hotbar - same height,
+     * same backing plate, same geometry maths - so the two read as one HUD rather than as a
+     * custom bar sitting next to a vanilla one. Vanilla's own bar and level number are
+     * cancelled in OverlayCanceller.
+     *
+     * The level sits above the bar in plain white: it's a count, not a gauge, so it gets no
+     * severity colouring like the percentage stats do.
+     */
+    private void drawXpBar(GuiGraphics graphics, LocalPlayer player, int screenWidth, int screenHeight) {
+        int barBottom = screenHeight - MARGIN_Y;
+        int barTop = barBottom - STAMINA_BAR_HEIGHT;
+
+        // Mirror of drawStaminaBar's anchoring: measured from the hotbar's RIGHT edge.
+        // Keep in sync with DayzHotbarOverlay's geometry if either changes.
+        int hotbarRight = screenWidth / 2 + 90;
+        int barLeft = hotbarRight + XP_BAR_GAP_FROM_HOTBAR;
+        int barRight = Math.min(screenWidth - MARGIN_X, barLeft + STAMINA_BAR_WIDTH);
+        if (barRight <= barLeft) return;
+
+        graphics.fill(barLeft, barTop, barRight, barBottom, 0x90707070);
+
+        int filledWidth = Math.round((barRight - barLeft) * Math.max(0f, Math.min(1f, player.experienceProgress)));
+        graphics.fill(barLeft, barTop, barLeft + filledWidth, barBottom, 0xFF000000 | COLOR_XP);
+
+        int level = player.experienceLevel;
+        if (level <= 0) return;
+
+        String text = String.valueOf(level);
+        var font = Minecraft.getInstance().font;
+        int textX = barLeft + (barRight - barLeft - font.width(text)) / 2;
+        graphics.drawString(font, text, textX, barTop - font.lineHeight - 2, 0xFFFFFF, true);
     }
 
     private void drawMovementIcon(GuiGraphics graphics, LocalPlayer player, int screenWidth, int screenHeight) {

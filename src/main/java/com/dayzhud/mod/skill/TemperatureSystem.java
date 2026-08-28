@@ -58,8 +58,8 @@ public final class TemperatureSystem {
     /** Ticks between damage/exhaustion applications. 40 = every 2 seconds. */
     private static final int EFFECT_INTERVAL = 40;
 
-    /** Ticks between temperature syncs to the client. 10 = 4x/second, plenty for a gauge. */
-    private static final int SYNC_INTERVAL = 10;
+    /** Ticks between state syncs. 3 ticks is ~7/sec - the stamina bar needs the resolution. */
+    private static final int SYNC_INTERVAL = 3;
 
     private static final float SEVERE_DAMAGE = 1.0f;
     private static final float DISCOMFORT_EXHAUSTION = 0.08f;

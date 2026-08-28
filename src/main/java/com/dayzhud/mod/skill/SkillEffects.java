@@ -1,6 +1,7 @@
 package com.dayzhud.mod.skill;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.compat.ThirstWasTakenCompat;
 import com.dayzhud.mod.inventory.NetworkHandler;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -17,15 +18,17 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 /**
  * Applies the server-side half of the skills, and keeps the client's copy in sync.
  *
  * SPLIT OF RESPONSIBILITY: everything with real consequences lives here, on the server,
- * driven by the authoritative capability - max health, damage taken, hunger. The client is
- * told the numbers ({@link SkillStatePacket}) only so it can draw the screen and run the
- * stamina model. Temperature's own effects are in {@link TemperatureSystem}.
+ * driven by the authoritative capability - max health, damage taken, hunger, thirst. The
+ * client is told the numbers ({@link SkillStatePacket}) purely so it can draw them. Stamina
+ * lives in {@link StaminaSystem} and temperature in {@link TemperatureSystem}, both also
+ * server-side.
  */
 @Mod.EventBusSubscriber(modid = DayzHudMod.MOD_ID)
 public final class SkillEffects {
@@ -38,9 +41,13 @@ public final class SkillEffects {
     private static final UUID VITALITY_MODIFIER =
             UUID.fromString("6b1a5f2c-3d4e-4a7b-9c8d-0e1f2a3b4c5d");
 
-    /** Per-player food bookkeeping for Metabolism. Keyed by player UUID; cleared on logout. */
-    private static final Map<UUID, Integer> LAST_FOOD_LEVEL = new HashMap<>();
-    private static final Map<UUID, Float> SAVED_FOOD_FRACTION = new HashMap<>();
+    /**
+     * Last-seen exhaustion counters, so Metabolism can tell a RISE from the sharp drop that
+     * happens when a point of food or thirst is actually spent. Keyed by player UUID; cleared
+     * on logout so a long-running server doesn't accumulate entries for people who left.
+     */
+    private static final Map<UUID, Float> LAST_FOOD_EXHAUSTION = new HashMap<>();
+    private static final Map<UUID, Float> LAST_THIRST_EXHAUSTION = new HashMap<>();
 
     private SkillEffects() {}
 
@@ -68,13 +75,15 @@ public final class SkillEffects {
         }
     }
 
-    /** Pushes skills + current temperature to one player's client. */
+    /** Pushes skills, temperature and stamina to one player's client. */
     public static void sync(ServerPlayer player) {
         PlayerSkills skills = SkillCapability.of(player);
         if (skills == null) return;
         NetworkHandler.CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new SkillStatePacket(skills, TemperatureSystem.temperatureOf(player)));
+                new SkillStatePacket(skills,
+                        TemperatureSystem.temperatureOf(player),
+                        StaminaSystem.stamina01(player)));
     }
 
     // ---------------------------------------------------------------- lifecycle
@@ -127,8 +136,8 @@ public final class SkillEffects {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID id = event.getEntity().getUUID();
-        LAST_FOOD_LEVEL.remove(id);
-        SAVED_FOOD_FRACTION.remove(id);
+        LAST_FOOD_EXHAUSTION.remove(id);
+        LAST_THIRST_EXHAUSTION.remove(id);
     }
 
     // ---------------------------------------------------------------- Toughness
@@ -146,17 +155,22 @@ public final class SkillEffects {
     // ---------------------------------------------------------------- Metabolism
 
     /**
-     * Slows hunger by refunding a fraction of every point of food you lose.
+     * Slows hunger and thirst by scaling down every INCREASE in their exhaustion counters.
      *
-     * WHY IT'S DONE THIS WAY: vanilla drains food through exhaustion accumulated in dozens of
-     * places, with no event to intercept, and no subtract-exhaustion API. Watching the food
-     * LEVEL and handing part of it back is the one lever that works without touching vanilla
-     * internals. The fractional remainder is banked in SAVED_FOOD_FRACTION so a 30% reduction
-     * really does return roughly three points in ten rather than rounding away to nothing.
+     * Both vanilla food and Thirst Was Taken work the same way: activity piles up an
+     * "exhaustion" float, and when it crosses a threshold one point of food/thirst is spent
+     * and the counter drops back. Intercepting the rise is therefore the correct place to slow
+     * the drain - it happens before anything is spent, it leaves saturation semantics intact,
+     * and it scales every source of exhaustion at once without knowing what any of them are.
      *
-     * Thirst rides along for free wherever a thirst mod drains on the same activity, but it
-     * is NOT directly reduced - see the note in the README about needing Thirst Was Taken's
-     * write API to do that properly.
+     * (An earlier version watched the food LEVEL and refunded points after the fact. That
+     * worked, but it bypassed saturation and refunded food lost to any cause at all. This is
+     * the real thing; it needed IThirst.getExhaustion/setExhaustion, which the TWT jar was
+     * checked for rather than assumed.)
+     *
+     * Both counters are read back AFTER writing, so the stored baseline is whatever actually
+     * landed - if a write silently fails, the next tick compares against reality instead of
+     * against a value we only wished for.
      */
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -164,25 +178,43 @@ public final class SkillEffects {
         if (!(event.player instanceof ServerPlayer player)) return;
 
         UUID id = player.getUUID();
-        FoodData food = player.getFoodData();
-        int now = food.getFoodLevel();
-        Integer previous = LAST_FOOD_LEVEL.put(id, now);
-
         int level = SkillCapability.levelOf(player, Skill.METABOLISM);
-        if (level <= 0 || previous == null || now >= previous) return;
+        float keep = 1f - Skill.METABOLISM.fractionAt(level);   // 1.0 at level 0, 0.4 at cap
 
-        int lost = previous - now;
-        float banked = SAVED_FOOD_FRACTION.getOrDefault(id, 0f)
-                + lost * Skill.METABOLISM.fractionAt(level);
+        dampenVanillaHunger(player, id, level, keep);
+        dampenThirst(player, id, level, keep);
+    }
 
-        int refund = (int) banked;
-        if (refund > 0) {
-            // Never push above where the player was a tick ago - this slows the drain, it
-            // must not become a food source.
-            food.setFoodLevel(Math.min(previous, now + refund));
-            LAST_FOOD_LEVEL.put(id, food.getFoodLevel());
-            banked -= refund;
+    private static void dampenVanillaHunger(ServerPlayer player, UUID id, int level, float keep) {
+        FoodData food = player.getFoodData();
+        float now = food.getExhaustionLevel();
+        Float previous = LAST_FOOD_EXHAUSTION.get(id);
+
+        if (level > 0 && previous != null && now > previous) {
+            food.setExhaustion(previous + (now - previous) * keep);
+            now = food.getExhaustionLevel();
         }
-        SAVED_FOOD_FRACTION.put(id, banked);
+        LAST_FOOD_EXHAUSTION.put(id, now);
+    }
+
+    /**
+     * The same treatment for Thirst Was Taken. Silently does nothing when the mod is absent or
+     * its API can't be resolved, which is exactly the degradation we want - no hard dependency.
+     */
+    private static void dampenThirst(ServerPlayer player, UUID id, int level, float keep) {
+        OptionalDouble reading = ThirstWasTakenCompat.getExhaustion(player);
+        if (reading.isEmpty()) {
+            LAST_THIRST_EXHAUSTION.remove(id);
+            return;
+        }
+
+        float now = (float) reading.getAsDouble();
+        Float previous = LAST_THIRST_EXHAUSTION.get(id);
+
+        if (level > 0 && previous != null && now > previous
+                && ThirstWasTakenCompat.setExhaustion(player, previous + (now - previous) * keep)) {
+            now = (float) ThirstWasTakenCompat.getExhaustion(player).orElse(now);
+        }
+        LAST_THIRST_EXHAUSTION.put(id, now);
     }
 }

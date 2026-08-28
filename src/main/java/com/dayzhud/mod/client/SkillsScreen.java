@@ -1,14 +1,17 @@
 package com.dayzhud.mod.client;
 
+import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.inventory.NetworkHandler;
 import com.dayzhud.mod.inventory.StyledTheme;
 import com.dayzhud.mod.skill.ClientSkillState;
 import com.dayzhud.mod.skill.Skill;
 import com.dayzhud.mod.skill.SpendSkillPacket;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -29,7 +32,7 @@ import java.util.Locale;
 @OnlyIn(Dist.CLIENT)
 public class SkillsScreen extends Screen {
 
-    private static final int PANEL_W = 320;
+    private static final int PANEL_W = 360;
     private static final int HEADER_H = 46;
     private static final int ROW_H = 44;
     private static final int PAD = 14;
@@ -39,6 +42,24 @@ public class SkillsScreen extends Screen {
     private static final int PIP_H = 5;
 
     private static final int BUY_SIZE = 16;
+
+    /**
+     * Icon column. The textures are 64x64 but are blitted with the texture dimensions given as
+     * the DRAWN size - that's this codebase's convention for "scale the whole image down to
+     * this box" (see DayzHudOverlay), and it's what keeps them crisp at any GUI scale.
+     */
+    private static final int ICON_SIZE = 26;
+    private static final int ICON_X_OFFSET = 10;
+
+    /** Indexed by Skill.ordinal(), so the enum order and this array must stay in step. */
+    private static final ResourceLocation[] ICONS = {
+            icon("skill_vitality"), icon("skill_endurance"), icon("skill_metabolism"),
+            icon("skill_toughness"), icon("skill_acclimation")
+    };
+
+    private static ResourceLocation icon(String name) {
+        return new ResourceLocation(DayzHudMod.MOD_ID, "textures/gui/" + name + ".png");
+    }
 
     private int leftPos;
     private int topPos;
@@ -116,15 +137,18 @@ public class SkillsScreen extends Screen {
         StyledTheme.zone(graphics, leftPos + PAD - 4, y - 2,
                 leftPos + PANEL_W - PAD + 4, y + ROW_H - 8);
 
+        renderIcon(graphics, skill, y);
+
+        int textX = leftPos + PAD + ICON_X_OFFSET + ICON_SIZE + 10;
         graphics.drawString(font, skill.displayName().toUpperCase(Locale.ROOT),
-                leftPos + PAD, y + 3, StyledTheme.TEXT_COLOR, false);
+                textX, y + 3, StyledTheme.TEXT_COLOR, false);
 
         // Current effect, so the number you're buying is always in front of you.
         String effect = level > 0 ? skill.describe(level) : "no bonus yet";
-        graphics.drawString(font, effect, leftPos + PAD, y + 15,
+        graphics.drawString(font, effect, textX, y + 15,
                 level > 0 ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
 
-        renderPips(graphics, skill, level, leftPos + PAD, y + 28);
+        renderPips(graphics, skill, level, textX, y + 28);
 
         if (maxed) {
             String maxLabel = "MAX";
@@ -142,6 +166,26 @@ public class SkillsScreen extends Screen {
                 affordable ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
 
         renderBuyButton(graphics, index, affordable, mouseX, mouseY);
+    }
+
+    /**
+     * The skill's glyph, dimmed until the first level is bought so an untouched row reads as
+     * inactive at a glance rather than needing the text to be read.
+     */
+    private void renderIcon(GuiGraphics graphics, Skill skill, int rowY) {
+        ResourceLocation texture = ICONS[skill.ordinal()];
+        int x = leftPos + PAD + ICON_X_OFFSET;
+        int y = rowY + (ROW_H - 8 - ICON_SIZE) / 2;
+
+        boolean owned = ClientSkillState.level(skill) > 0;
+        float shade = owned ? 1f : 0.45f;
+
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(shade, shade, shade, 1f);
+        graphics.blit(texture, x, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+        // Reset, or every later element on this screen inherits the tint.
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
     }
 
     /** Ten pips per skill - the cap is visible at a glance, not something you discover. */

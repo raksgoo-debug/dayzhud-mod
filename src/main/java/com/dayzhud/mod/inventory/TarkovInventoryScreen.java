@@ -412,7 +412,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     // --- Skills button, immediately right of the crafting button ---
 
-    private int skillsBtnX() { return leftPos + 350; }
+    private int skillsBtnX() { return leftPos + 308; }
     private int skillsBtnY() { return topPos + 4; }
 
     private boolean isOverSkillsButton(double mouseX, double mouseY) {
