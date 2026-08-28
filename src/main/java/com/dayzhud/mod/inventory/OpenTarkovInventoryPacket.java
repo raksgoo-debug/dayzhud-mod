@@ -41,11 +41,15 @@ public class OpenTarkovInventoryPacket {
                     return new TarkovInventoryMenu(windowId, inv);
                 }
             };
-            // MUST write the container size (0 = no container). The client-side menu
-            // factory reads this VarInt first; without it the buffer is empty, the factory
-            // throws, and the screen silently never opens.
+            // MUST write the full payload, in the order TarkovMenuTypes reads it - see its
+            // class notes. The client factory reads all three fields unconditionally; write
+            // fewer and it throws, and the screen silently never opens.
             NetworkHooks.openScreen((net.minecraft.server.level.ServerPlayer) player, provider,
-                    buf -> buf.writeVarInt(0));
+                    buf -> {
+                        buf.writeVarInt(0);       // no container - just the inventory screen
+                        buf.writeBoolean(false);  // not a corpse
+                        buf.writeVarInt(0);       // no curio slots
+                    });
         });
         ctx.setPacketHandled(true);
     }

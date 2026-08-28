@@ -138,11 +138,13 @@ public class CorpseOpenRedirect {
 
                 @Override
                 public AbstractContainerMenu createMenu(int windowId, Inventory inv, Player p) {
-                    return new TarkovInventoryMenu(windowId, inv, corpse, curioIds);
+                    return new TarkovInventoryMenu(windowId, inv, corpse, curioIds, true);
                 }
             }, buf -> {
+                // Payload order is fixed by TarkovMenuTypes - see its class notes.
                 buf.writeVarInt(corpse.getContainerSize());
-                buf.writeVarInt(curioIds.size());
+                buf.writeBoolean(true);              // this IS a corpse, curios or not
+                buf.writeVarInt(curioIds.size());    // 0 is normal for a bare NPC
             });
             DayzHudMod.LOGGER.info("[dayzhud] Opened the merged corpse view for {} ({} slots, "
                     + "{} curios, from {}).", serverPlayer.getGameProfile().getName(),

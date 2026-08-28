@@ -137,8 +137,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawWeaponMirrors(graphics, mouseX, mouseY);
         drawCraftingArrow(graphics);
         drawCraftTableButton(graphics, mouseX, mouseY);
+        drawSkillsButton(graphics, mouseX, mouseY);
         if (isOverCraftButton(mouseX, mouseY)) {
             graphics.renderTooltip(font, Component.literal("Open 3x3 crafting"), mouseX, mouseY);
+        }
+        if (isOverSkillsButton(mouseX, mouseY)) {
+            graphics.renderTooltip(font, Component.literal("Skills"), mouseX, mouseY);
         }
         drawBackpackScrollbar(graphics);
         drawCorpseScrollbar(graphics);
@@ -406,10 +410,48 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
     }
 
+    // --- Skills button, immediately right of the crafting button ---
+
+    private int skillsBtnX() { return leftPos + 350; }
+    private int skillsBtnY() { return topPos + 4; }
+
+    private boolean isOverSkillsButton(double mouseX, double mouseY) {
+        return mouseX >= skillsBtnX() && mouseX <= skillsBtnX() + CRAFT_BTN_W
+                && mouseY >= skillsBtnY() && mouseY <= skillsBtnY() + CRAFT_BTN_H;
+    }
+
+    private void drawSkillsButton(GuiGraphics graphics, int mouseX, int mouseY) {
+        boolean hovered = isOverSkillsButton(mouseX, mouseY);
+        int bx = skillsBtnX(), by = skillsBtnY();
+        graphics.fill(bx, by, bx + CRAFT_BTN_W, by + CRAFT_BTN_H,
+                hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
+        graphics.renderOutline(bx, by, CRAFT_BTN_W, CRAFT_BTN_H,
+                hovered ? StyledTheme.ACCENT : SLOT_BORDER);
+
+        // Three ascending bars - a "level up" glyph, distinct at a glance from the crafting
+        // button's 3x3 grid even at small GUI scales.
+        int glyphColor = hovered ? 0xFFFFFFFF : HEADER_COLOR;
+        for (int i = 0; i < 3; i++) {
+            int barHeight = 3 + i * 3;
+            int bxi = bx + 4 + i * 3;
+            graphics.fill(bxi, by + 12 - barHeight, bxi + 2, by + 12, glyphColor);
+        }
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && isOverCraftButton(mouseX, mouseY)) {
             NetworkHandler.CHANNEL.sendToServer(new OpenCraftingPacket());
+            return true;
+        }
+        if (button == 0 && isOverSkillsButton(mouseX, mouseY)) {
+            // The skills screen has no slots, so it isn't a container screen. Close this
+            // menu properly first - just swapping the screen would leave the server holding
+            // an open container for a screen that no longer exists.
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.closeContainer();
+                minecraft.setScreen(new com.dayzhud.mod.client.SkillsScreen());
+            }
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);

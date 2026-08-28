@@ -21,14 +21,25 @@ public class TarkovMenuTypes {
      * view. The open packet carries the opened container's size (0 for none) so the client
      * can build a dummy SimpleContainer of matching size - the slot COUNT has to agree on
      * both sides or the sync packets won't line up, but the contents arrive from the server.
+     *
+     * PAYLOAD, written by every opener (OpenTarkovInventoryPacket, ContainerOpenRedirect,
+     * CorpseOpenRedirect) and read here. All three fields are ALWAYS present, in this order:
+     *
+     *   varint  containerSize   0 = no container, just the inventory screen
+     *   boolean isCorpse        corpse layout (paperdoll + gear column) vs plain grid
+     *   varint  curioCount      how many curio slots the corpse has; 0 is normal and legal
+     *
+     * isCorpse is its own field rather than being inferred from curioCount > 0. Inferring it
+     * meant a corpse wearing no curios - a bare NPC - opened as an ordinary chest. Writing
+     * all three unconditionally also retires the old isReadable() probe, which would silently
+     * build a different menu shape if an opener ever forgot to write a field.
      */
     public static final RegistryObject<MenuType<TarkovInventoryMenu>> TARKOV_INVENTORY =
             MENU_TYPES.register("tarkov_inventory",
                     () -> IForgeMenuType.create((windowId, inv, buf) -> {
                         int containerSize = buf.readVarInt();
-                        // Corpse opens also send a curio count; plain inventory/chest opens
-                        // don't, so only read it when there's payload left.
-                        int curioCount = buf.isReadable() ? buf.readVarInt() : 0;
+                        boolean isCorpse = buf.readBoolean();
+                        int curioCount = buf.readVarInt();
                         if (containerSize <= 0) {
                             return new TarkovInventoryMenu(windowId, inv, null);
                         }
@@ -40,6 +51,6 @@ public class TarkovMenuTypes {
                             curioIds.add("curio" + i);
                         }
                         return new TarkovInventoryMenu(windowId, inv,
-                                new SimpleContainer(containerSize), curioIds);
+                                new SimpleContainer(containerSize), curioIds, isCorpse);
                     }));
 }

@@ -5,7 +5,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkHooks;
 
@@ -21,8 +20,11 @@ import java.util.function.Supplier;
  * either way and matches vanilla behaviour.
  *
  * The menu is opened server-side through the normal NetworkHooks flow so the container is
- * properly synced, and it renders with this mod's styling because StyledScreens
- * re-registers MenuType.CRAFTING against StyledContainerScreen.
+ * properly synced, and it picks up this mod's styling because StyledScreens substitutes
+ * StyledContainerScreen at screen-open time.
+ *
+ * The menu is a {@link PortableCraftingMenu}, NOT a bare CraftingMenu - see that class for
+ * why a plain one built on ContainerLevelAccess.NULL could never craft anything at all.
  */
 public class OpenCraftingPacket {
 
@@ -39,8 +41,16 @@ public class OpenCraftingPacket {
         ctx.enqueueWork(() -> {
             ServerPlayer sender = ctx.getSender();
             if (sender == null) return;
+            // A REAL level access, anchored where the player is standing. CraftingMenu runs
+            // both its result calculation and its give-your-items-back-on-close through
+            // access.execute(), and ContainerLevelAccess.NULL never invokes the callback at
+            // all - so with NULL the grid could never produce a result and ate anything left
+            // on it. PortableCraftingMenu re-opens stillValid() so the real access doesn't
+            // then demand an actual crafting table block underfoot.
+            ContainerLevelAccess access =
+                    ContainerLevelAccess.create(sender.level(), sender.blockPosition());
             NetworkHooks.openScreen(sender, new SimpleMenuProvider(
-                    (windowId, inv, p) -> new CraftingMenu(windowId, inv, ContainerLevelAccess.NULL),
+                    (windowId, inv, p) -> new PortableCraftingMenu(windowId, inv, access),
                     Component.literal("Crafting")));
         });
         ctx.setPacketHandled(true);

@@ -146,8 +146,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** The opened chest/crate/corpse, or null when this is just the player inventory screen. */
     public final Container openedContainer;
     public final int containerRows;
-    /** Non-empty only for corpses; drives the gear-style layout instead of a flat grid. */
+    /** The corpse's curio slot ids, in container order. EMPTY for a corpse wearing none. */
     public final List<String> corpseCurioIds;
+    /**
+     * Whether {@link #openedContainer} is a corpse, and so gets the gear-style layout with
+     * the paperdoll instead of a flat grid.
+     *
+     * Passed in explicitly, NOT inferred from corpseCurioIds being non-empty. It used to be
+     * inferred, which meant a corpse wearing no curios at all - a bare NPC, very common -
+     * failed the test and was drawn as an ordinary chest. The curio list describes what the
+     * corpse is WEARING; it can legitimately be empty, and that says nothing about whether
+     * the container is a corpse.
+     */
+    private final boolean corpseLayout;
     public CorpseLootHandler corpseLoot;
     public ScrollingBackpackView corpseLootView;
     private final DataSlot corpseBagSlots = DataSlot.standalone();
@@ -182,19 +193,24 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      *                  the client passes a SimpleContainer of the size sent in the open packet.
      */
     public TarkovInventoryMenu(int windowId, Inventory playerInventory, Container container) {
-        this(windowId, playerInventory, container, List.of());
+        this(windowId, playerInventory, container, List.of(), false);
     }
 
     /**
-     * @param curioIds when non-empty, {@code container} is treated as a Ragdollified corpse
-     *                 and laid out as armor/gear/inventory/hotbar instead of a plain grid.
+     * @param curioIds the corpse's curio slot ids, in container order. May be empty - a
+     *                 corpse wearing no curios is perfectly normal.
+     * @param isCorpse true to lay {@code container} out as a Ragdollified corpse
+     *                 (armor/gear/inventory/hotbar plus the paperdoll) instead of a plain
+     *                 grid. Both sides MUST pass the same value or the slot counts diverge
+     *                 and sync breaks, so it travels in the open packet.
      */
     public TarkovInventoryMenu(int windowId, Inventory playerInventory, Container container,
-                               List<String> curioIds) {
+                               List<String> curioIds, boolean isCorpse) {
         super(TarkovMenuTypes.TARKOV_INVENTORY.get(), windowId);
         this.player = playerInventory.player;
         this.openedContainer = container;
         this.corpseCurioIds = List.copyOf(curioIds);
+        this.corpseLayout = isCorpse && container != null;
         this.containerRows = container == null ? 0 : Math.max(1, container.getContainerSize() / CONTAINER_COLS);
         if (container != null) {
             container.startOpen(player);
@@ -399,7 +415,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean isCorpse() {
-        return openedContainer != null && !corpseCurioIds.isEmpty();
+        return corpseLayout;
     }
 
     /** Recompute the crafting result whenever the 2x2 grid changes. */

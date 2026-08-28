@@ -133,7 +133,12 @@ public class ContainerOpenRedirect {
                 public AbstractContainerMenu createMenu(int windowId, Inventory inv, Player p) {
                     return new TarkovInventoryMenu(windowId, inv, backing);
                 }
-            }, buf -> buf.writeVarInt(backing.getContainerSize()));
+            }, buf -> {
+                // Payload order is fixed by TarkovMenuTypes - see its class notes.
+                buf.writeVarInt(backing.getContainerSize());
+                buf.writeBoolean(false);  // a chest/barrel/hopper, not a corpse
+                buf.writeVarInt(0);       // no curio slots
+            });
         } catch (Exception e) {
             DayzHudMod.LOGGER.warn("[dayzhud] Failed to open merged container view; "
                     + "leaving the vanilla screen in place.", e);
