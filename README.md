@@ -135,8 +135,8 @@ carries its owner's stored XP.
 | Skill | Per level | Cap | What it touches |
 |---|---|---|---|
 | Vitality | +2 max health | 10 | `Attributes.MAX_HEALTH`, transient modifier |
-| Endurance | +10 max stamina, −4% sprint drain | 10 | client stamina model |
-| Metabolism | −6% hunger drain | 10 | food level refund, server-side |
+| Endurance | +10 max stamina, −4% sprint drain | 10 | `StaminaSystem`, server-side |
+| Metabolism | −6% hunger & thirst drain | 10 | exhaustion damping, server-side |
 | Toughness | −2% damage taken | 10 | `LivingHurtEvent` |
 | Acclimation | +2% wider comfort band | 10 | temperature thresholds |
 
@@ -166,11 +166,43 @@ per level, so a capped player is effectively immune — deliberate, for a 130-le
 
 Every tunable is a constant at the top of `TemperatureSystem`.
 
-**Known gap:** Metabolism slows *hunger* directly but not thirst. Thirst Was Taken's
-capability is only read here, never written — `ThirstWasTakenCompat` has no setter, and
-guessing at another mod's write API is exactly what goes stale. Thirst still benefits
-indirectly wherever it drains on exhaustion. To do it properly, the TWT jar needs checking
-for its thirst mutator first.
+The XP bar is drawn by `DayzHudOverlay` as a mirror of the stamina bar on the other side of
+the hotbar, with the level in plain white above it; vanilla's own bar is cancelled in
+`OverlayCanceller`. Skill icons live in `assets/dayzhud/textures/gui/skill_*.png` (64x64,
+drawn at 26px), dimmed to 45% until a skill has at least one level. They're sliced from
+supplied artwork: white shape, alpha taken from luminance, so the black detail inside them
+(the ECG trace, the lung bronchi) is a genuine cutout and the panel shows through it.
+
+### How Metabolism slows hunger and thirst
+
+Vanilla food and Thirst Was Taken both work the same way: activity piles up an *exhaustion*
+float, and crossing a threshold spends one point of food/thirst. Metabolism scales down every
+**increase** to those counters, which is the correct place to intervene — it happens before
+anything is spent, saturation semantics stay intact, and it covers every source of exhaustion
+without needing to know what they are.
+
+TWT's side goes through `IThirst.getExhaustion()` / `setExhaustion(float)`, both confirmed
+present in `ThirstWasTaken-1.20.1-1.4.0.jar` before being used. If a future TWT release
+renames them, `ThirstWasTakenCompat` degrades to "unavailable" and only hunger is slowed.
+
+### Stamina is server-side
+
+`StaminaSystem` owns it. The client is sent a value for the bar and smooths it for display
+(syncs land every 3 ticks, so the raw value would visibly step). Movement is measured from
+the player's actual position delta rather than `deltaMovement`, which isn't reliable
+server-side — that also closes the "hold sprint while standing still" dodge.
+
+### Commands
+
+```
+/dayzhud skills query  [targets]          what someone has (self needs no permission)
+/dayzhud skills reset  [targets]          wipe to 0, XP is gone                 (op)
+/dayzhud skills respec [targets]          wipe to 0 and refund every XP level   (op)
+/dayzhud skills set <skill> <level> [targets]                                   (op)
+```
+
+The respec refund is recomputed from the cost curve, so it stays correct if `Skill.java` is
+retuned later.
 
 ## Building
 
