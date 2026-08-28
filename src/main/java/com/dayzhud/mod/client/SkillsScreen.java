@@ -44,12 +44,28 @@ public class SkillsScreen extends Screen {
     private static final int BUY_SIZE = 16;
 
     /**
+     * The row's highlighted zone, relative to rowY. EVERY element in a row is positioned from
+     * the centre of this box rather than from the row's top edge - which is what the first
+     * version did, with each offset eyeballed separately, so the icon, the text block, the
+     * cost and the + button all ended up centred on four slightly different lines.
+     */
+    private static final int ZONE_INSET = 2;              // zone starts this far above rowY
+    private static final int ZONE_H = ROW_H - 6;
+
+    /**
      * Icon column. The textures are 64x64 but are blitted with the texture dimensions given as
      * the DRAWN size - that's this codebase's convention for "scale the whole image down to
      * this box" (see DayzHudOverlay), and it's what keeps them crisp at any GUI scale.
      */
     private static final int ICON_SIZE = 26;
-    private static final int ICON_X_OFFSET = 10;
+
+    /**
+     * Gap on BOTH sides of the icon. Equal gutters are the point: the icon then sits centred
+     * in a column of its own between the zone's left edge and the text, rather than being
+     * tucked against one side of it. Widen or narrow this single number to move the icon and
+     * the text together and keep that centring intact.
+     */
+    private static final int ICON_GUTTER = 16;
 
     /** Indexed by Skill.ordinal(), so the enum order and this array must stay in step. */
     private static final ResourceLocation[] ICONS = {
@@ -85,12 +101,47 @@ public class SkillsScreen extends Screen {
         return topPos + HEADER_H + index * ROW_H;
     }
 
+    private int zoneLeft() {
+        return leftPos + PAD - 4;
+    }
+
+    private int zoneRight() {
+        return leftPos + PANEL_W - PAD + 4;
+    }
+
+    /** Left edge of the icon - one gutter in from the zone. */
+    private int iconX() {
+        return zoneLeft() + ICON_GUTTER;
+    }
+
+    /** Left edge of the text block - one gutter past the icon, so both gutters match. */
+    private int textX() {
+        return iconX() + ICON_SIZE + ICON_GUTTER;
+    }
+
+    private int zoneTop(int index) {
+        return rowY(index) - ZONE_INSET;
+    }
+
+    /** The single line everything in a row is centred on. */
+    private int zoneCenterY(int index) {
+        return zoneTop(index) + ZONE_H / 2;
+    }
+
+    /**
+     * Top edge to pass to drawString so a single line of text sits centred on {@code centerY}.
+     * Minecraft draws text downward from the given y, so this backs off half a line.
+     */
+    private int centeredTextY(int centerY) {
+        return centerY - font.lineHeight / 2;
+    }
+
     private int buyX() {
         return leftPos + PANEL_W - PAD - BUY_SIZE;
     }
 
     private int buyY(int index) {
-        return rowY(index) + 4;
+        return zoneCenterY(index) - BUY_SIZE / 2;
     }
 
     /** XP levels the player has to spend right now. */
@@ -129,31 +180,46 @@ public class SkillsScreen extends Screen {
         renderTooltips(graphics, mouseX, mouseY);
     }
 
+    /** Name + effect + pips stacked as one block: line heights and the gaps between them. */
+    private static final int TEXT_LINE_H = 8;
+    private static final int TEXT_GAP = 4;
+    private static final int PIP_GAP_ABOVE = 5;
+    private static final int TEXT_BLOCK_H =
+            TEXT_LINE_H + TEXT_GAP + TEXT_LINE_H + PIP_GAP_ABOVE + PIP_H;
+
     private void renderRow(GuiGraphics graphics, Skill skill, int index, int mouseX, int mouseY) {
-        int y = rowY(index);
         int level = ClientSkillState.level(skill);
         boolean maxed = level >= skill.maxLevel();
 
-        StyledTheme.zone(graphics, leftPos + PAD - 4, y - 2,
-                leftPos + PANEL_W - PAD + 4, y + ROW_H - 8);
+        int top = zoneTop(index);
+        int centerY = zoneCenterY(index);
 
-        renderIcon(graphics, skill, y);
+        StyledTheme.zone(graphics, zoneLeft(), top, zoneRight(), top + ZONE_H);
 
-        int textX = leftPos + PAD + ICON_X_OFFSET + ICON_SIZE + 10;
+        renderIcon(graphics, skill, centerY);
+
+        // The three stacked lines are centred as ONE block, so the row reads as a unit rather
+        // than as text that happens to sit near an icon.
+        int textX = textX();
+        int blockTop = centerY - TEXT_BLOCK_H / 2;
+
         graphics.drawString(font, skill.displayName().toUpperCase(Locale.ROOT),
-                textX, y + 3, StyledTheme.TEXT_COLOR, false);
+                textX, blockTop, StyledTheme.TEXT_COLOR, false);
 
         // Current effect, so the number you're buying is always in front of you.
         String effect = level > 0 ? skill.describe(level) : "no bonus yet";
-        graphics.drawString(font, effect, textX, y + 15,
+        graphics.drawString(font, effect, textX, blockTop + TEXT_LINE_H + TEXT_GAP,
                 level > 0 ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
 
-        renderPips(graphics, skill, level, textX, y + 28);
+        renderPips(graphics, skill, level, textX,
+                blockTop + TEXT_BLOCK_H - PIP_H);
 
         if (maxed) {
             String maxLabel = "MAX";
+            // Centred on the same column the + button occupies, so a maxed row and a buyable
+            // row have their right-hand element in exactly the same place.
             graphics.drawString(font, maxLabel,
-                    buyX() + (BUY_SIZE - font.width(maxLabel)) / 2, y + 8,
+                    buyX() + (BUY_SIZE - font.width(maxLabel)) / 2, centeredTextY(centerY),
                     StyledTheme.LABEL_DIM, false);
             return;
         }
@@ -162,7 +228,7 @@ public class SkillsScreen extends Screen {
         boolean affordable = canAfford(skill);
         String costLabel = cost + " XP";
         graphics.drawString(font, costLabel,
-                buyX() - 6 - font.width(costLabel), y + 8,
+                buyX() - 6 - font.width(costLabel), centeredTextY(centerY),
                 affordable ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
 
         renderBuyButton(graphics, index, affordable, mouseX, mouseY);
@@ -172,10 +238,10 @@ public class SkillsScreen extends Screen {
      * The skill's glyph, dimmed until the first level is bought so an untouched row reads as
      * inactive at a glance rather than needing the text to be read.
      */
-    private void renderIcon(GuiGraphics graphics, Skill skill, int rowY) {
+    private void renderIcon(GuiGraphics graphics, Skill skill, int centerY) {
         ResourceLocation texture = ICONS[skill.ordinal()];
-        int x = leftPos + PAD + ICON_X_OFFSET;
-        int y = rowY + (ROW_H - 8 - ICON_SIZE) / 2;
+        int x = iconX();
+        int y = centerY - ICON_SIZE / 2;
 
         boolean owned = ClientSkillState.level(skill) > 0;
         float shade = owned ? 1f : 0.45f;
@@ -218,9 +284,9 @@ public class SkillsScreen extends Screen {
     private void renderTooltips(GuiGraphics graphics, int mouseX, int mouseY) {
         Skill[] skills = Skill.values();
         for (int i = 0; i < skills.length; i++) {
-            int y = rowY(i);
+            int top = zoneTop(i);
             boolean overRow = mouseX >= leftPos + PAD && mouseX <= leftPos + PANEL_W - PAD
-                    && mouseY >= y && mouseY <= y + ROW_H - 8;
+                    && mouseY >= top && mouseY <= top + ZONE_H;
             if (!overRow) continue;
 
             Skill skill = skills[i];

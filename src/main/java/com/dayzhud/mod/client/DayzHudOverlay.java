@@ -13,7 +13,7 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 /**
  * Draws a DayZ-style status row in the bottom-right corner (Temperature, Food, Water,
  * Health), a thin horizontal stamina bar and movement-state icon in the bottom-left, and a
- * matching XP bar mirrored on the other side of the hotbar.
+ * hairline XP bar sitting on top of the hotbar.
  *
  * Each status icon is drawn as two layers: a thin outline (always fully visible) and a
  * solid fill clipped to the bottom N% of the icon based on the stat's value - a liquid-
@@ -33,7 +33,14 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int STAMINA_BAR_HEIGHT = 3;
     private static final int STAMINA_BAR_GAP_FROM_OFFHAND = 10; // clearance from the offhand slot
     private static final int STAMINA_BAR_MIN_LEFT = 70;          // never sit closer to the left edge than this (clears other mods' bottom-left UI)
-    private static final int XP_BAR_GAP_FROM_HOTBAR = 10;        // mirrors STAMINA_BAR_GAP_FROM_OFFHAND on the other side
+    // XP bar: a hairline rule directly above the hotbar, matching its width exactly.
+    private static final int XP_BAR_HEIGHT = 2;
+    private static final int XP_BAR_GAP_FROM_HOTBAR = 3;
+    private static final float XP_LEVEL_TEXT_SCALE = 0.75f;
+    // Mirrors DayzHotbarOverlay: BOTTOM_MARGIN (4) + SLOT_SIZE (20) + its 2px panel border.
+    private static final int HOTBAR_PANEL_TOP_OFFSET = 26;
+    private static final int HOTBAR_SLOT_SIZE = 20;
+    private static final int HOTBAR_SLOT_COUNT = 9;
 
     private static final int MOVEMENT_ICON_SIZE = 12;
     private static final int MOVEMENT_ICON_GAP = 6;
@@ -44,8 +51,6 @@ public class DayzHudOverlay implements IGuiOverlay {
     private static final int COLOR_COLD = 0x4DA6FF;
     private static final int COLOR_HOT = 0xFF5C33;
     private static final int COLOR_OUTLINE = 0x9A9A9A;
-    /** XP fill. Deliberately not a severity colour - a level count has no "low" state. */
-    private static final int COLOR_XP = 0x7FA650;
 
     private static final ResourceLocation ICON_HEART_OUTLINE = rl("icon_heart_outline");
     private static final ResourceLocation ICON_HEART_SOLID = rl("icon_heart_solid");
@@ -125,37 +130,53 @@ public class DayzHudOverlay implements IGuiOverlay {
     }
 
     /**
-     * XP bar, mirroring the stamina bar on the opposite side of the hotbar - same height,
-     * same backing plate, same geometry maths - so the two read as one HUD rather than as a
-     * custom bar sitting next to a vanilla one. Vanilla's own bar and level number are
-     * cancelled in OverlayCanceller.
+     * XP bar, sitting directly on top of the hotbar the way vanilla's does - but as a hairline
+     * white rule spanning exactly the hotbar's width, so it reads as part of the same HUD
+     * rather than a second bar bolted above it.
      *
-     * The level sits above the bar in plain white: it's a count, not a gauge, so it gets no
-     * severity colouring like the percentage stats do.
+     * GEOMETRY IS DERIVED FROM DayzHotbarOverlay, not from vanilla's: that overlay draws its
+     * panel at screenHeight - BOTTOM_MARGIN - SLOT_SIZE with a 2px border, which is what
+     * HOTBAR_PANEL_TOP_OFFSET encodes. If the hotbar's size or margin changes, this is the one
+     * number to change with it.
+     *
+     * White rather than a severity colour: a level count has no "low" state to warn about.
      */
     private void drawXpBar(GuiGraphics graphics, LocalPlayer player, int screenWidth, int screenHeight) {
-        int barBottom = screenHeight - MARGIN_Y;
-        int barTop = barBottom - STAMINA_BAR_HEIGHT;
+        int hotbarWidth = HOTBAR_SLOT_COUNT * HOTBAR_SLOT_SIZE;
+        // Written exactly as DayzHotbarOverlay computes its startX, not as the equivalent
+        // (screenWidth - hotbarWidth) / 2 - the two disagree by a pixel at odd widths, and
+        // the bar has to line up with the hotbar's edges at every resolution.
+        int barLeft = screenWidth / 2 - hotbarWidth / 2;
+        int barRight = barLeft + hotbarWidth;
 
-        // Mirror of drawStaminaBar's anchoring: measured from the hotbar's RIGHT edge.
-        // Keep in sync with DayzHotbarOverlay's geometry if either changes.
-        int hotbarRight = screenWidth / 2 + 90;
-        int barLeft = hotbarRight + XP_BAR_GAP_FROM_HOTBAR;
-        int barRight = Math.min(screenWidth - MARGIN_X, barLeft + STAMINA_BAR_WIDTH);
-        if (barRight <= barLeft) return;
+        int hotbarPanelTop = screenHeight - HOTBAR_PANEL_TOP_OFFSET;
+        int barBottom = hotbarPanelTop - XP_BAR_GAP_FROM_HOTBAR;
+        int barTop = barBottom - XP_BAR_HEIGHT;
 
-        graphics.fill(barLeft, barTop, barRight, barBottom, 0x90707070);
+        // Dim track so the unfilled remainder is still legible against a bright scene.
+        graphics.fill(barLeft, barTop, barRight, barBottom, 0x90404040);
 
-        int filledWidth = Math.round((barRight - barLeft) * Math.max(0f, Math.min(1f, player.experienceProgress)));
-        graphics.fill(barLeft, barTop, barLeft + filledWidth, barBottom, 0xFF000000 | COLOR_XP);
+        float progress = Math.max(0f, Math.min(1f, player.experienceProgress));
+        graphics.fill(barLeft, barTop, barLeft + Math.round(hotbarWidth * progress), barBottom,
+                0xFFFFFFFF);
 
         int level = player.experienceLevel;
         if (level <= 0) return;
 
-        String text = String.valueOf(level);
+        // Scaled down via the pose stack - Minecraft's font has one size, so shrinking text
+        // means scaling the matrix and dividing the placement back out by the same factor.
         var font = Minecraft.getInstance().font;
-        int textX = barLeft + (barRight - barLeft - font.width(text)) / 2;
-        graphics.drawString(font, text, textX, barTop - font.lineHeight - 2, 0xFFFFFF, true);
+        String text = String.valueOf(level);
+        float textWidth = font.width(text) * XP_LEVEL_TEXT_SCALE;
+        float textHeight = font.lineHeight * XP_LEVEL_TEXT_SCALE;
+        float textX = barLeft + (hotbarWidth - textWidth) / 2f;
+        float textY = barTop - textHeight - 1;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(textX, textY, 0);
+        graphics.pose().scale(XP_LEVEL_TEXT_SCALE, XP_LEVEL_TEXT_SCALE, 1f);
+        graphics.drawString(font, text, 0, 0, 0xFFFFFF, true);
+        graphics.pose().popPose();
     }
 
     private void drawMovementIcon(GuiGraphics graphics, LocalPlayer player, int screenWidth, int screenHeight) {
