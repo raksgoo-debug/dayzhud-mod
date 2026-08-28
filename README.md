@@ -126,6 +126,52 @@ can't be read.
 merged view doesn't reproduce - replacing the menu replaces its buttons too. Everything is
 still reachable by hand (and by shift-click).
 
+## Skills and temperature
+
+A button beside the 3x3 crafting button opens the **SKILLS** screen. Levels are bought with
+**vanilla XP levels** — which pairs with corpse looting, since a Ragdollified corpse already
+carries its owner's stored XP.
+
+| Skill | Per level | Cap | What it touches |
+|---|---|---|---|
+| Vitality | +2 max health | 10 | `Attributes.MAX_HEALTH`, transient modifier |
+| Endurance | +10 max stamina, −4% sprint drain | 10 | client stamina model |
+| Metabolism | −6% hunger drain | 10 | food level refund, server-side |
+| Toughness | −2% damage taken | 10 | `LivingHurtEvent` |
+| Acclimation | +2% wider comfort band | 10 | temperature thresholds |
+
+Cost rises with the level being bought (`baseCost + level * costStep` in `Skill.java`), so
+taking one skill from 0 to 10 runs to about 130 XP levels. **Progress is kept on death** —
+`SkillEffects.onClone` copies the capability across, including the `reviveCaps()` call that
+this otherwise silently loses.
+
+### Temperature now actually does something
+
+It used to be decorative: `VitalsTracker` computed a number from the biome and nothing but
+the HUD ever read it. It's now owned by `TemperatureSystem` **server-side**, because it does
+real damage and that has to be authoritative. The client is sent the value and no longer
+computes its own, so the gauge and the effects can't disagree.
+
+```
+target = biome base temperature, normalised 0..1
+       − 0.25 in water
+       + 0.03 per equipped armor piece
+       = 1.0 flat in lava / on fire
+```
+
+Body temperature eases toward that at 2% per tick. Outside `0.20..0.80` you burn extra
+exhaustion (which reaches hunger, and any thirst mod that drains on exhaustion); a further
+`0.12` past either edge costs 1 damage every 2 seconds. Acclimation widens both edges by 2%
+per level, so a capped player is effectively immune — deliberate, for a 130-level investment.
+
+Every tunable is a constant at the top of `TemperatureSystem`.
+
+**Known gap:** Metabolism slows *hunger* directly but not thirst. Thirst Was Taken's
+capability is only read here, never written — `ThirstWasTakenCompat` has no setter, and
+guessing at another mod's write API is exactly what goes stale. Thirst still benefits
+indirectly wherever it drains on exhaustion. To do it properly, the TWT jar needs checking
+for its thirst mutator first.
+
 ## Building
 
 Recommended: push this to a GitHub repo and let `.github/workflows/build.yml` build it
