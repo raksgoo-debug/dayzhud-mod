@@ -52,9 +52,17 @@ public class SpendSkillPacket {
             // free level. giveExperienceLevels with a negative amount is how vanilla itself
             // deducts levels (enchanting, anvils).
             player.giveExperienceLevels(-cost);
-            skills.increment(packet.skill);
 
+            float maxHealthBefore = player.getMaxHealth();
+            skills.increment(packet.skill);
             SkillEffects.reapply(player);
+
+            // Buying Vitality raises the ceiling but not current health, so the health gauge
+            // would DROP as a percentage the moment you bought an upgrade. Healing by exactly
+            // what was gained makes the purchase read as the upgrade it is.
+            float gained = player.getMaxHealth() - maxHealthBefore;
+            if (gained > 0f) player.heal(gained);
+
             SkillEffects.sync(player);
 
             DayzHudMod.LOGGER.debug("[dayzhud] {} bought {} level {} for {} XP levels.",

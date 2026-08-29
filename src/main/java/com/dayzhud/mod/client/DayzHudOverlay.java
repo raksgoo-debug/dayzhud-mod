@@ -1,6 +1,7 @@
 package com.dayzhud.mod.client;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -78,7 +79,10 @@ public class DayzHudOverlay implements IGuiOverlay {
         LocalPlayer player = mc.player;
         if (player == null || mc.options.hideGui) return;
 
-        float health01 = player.getHealth() / Math.max(1f, player.getMaxHealth());
+        // First Aid, when present, owns the real health - vanilla health is only a lossy
+        // summary of its limb model and drifts out of step with it. See FirstAidCompat.
+        float health01 = FirstAidCompat.getBodyHealth01(player)
+                .orElseGet(() -> player.getHealth() / Math.max(1f, player.getMaxHealth()));
         float food01 = player.getFoodData().getFoodLevel() / 20f;
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);

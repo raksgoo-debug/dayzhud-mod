@@ -47,6 +47,17 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
+# Soft dependency: First Aid. When present it owns the player's real health as a per-limb
+# damage model, and vanilla health becomes only a derived summary of it - so the HUD reads
+# the limbs directly via FirstAidCompat. Loading AFTER it keeps its capability registered
+# before we ever look it up.
+[[dependencies.${mod_id}]]
+    modId="firstaid"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Soft dependency: loads fine with or without Thirst Was Taken installed.
 # If present, the mod reads its thirst value via reflection for the HUD's water gauge.
 # (Note: the mod's actual id is "thirst" - the jar is just named ThirstWasTaken-*.jar.)

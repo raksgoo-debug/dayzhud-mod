@@ -55,11 +55,26 @@ public final class SkillEffects {
 
     /**
      * Re-derives every attribute-backed skill from the capability. Safe to call repeatedly -
-     * each modifier is removed before being re-added, so this converges rather than stacking.
+     * the modifier is removed by its fixed UUID before being re-added, so this converges
+     * rather than stacking however many times it runs.
      *
-     * The modifier is TRANSIENT (not saved to the player's NBT) on purpose: the capability is
-     * the single source of truth, and a saved modifier would be re-added on top of a freshly
-     * computed one every load, doubling the bonus a bit more each time.
+     * THE MODIFIER IS PERMANENT (saved into the player's attribute NBT), NOT TRANSIENT, and
+     * that difference is a bug fix, not a style choice. Vanilla loads a player like this:
+     *
+     *     LivingEntity.readAdditionalSaveData:
+     *         ... getAttributes().load(...)      <- attributes first
+     *         ... setHealth(nbt "Health")        <- THEN health, clamped to current max
+     *
+     * With a transient modifier there was nothing in the attribute NBT, so at the moment
+     * health was read the player's maximum was still the base 20 - and setHealth clamped a
+     * saved 40 down to 20. Our login handler then raised the maximum back to 40, leaving
+     * every single login at 20/40. That is exactly the "I always join with 50% HP" symptom.
+     * A permanent modifier is restored WITH the attributes, before health is read, so the
+     * saved value survives.
+     *
+     * KNOWN TRADE-OFF: a permanent modifier persists in the player's NBT. If this mod is
+     * ever removed, affected players keep the bonus maximum health until something strips
+     * the modifier. That is the accepted cost of loading in the right order.
      */
     public static void reapply(Player player) {
         int vitality = SkillCapability.levelOf(player, Skill.VITALITY);
@@ -69,9 +84,16 @@ public final class SkillEffects {
         maxHealth.removeModifier(VITALITY_MODIFIER);
         float bonus = Skill.VITALITY.magnitudeAt(vitality);
         if (bonus > 0f) {
-            maxHealth.addTransientModifier(new AttributeModifier(
+            maxHealth.addPermanentModifier(new AttributeModifier(
                     VITALITY_MODIFIER, "dayzhud.vitality", bonus,
                     AttributeModifier.Operation.ADDITION));
+        }
+
+        // Lowering the cap - a reset or respec - has to pull current health down with it.
+        // Nothing in vanilla does that on its own, so without this a player who reset from
+        // Vitality 10 would sit at 40 health with a maximum of 20.
+        if (player.getHealth() > player.getMaxHealth()) {
+            player.setHealth(player.getMaxHealth());
         }
     }
 
@@ -116,11 +138,17 @@ public final class SkillEffects {
         }
     }
 
-    /** Respawn builds a new entity, so transient modifiers must be re-added. */
+    /**
+     * Respawn builds a fresh entity whose maximum is the BASE maximum, and vanilla sets the
+     * respawning player to that base value before we get here. Re-applying the modifier then
+     * raises the ceiling but not the health, so without the explicit top-up you would respawn
+     * at 20/40 - the same off-by-a-modifier problem as the login path, from the other end.
+     */
     @SubscribeEvent
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             reapply(player);
+            player.setHealth(player.getMaxHealth());
             sync(player);
         }
     }
