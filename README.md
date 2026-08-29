@@ -185,6 +185,36 @@ TWT's side goes through `IThirst.getExhaustion()` / `setExhaustion(float)`, both
 present in `ThirstWasTaken-1.20.1-1.4.0.jar` before being used. If a future TWT release
 renames them, `ThirstWasTakenCompat` degrades to "unavailable" and only hunger is slowed.
 
+### First Aid changes what "health" means
+
+With **First Aid** installed, `player.getHealth()` is not your health. First Aid keeps a
+per-limb damage model and recomputes the vanilla value from it
+(`PlayerDamageModel.calculateNewCurrentHealth`, verified in `firstaid-1.20.1-1.1.jar`):
+
+```
+AVERAGE_ALL (default vanillaHealthCalculation):
+  criticalFraction = sum(critical currentHealth) / sum(critical maxHealth)
+  otherFraction    = sum(other    currentHealth) / sum(other    maxHealth)
+  vanillaHealth    = (criticalFraction + otherFraction) / 2 * player.getMaxHealth()
+```
+
+That's an average of two group averages, re-scaled onto the max-health attribute, refreshed
+only when First Aid pushes it — so anything writing vanilla health directly moves the number
+without touching a limb. `FirstAidCompat` therefore reads the limbs and totals them, which is
+the same arithmetic you'd do looking at First Aid's own overlay. Falls back to vanilla health
+when First Aid is absent.
+
+**Vitality interacts with two First Aid server settings** (`firstaid-server.toml`):
+
+| Setting | Default | Effect on Vitality |
+|---|---|---|
+| `scaleMaxHealth` | `true` | Limb health scales by `getMaxHealth() / 20`. **Turn this off and Vitality does nothing.** |
+| `capMaxHealth` | `true` | Caps every limb at 6 hearts. Default limbs are 4 hearts and the body is already 6. |
+
+With both at their defaults, Vitality is useful up to about **+50% max health** (max 30, i.e.
+Vitality 5): limbs scale 4 → 6 hearts and stop, and the body — already at the 6-heart cap —
+never gains anything at all. Set `capMaxHealth = false` to let the full ten levels matter.
+
 ### Stamina is server-side
 
 `StaminaSystem` owns it. The client is sent a value for the bar and smooths it for display
