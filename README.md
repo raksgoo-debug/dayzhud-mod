@@ -138,7 +138,7 @@ carries its owner's stored XP.
 | Endurance | +10 max stamina, −4% sprint drain | 10 | `StaminaSystem`, server-side |
 | Metabolism | −6% hunger & thirst drain | 10 | exhaustion damping, server-side |
 | Toughness | −2% damage taken | 10 | `LivingHurtEvent` |
-| Acclimation | +2% wider comfort band | 10 | temperature thresholds |
+| Acclimation | +2% wider comfort band (≈1°C/level) | 10 | temperature thresholds |
 
 Cost rises with the level being bought (`baseCost + level * costStep` in `Skill.java`), so
 taking one skill from 0 to 10 runs to about 130 XP levels. **Progress is kept on death** —
@@ -148,30 +148,44 @@ this otherwise silently loses.
 ### Temperature now actually does something
 
 It used to be decorative: `VitalsTracker` computed a number from the biome and nothing but
-the HUD ever read it. It's now owned by `TemperatureSystem` **server-side**, because it does
-real damage and that has to be authoritative. The client is sent the value and no longer
-computes its own, so the gauge and the effects can't disagree.
+the HUD ever read it. It's now owned by `TemperatureSystem` **server-side**, because it drives
+real effects. The client is sent the value and no longer computes its own, so the gauge and
+the effects can't disagree.
 
 ```
 target = biome base temperature, normalised 0..1
-       − 0.25 in water
-       + 0.03 per equipped armor piece
+       + 0.08  sun      (day, sky visible, not raining)
+       - 0.10  night    (night, sky visible)
+       - 0.10  rain     (rain falling on you)
+       - 0.25  wetness  (× how soaked you are)
+       + 0.03  per equipped armor piece
        = 1.0 flat in lava / on fire
 ```
 
-Body temperature eases toward that at 2% per tick. Outside `0.20..0.80` you burn extra
-exhaustion (which reaches hunger, and any thirst mod that drains on exhaustion); a further
-`0.12` past either edge costs 1 damage every 2 seconds. Acclimation widens both edges by 2%
-per level, so a capped player is effectively immune — deliberate, for a 130-level investment.
+Body temperature eases toward that at 2% per tick — about 87% of the way in five seconds.
+
+**Shelter falls out for free.** With no sky above you, none of the sun/night/rain terms apply,
+so being indoors parks you at the biome baseline. Getting out of the weather answers both
+extremes without being a separate mechanic.
+
+**Wetness is why swimming works.** Water soaks you instantly, rain over 30s, and it dries over
+60s — so a swim keeps you cool for a minute afterwards, and rain at night is genuinely
+miserable. Drinking anything with the DRINK use animation (vanilla bottles, a thirst mod's
+canteens — matched on the animation, not on item ids) also nudges you cooler.
+
+The gauge reads `-10 + t × 50` °C, so: above **30°C** or below **0°C** you're uncomfortable;
+a further 0.12 out (**36°C** / **−6°C**) it gets heavier.
+
+**No damage, at either extreme.** Being too hot or cold burns food and water faster and slows
+stamina recovery (0.6× uncomfortable, 0.35× severe) — in *both* directions, so overheating
+tires you just like freezing does. It never takes a heart. An ambient stat that can kill you
+while you're reading a chest is a bad experience, and the pressure works without it.
+
+`TemperatureSystem.discomfortLevel()` is the single source of that 0/1/2 judgement; the
+stamina penalty and the exhaustion penalty both read it rather than re-deriving the
+thresholds, so they can't drift apart.
 
 Every tunable is a constant at the top of `TemperatureSystem`.
-
-The XP bar is drawn by `DayzHudOverlay` as a mirror of the stamina bar on the other side of
-the hotbar, with the level in plain white above it; vanilla's own bar is cancelled in
-`OverlayCanceller`. Skill icons live in `assets/dayzhud/textures/gui/skill_*.png` (64x64,
-drawn at 26px), dimmed to 45% until a skill has at least one level. They're sliced from
-supplied artwork: white shape, alpha taken from luminance, so the black detail inside them
-(the ECG trace, the lung bronchi) is a genuine cutout and the panel shows through it.
 
 ### How Metabolism slows hunger and thirst
 
@@ -233,6 +247,33 @@ server-side — that also closes the "hold sprint while standing still" dodge.
 
 The respec refund is recomputed from the cost curve, so it stays correct if `Skill.java` is
 retuned later.
+
+## Sounds
+
+| Event | Fires when | Files |
+|---|---|---|
+| `dayzhud:inventory_open` | any styled screen opens | `inventory_open.ogg` |
+| `dayzhud:inventory_close` | it closes | `inventory_close.ogg` |
+| `dayzhud:inventory_move` | an item is picked up, placed, swapped or dropped | `inventory_move1/2/3.ogg`, chosen at random |
+| `dayzhud:heavy_breathing` | stamina hits zero | `heavy_breathing.ogg` |
+
+**Minecraft only reads OGG Vorbis.** WAV, MP3 and M4A are ignored silently, which is the usual
+reason a newly added sound does nothing at all. Source files were converted with ffmpeg to
+44.1 kHz Vorbis and loudness-normalised to −16 LUFS so the set sits at one level.
+
+Interface sounds go through `UiSounds` (client-only, `SimpleSoundInstance.forUI`) — played
+non-positionally, so they're at full volume regardless of facing and the stereo files stay
+stereo. A *positional* sound has to be mono or Minecraft ignores its attenuation entirely.
+
+`slotClicked` is where the move sound hooks in rather than the mouse handlers, because every
+route into moving an item funnels through it: left/right click, shift-click, number-key swaps,
+and Q/outside-window drops (which arrive with a null slot). The carried stack and slot are
+sampled **before** `super`, since super is what empties them.
+
+The exhaustion cue is sent server-side with `playNotifySound`, so only the player who ran out
+hears it — no one else. It fires once on the transition to empty and re-arms only after
+stamina passes `EXHAUSTION_RESET_FRACTION` (50%), which takes about as long as the clip runs,
+so it can't stack on itself.
 
 ## Building
 
