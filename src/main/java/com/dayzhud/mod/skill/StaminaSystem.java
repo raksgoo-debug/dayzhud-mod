@@ -1,6 +1,8 @@
 package com.dayzhud.mod.skill;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.sound.ModSounds;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.TickEvent;
@@ -10,7 +12,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -45,14 +49,24 @@ public final class StaminaSystem {
     /** Drain can never fall below this multiple of the base, however deep the skill goes. */
     private static final float MIN_DRAIN_MULTIPLIER = 0.2f;
 
-    /** Regeneration multiplier while below the cold threshold. */
-    private static final float COLD_REGEN_PENALTY = 0.5f;
+    /** Regeneration multipliers while uncomfortable, then severely so - hot OR cold. */
+    private static final float MILD_REGEN_PENALTY = 0.6f;
+    private static final float SEVERE_REGEN_PENALTY = 0.35f;
 
     /** Squared blocks/tick above which the player counts as genuinely moving. */
     private static final double MOVEMENT_EPSILON_SQR = 1.0E-4;
 
+    /**
+     * Stamina that must be recovered before the exhaustion sound can fire again. At the normal
+     * regen rate half a bar takes roughly as long as the breathing clip runs, so the cue can't
+     * stack on top of itself however hard you push.
+     */
+    private static final float EXHAUSTION_RESET_FRACTION = 0.5f;
+
     private static final Map<UUID, Float> STAMINA = new HashMap<>();
     private static final Map<UUID, double[]> LAST_POSITION = new HashMap<>();
+    /** Players currently bottomed out, so the gasp plays once per exhaustion rather than per tick. */
+    private static final Set<UUID> EXHAUSTED = new HashSet<>();
 
     private StaminaSystem() {}
 
@@ -95,6 +109,22 @@ public final class StaminaSystem {
         }
 
         STAMINA.put(id, stamina);
+        updateExhaustionCue(player, id, stamina / max);
+    }
+
+    /**
+     * Fires the out-of-breath sound on the transition to empty, and re-arms it only once the
+     * player has genuinely recovered. Sent with playNotifySound, which reaches that player and
+     * nobody else - your own lungs, not a position in the world.
+     */
+    private static void updateExhaustionCue(ServerPlayer player, UUID id, float fraction) {
+        if (fraction <= 0f) {
+            if (EXHAUSTED.add(id)) {
+                player.playNotifySound(ModSounds.HEAVY_BREATHING.get(), SoundSource.PLAYERS, 1f, 1f);
+            }
+        } else if (fraction >= EXHAUSTION_RESET_FRACTION) {
+            EXHAUSTED.remove(id);
+        }
     }
 
     /** Jump cost. LivingJumpEvent fires server-side for a ServerPlayer, so this is authoritative. */
@@ -112,6 +142,7 @@ public final class StaminaSystem {
         UUID id = event.getEntity().getUUID();
         STAMINA.remove(id);
         LAST_POSITION.remove(id);
+        EXHAUSTED.remove(id);
     }
 
     /**
@@ -132,14 +163,20 @@ public final class StaminaSystem {
     }
 
     /**
-     * Cold slows recovery - the first thing you notice as your temperature drops, well before
-     * it starts doing damage. Acclimation moves the threshold, so a trained player stops
-     * feeling it at all.
+     * Being too hot OR too cold slows recovery. Heat was previously ignored here, which made
+     * overheating cost nothing but hunger - now both ends tire you, which is the point of
+     * having a comfortable band at all.
+     *
+     * The threshold decision is delegated to TemperatureSystem.discomfortLevel rather than
+     * re-derived from the edges here: two copies of that arithmetic would eventually disagree
+     * about whether the player is suffering, and the stamina bar would contradict the gauge.
+     * Acclimation widens the band, so a trained player stops feeling this at all.
      */
     private static float regenMultiplier(Player player) {
-        float temperature = TemperatureSystem.temperatureOf(player);
-        float coldEdge = TemperatureSystem.coldEdgeFor(
-                SkillCapability.levelOf(player, Skill.ACCLIMATION));
-        return temperature < coldEdge ? COLD_REGEN_PENALTY : 1f;
+        return switch (TemperatureSystem.discomfortLevel(player)) {
+            case 2 -> SEVERE_REGEN_PENALTY;
+            case 1 -> MILD_REGEN_PENALTY;
+            default -> 1f;
+        };
     }
 }

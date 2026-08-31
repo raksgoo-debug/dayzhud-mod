@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.client.UiSounds;
 import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -11,6 +12,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Locale;
@@ -70,6 +73,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int CORPSE_LAYOUT_WIDTH =
             TarkovInventoryMenu.CORPSE_INV_X + 9 * 18 + 12;
 
+    /**
+     * init() runs again on every window resize, so the open sound is guarded - without this
+     * you'd hear it each time the window changed size while the screen was up.
+     */
+    private boolean openSoundPlayed = false;
+
     @Override
     protected void init() {
         super.init();
@@ -78,6 +87,34 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // doesn't jump sideways as you open and close chests.
         int anchorWidth = menu.isCorpse() ? CORPSE_LAYOUT_WIDTH : FULL_LAYOUT_WIDTH;
         this.leftPos = (this.width - anchorWidth) / 2;
+
+        if (!openSoundPlayed) {
+            openSoundPlayed = true;
+            UiSounds.inventoryOpen();
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        UiSounds.inventoryClose();
+    }
+
+    /**
+     * Handling clicks by SLOT rather than by mouse means every route into moving an item is
+     * covered at once - left/right click, shift-click, number-key swaps, and dropping with Q
+     * or outside the window (which arrives here with a null slot).
+     *
+     * The state is sampled BEFORE super runs, because super is what empties the cursor or the
+     * slot; checking afterwards would miss exactly the interactions we want to hear.
+     */
+    @Override
+    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
+        boolean movedSomething = !menu.getCarried().isEmpty() || (slot != null && slot.hasItem());
+        super.slotClicked(slot, slotId, mouseButton, type);
+        if (movedSomething) {
+            UiSounds.inventoryMove();
+        }
     }
 
     @Override

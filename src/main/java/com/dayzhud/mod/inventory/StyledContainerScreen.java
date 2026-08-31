@@ -1,9 +1,12 @@
 package com.dayzhud.mod.inventory;
 
+import com.dayzhud.mod.client.UiSounds;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.Slot;
@@ -74,6 +77,34 @@ public class StyledContainerScreen<T extends AbstractContainerMenu> extends Abst
             graphics.fill(ax, ay, ax + 16, ay + 2, StyledTheme.HEADER_ACCENT);
             graphics.fill(ax + 12, ay - 3, ax + 14, ay + 5, StyledTheme.HEADER_ACCENT);
             graphics.fill(ax + 14, ay - 1, ax + 16, ay + 3, StyledTheme.HEADER_ACCENT);
+        }
+    }
+
+    /** Guarded because init() re-runs on every window resize. */
+    private boolean openSoundPlayed = false;
+
+    @Override
+    protected void init() {
+        super.init();
+        if (!openSoundPlayed) {
+            openSoundPlayed = true;
+            UiSounds.inventoryOpen();
+        }
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        UiSounds.inventoryClose();
+    }
+
+    /** Sampled before super, which is what clears the cursor or the slot. */
+    @Override
+    protected void slotClicked(Slot slot, int slotId, int mouseButton, ClickType type) {
+        boolean movedSomething = !menu.getCarried().isEmpty() || (slot != null && slot.hasItem());
+        super.slotClicked(slot, slotId, mouseButton, type);
+        if (movedSomething) {
+            UiSounds.inventoryMove();
         }
     }
 

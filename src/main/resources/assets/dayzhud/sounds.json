@@ -1,0 +1,32 @@
+{
+  "inventory_open": {
+    "category": "player",
+    "subtitle": "subtitles.dayzhud.inventory_open",
+    "sounds": [
+      "dayzhud:inventory_open"
+    ]
+  },
+  "inventory_close": {
+    "category": "player",
+    "subtitle": "subtitles.dayzhud.inventory_close",
+    "sounds": [
+      "dayzhud:inventory_close"
+    ]
+  },
+  "inventory_move": {
+    "category": "player",
+    "subtitle": "subtitles.dayzhud.inventory_move",
+    "sounds": [
+      "dayzhud:inventory_move1",
+      "dayzhud:inventory_move2",
+      "dayzhud:inventory_move3"
+    ]
+  },
+  "heavy_breathing": {
+    "category": "player",
+    "subtitle": "subtitles.dayzhud.heavy_breathing",
+    "sounds": [
+      "dayzhud:heavy_breathing"
+    ]
+  }
+}

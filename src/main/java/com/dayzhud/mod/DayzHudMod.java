@@ -3,6 +3,7 @@ package com.dayzhud.mod;
 import com.dayzhud.mod.client.ClientEvents;
 import com.dayzhud.mod.inventory.NetworkHandler;
 import com.dayzhud.mod.inventory.TarkovMenuTypes;
+import com.dayzhud.mod.sound.ModSounds;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.DistExecutor;
@@ -22,6 +23,7 @@ public class DayzHudMod {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         TarkovMenuTypes.MENU_TYPES.register(modEventBus);
+        ModSounds.SOUNDS.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature
