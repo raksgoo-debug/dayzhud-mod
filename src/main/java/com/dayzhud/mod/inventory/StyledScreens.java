@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.market.MarketScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -44,7 +45,16 @@ public class StyledScreens {
         if (!(incoming instanceof AbstractContainerScreen<?> containerScreen)) return;
 
         // Don't re-wrap our own screens (that would recurse).
-        if (incoming instanceof StyledContainerScreen<?> || incoming instanceof TarkovInventoryScreen) return;
+        //
+        // MarketScreen has to be here too, and its absence was a real bug. This class
+        // restyles by DEFAULT and only excludes known-complex menus, so a new screen of our
+        // own gets caught by exactly the same net as any other mod's: MarketMenu has 45
+        // slots, clears the >36 test, and its simple name was not in EXCLUDED_MENU_CLASSES,
+        // so the trader opened as a plain styled grid with the stock list, tabs, balance and
+        // buttons all gone. Anything added later that draws its own widgets needs this line.
+        if (incoming instanceof StyledContainerScreen<?>
+                || incoming instanceof TarkovInventoryScreen
+                || incoming instanceof MarketScreen) return;
 
         // The creative menu and the vanilla survival inventory are tabbed screens with their
         // own widgets - swapping in a plain slot grid destroys the tabs and item list, which
@@ -86,7 +96,11 @@ public class StyledScreens {
             // a stood-down redirect falls back to the addon's real, fully working screen -
             // and that visible difference is also the quickest way to tell, in game, whether
             // the redirect fired at all.
-            "CorpseMenu"
+            "CorpseMenu",
+
+            // Our own trader. Redundant with the MarketScreen check above and kept as belt
+            // and braces: that check only helps once MarketScreen is the incoming screen.
+            "MarketMenu"
     );
 
     /**

@@ -117,7 +117,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+        // AbstractContainerScreen.render already calls renderBackground; calling it here as
+        // well dims the world twice and makes the panel read as murky rather than dark.
         super.render(g, mouseX, mouseY, partialTick);
         drawBalance(g);
         drawTabs(g, mouseX, mouseY);
@@ -132,7 +133,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         g.drawString(font, "TRADER", titleLabelX, titleLabelY, StyledTheme.HEADER_COLOR, false);
         StyledTheme.header(g, font, "STOCK", LIST_X, LIST_Y - 12, LIST_W);
         StyledTheme.header(g, font, "SELL", PANEL_X, 46, PANEL_W);
-        StyledTheme.caption(g, font, "DRAG ITEMS HERE", PANEL_X + 62, MarketMenu.TRAY_Y + 4);
+        // Below the tray, not beside it: the tray is three slots (54 px) wide starting at
+        // TRAY_X 213, so a caption at tray height sits on top of it.
+        StyledTheme.caption(g, font, "DRAG ITEMS HERE TO SELL", PANEL_X + 6, MarketMenu.TRAY_Y + 56);
     }
 
     private void drawBalance(GuiGraphics g) {
