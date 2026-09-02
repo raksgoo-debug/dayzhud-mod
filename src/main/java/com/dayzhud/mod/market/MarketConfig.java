@@ -35,6 +35,10 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.IntValue TACZ_AMMO_PRICE;
     public static final ForgeConfigSpec.IntValue TACZ_AMMO_BATCH;
 
+    public static final ForgeConfigSpec.BooleanValue DERIVE_ARMOR;
+    public static final ForgeConfigSpec.BooleanValue DERIVE_FOOD;
+    public static final ForgeConfigSpec.DoubleValue DERIVE_SCALE;
+
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
 
@@ -114,6 +118,20 @@ public final class MarketConfig {
                 .defineInRange("ammoUnitPrice", 45, 1, 100000);
         TACZ_AMMO_BATCH = b.comment("How many rounds one ammo listing sells at a time.")
                 .defineInRange("ammoBatchSize", 30, 1, 64);
+        b.pop();
+
+        b.push("derived");
+        b.comment(
+                "Prices for items with no entry in the price data, worked out from the stats",
+                "the item already declares. This is what makes the trader work with a gear mod",
+                "that ships hundreds of armour pieces - hand-authoring a row each does not",
+                "survive contact with a real modpack. An explicit entry always wins.");
+        DERIVE_ARMOR = b.comment("Price unlisted armour from defence, toughness and durability.")
+                .define("armor", true);
+        DERIVE_FOOD = b.comment("Price unlisted food from nutrition and saturation.")
+                .define("food", true);
+        DERIVE_SCALE = b.comment("Multiplier on every derived price.")
+                .defineInRange("scale", 1.0D, 0.05D, 50.0D);
         b.pop();
 
         SPEC = b.build();

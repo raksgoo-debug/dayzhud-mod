@@ -96,7 +96,9 @@ public final class MarketCatalog {
                     ItemStack stack = TaczMarketCompat.makeAmmo(id, batch);
                     if (stack.isEmpty()) continue;
                     MarketPrices.Entry override = MarketPrices.all().get("tacz:ammo/" + id);
-                    int unit = override != null ? override.value() : MarketConfig.TACZ_AMMO_PRICE.get();
+                    Integer derived = TaczMarketCompat.priceOfAmmo(id);
+                    int unit = override != null ? override.value()
+                            : (derived != null ? derived : MarketConfig.TACZ_AMMO_PRICE.get());
                     out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, batch), CAT_AMMO));
                 }
             }

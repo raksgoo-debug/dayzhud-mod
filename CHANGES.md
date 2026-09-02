@@ -1,48 +1,67 @@
-# dayzhud 1.1.0 fix 2 - the trader was being replaced by the generic styled screen
+# dayzhud 1.2.0 - market UI rebuild, confirmations, and two more mods
 
-**Three changed files.** Unzip over the repo root. Apply the creative-tab hotfix first if you
-have not already; this is on top of it.
+**Cumulative.** This replaces both earlier fix zips - if you have not applied them, this one
+is enough on top of the original 1.1.0 update. Eleven files, all replacements.
 
-    src/main/java/com/dayzhud/mod/inventory/StyledScreens.java
-    src/main/java/com/dayzhud/mod/market/MarketAccess.java
-    src/main/java/com/dayzhud/mod/market/MarketScreen.java
+## New UI (MarketScreen, rebuilt)
 
-## 1. StyledScreens was eating the trader (the screenshot)
+BUY and SELL tabs across the top; balance top right; a scrolling stock list (not pages) with
+icon, name, category and price; an ITEM DETAILS panel on the right with a large preview, an
+x1 / x5 / x16 quantity selector and a BUY button. SELL shows the tray, a per-item payout
+breakdown and a TOTAL, with SELL ALL and WITHDRAW beneath it.
 
-`StyledScreens` restyles container screens by DEFAULT and only excludes a list of
-known-complex menus. `MarketMenu` has 45 slots, so it cleared the `> 36` test, and
-"MarketMenu" was not in `EXCLUDED_MENU_CLASSES` - so `ScreenEvent.Opening` threw away
-`MarketScreen` and substituted a plain `StyledContainerScreen`. That screen draws the title
-and the slots and nothing else, which is exactly what was on screen: TRADER, an empty panel,
-the 3x3 sell tray in the corner, and no stock list, tabs, balance, SELL or WITHDRAW.
+**Categories moved from a horizontal strip to a vertical sidebar, and that is a bug fix, not
+decoration.** The strip laid tabs left to right and stopped when it ran out of panel width -
+so with your modpack installed WEAPONS, SUPPLIES and VALUABLES were unreachable. The stock
+was there; the way to reach it was not. That is why the old screen looked ammo-only.
 
-Fixed by adding `MarketScreen` to the "don't re-wrap our own screens" guard, next to
-`StyledContainerScreen` and `TarkovInventoryScreen`, plus "MarketMenu" in
-`EXCLUDED_MENU_CLASSES` as belt and braces. **Any future screen of ours that draws its own
-widgets needs the same line** - this class is opt-out, not opt-in.
+The panel is 384x246 now, up from 336x250, to fit three columns.
 
-## 2. The laptop only worked pointed at open air
+## Confirmations
 
-`PlayerInteractEvent.RightClickItem` does not fire when the crosshair is on a block -
-`RightClickBlock` fires instead. So the laptop did nothing whenever the player was looking at
-anything, which in play is most of the time. `onRightClickBlock` now falls through to a shared
-`tryTerminalItem` when the block is not a terminal, so the laptop behaves identically either
-way.
+Buying, selling and withdrawing all raise a confirm panel naming the item and the exact
+amount. It dims the screen behind it and swallows every click until CONFIRM or CANCEL - Enter
+and Escape work too. Buying is irreversible at a 55% buyback and the tray can hold a rifle,
+so a misclick was expensive.
 
-Note this is separate from the safe-zone rule, which is working as designed: the laptop is
-portable, so `access.itemRequiresSafeZone` defaults to true and it needs
-`/market zone add <name> <radius>` first. Set it to false in `config/dayzhud-common.toml` if
-you would rather the laptop work anywhere.
+## The sell tray now hides itself on the BUY tab
 
-## 3. Two rendering fixes in MarketScreen
+`Slot.x`/`y` are final in 1.20.1, so the tray cannot be moved off-screen. It uses a
+`SellSlot.isActive()` override instead, which is what AbstractContainerScreen already gates
+rendering and hit-testing on. The flag is only ever written by the screen, so the server side
+stays active and quick-move keeps working.
 
-- Removed a redundant `renderBackground` call; `AbstractContainerScreen.render` already makes
-  one, so the world was being dimmed twice and the panel read as murky.
-- Moved the "DRAG ITEMS HERE TO SELL" caption below the sell tray. The tray is three slots
-  (54 px) wide from x 213, so the caption was drawing on top of its third column.
+## Pricing: derived, not hand-written
+
+`caps_awim_tactical_gear_rework` ships **238 armour pieces**. A row each in prices.json does
+not survive contact with a real modpack, so `DerivedPrices` now prices any unlisted armour
+from its own defence, toughness, knockback resistance and durability, and any unlisted food
+from nutrition and saturation. Damaged gear is worth less, which also stops a trader paying
+full price for a helmet that ate a rifle round. Explicit entries always win. Toggles and a
+scale live in the new `[derived]` config block.
+
+Added by hand where stats cannot say anything useful: **20 lrtactical entries** (medkits,
+M67 / RGN / flash / smoke / molotov / C4, karambit and dagger, condensed milk) and **54 caps
+entries** for the parts that are curios rather than armour - backpacks, balaclavas, shemaghs,
+uniforms, glasses, gas mask, NVG module, rations. 160 entries total.
+
+**TACZ ammo is no longer one flat price.** Every calibre cost 1 350 because TACZ's ammo index
+carries no ballistics - damage lives on the *gun's* bullet data. `priceOfAmmo` now finds the
+hardest-hitting gun that chambers each round and prices from that, with pierce and
+armour-ignore premiums, so 12 gauge and .338 Lapua no longer cost the same.
+
+## Also fixed
+
+The TOTAL readout was drawing on top of the "drag items here" caption (visible in your
+screenshot). Both moved in the rebuild.
 
 ## Verification
 
-Parse-checked against the merged tree. Minecraft and Forge are not on the classpath here, so
-as always this proves the syntax and the mod's own cross-class references and nothing about
-MC/Forge calls. CI is the real check.
+Parse-checked over the merged tree, 76 source files, no errors outside the expected
+missing-Minecraft noise. As always that proves the syntax and this mod's own cross-class
+references and nothing about MC/Forge calls - CI is the real check.
+
+## Config note
+
+`[derived]` is a new config section. Forge only writes defaults into a config file that does
+not exist yet, so delete `config/dayzhud-common.toml` or hand-add the block to pick it up.

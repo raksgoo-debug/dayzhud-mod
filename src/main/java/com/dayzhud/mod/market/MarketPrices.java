@@ -74,9 +74,14 @@ public final class MarketPrices {
         }
         if (key.startsWith("tacz:ammo/")) {
             if (!MarketConfig.TACZ_SELL_GUNS.get()) return 0;
-            return MarketConfig.TACZ_AMMO_PRICE.get();
+            ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:ammo/".length()));
+            Integer price = id == null ? null : TaczMarketCompat.priceOfAmmo(id);
+            return price == null ? MarketConfig.TACZ_AMMO_PRICE.get() : price;
         }
-        return 0;
+
+        // Nothing explicit and not a TACZ item: fall back to the item's own stats, so a pack
+        // that adds a gear mod gets working prices without an entry per item.
+        return DerivedPrices.valueOf(stack);
     }
 
     /** What a trader pays for one of these. Never rounds a valuable item down to nothing. */

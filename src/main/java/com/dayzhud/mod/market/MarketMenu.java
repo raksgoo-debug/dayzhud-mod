@@ -23,12 +23,20 @@ public class MarketMenu extends AbstractContainerMenu {
 
     public static final int SELL_SLOTS = 9;
 
-    /** Tray origin, in screen-relative pixels. The screen reads these so the two agree. */
-    public static final int TRAY_X = 213;
-    public static final int TRAY_Y = 58;
-    public static final int INV_X = 87;
-    public static final int INV_Y = 168;
-    public static final int HOTBAR_Y = 226;
+    /** Slot origins, in screen-relative pixels. The screen reads these so the two agree. */
+    public static final int TRAY_X = 30;
+    public static final int TRAY_Y = 62;
+    public static final int INV_X = 111;
+    public static final int INV_Y = 162;
+    public static final int HOTBAR_Y = 220;
+
+    /**
+     * Client-side: whether the SELL tab is showing. The tray slots hide themselves when it is
+     * not, because AbstractContainerScreen renders and hit-tests only ACTIVE slots - and a
+     * Slot's x/y are final in 1.20.1, so moving them off-screen is not an option. The server
+     * never touches this, so it stays true there and quick-move keeps working.
+     */
+    public boolean sellTabActive = true;
 
     private final Container sellTray;
     private final Player player;
@@ -45,7 +53,7 @@ public class MarketMenu extends AbstractContainerMenu {
         checkContainerSize(sellTray, SELL_SLOTS);
 
         for (int i = 0; i < SELL_SLOTS; i++) {
-            addSlot(new Slot(sellTray, i, TRAY_X + (i % 3) * 18, TRAY_Y + (i / 3) * 18));
+            addSlot(new SellSlot(sellTray, i, TRAY_X + (i % 3) * 18, TRAY_Y + (i / 3) * 18));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -141,5 +149,17 @@ public class MarketMenu extends AbstractContainerMenu {
 
     public Player player() {
         return player;
+    }
+
+    /** A tray slot, hidden while the BUY tab is showing. */
+    private class SellSlot extends Slot {
+        SellSlot(net.minecraft.world.Container container, int index, int x, int y) {
+            super(container, index, x, y);
+        }
+
+        @Override
+        public boolean isActive() {
+            return sellTabActive;
+        }
     }
 }

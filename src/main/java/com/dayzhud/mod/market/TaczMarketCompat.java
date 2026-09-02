@@ -39,6 +39,7 @@ public final class TaczMarketCompat {
     private static Method gunIndexGetGunData;
     private static Method gunDataGetRpm;
     private static Method gunDataGetBulletData;
+    private static Method gunDataGetAmmoId;
     private static Method bulletGetDamage;
     private static Method bulletGetAmount;
     private static Method bulletGetPierce;
@@ -78,6 +79,7 @@ public final class TaczMarketCompat {
             Class<?> gunData = Class.forName("com.tacz.guns.resource.pojo.data.gun.GunData", false, cl);
             gunDataGetRpm = gunData.getMethod("getRoundsPerMinute");
             gunDataGetBulletData = gunData.getMethod("getBulletData");
+            gunDataGetAmmoId = gunData.getMethod("getAmmoId");
 
             Class<?> bullet = Class.forName("com.tacz.guns.resource.pojo.data.gun.BulletData", false, cl);
             bulletGetDamage = bullet.getMethod("getDamageAmount");
@@ -239,6 +241,49 @@ public final class TaczMarketCompat {
             // Round to the nearest hundred so prices read as prices, not as measurements.
             long rounded = Math.round(base / 100.0) * 100L;
             return (int) Math.max(100L, Math.min(Integer.MAX_VALUE, rounded));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
+     * Price of ONE round, worked out from the hardest-hitting gun that chambers it.
+     *
+     * TACZ's ammo index carries no ballistics of its own - damage lives on the gun's bullet
+     * data - so without this every calibre in the game costs the same, which is what shipped
+     * first and made a shotgun shell cost the same as .338 Lapua.
+     */
+    public static Integer priceOfAmmo(ResourceLocation ammoId) {
+        if (!isActive()) return null;
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> all =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonGunIndex.invoke(null);
+            float best = 0f;
+            int bestPierce = 0;
+            float bestIgnore = 0f;
+            for (Map.Entry<ResourceLocation, Object> e : all) {
+                Object gunData = gunIndexGetGunData.invoke(e.getValue());
+                Object id = gunDataGetAmmoId.invoke(gunData);
+                if (!ammoId.equals(id)) continue;
+                Object bullet = gunDataGetBulletData.invoke(gunData);
+                float damage = ((Number) bulletGetDamage.invoke(bullet)).floatValue();
+                int pellets = Math.max(1, ((Number) bulletGetAmount.invoke(bullet)).intValue());
+                float total = damage * pellets;
+                if (total <= best) continue;
+                best = total;
+                bestPierce = Math.max(0, ((Number) bulletGetPierce.invoke(bullet)).intValue());
+                Object extra = bulletGetExtraDamage.invoke(bullet);
+                bestIgnore = 0f;
+                if (extra != null) {
+                    Object ai = extraGetArmorIgnore.invoke(extra);
+                    if (ai != null) bestIgnore = ((Number) ai).floatValue();
+                }
+            }
+            if (best <= 0f) return null;
+            double price = 12 + best * 22 + bestPierce * 40 + bestIgnore * 220;
+            price *= MarketConfig.TACZ_PRICE_SCALE.get();
+            return (int) Math.max(5, Math.round(price / 5.0) * 5);
         } catch (Throwable t) {
             return null;
         }

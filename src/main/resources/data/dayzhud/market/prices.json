@@ -4,9 +4,12 @@
     "value * market.sellMultiplier for it and charges value * count *",
     "market.buyMultiplier for a listing. Entries without \"buy\": true can be",
     "sold but are not stocked - the barter junk that only flows one way.",
-    "Override this file from a datapack at the same path to retune the economy;",
-    "TACZ guns and ammo are priced from their own stats and do not need entries",
-    "here, but 'tacz:gun/<id>' and 'tacz:ammo/<id>' keys override them if you want."
+    "Override this file from a datapack at the same path to retune the economy.",
+    "NOT EVERYTHING NEEDS A ROW HERE. TACZ guns and ammo are priced from their own",
+    "ballistics, and any armour or food with no entry is priced from its own stats",
+    "(see DerivedPrices and the [derived] config block) - which is what makes a gear",
+    "mod shipping 238 armour pieces workable. Add a row only to override.",
+    "TACZ overrides use 'tacz:gun/<id>' and 'tacz:ammo/<id>' keys."
   ],
   "entries": {
     "tarkovdayz:bandgecivil": {
@@ -409,6 +412,363 @@
       "category": "supplies",
       "buy": true,
       "count": 32
+    },
+    "lrtactical:ai2": {
+      "value": 6500,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:carfak": {
+      "value": 14000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:cms": {
+      "value": 26000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:surv12": {
+      "value": 48000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:blood_pack": {
+      "value": 21000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:amoxycillin": {
+      "value": 7400,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:ibuprofen": {
+      "value": 5600,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:goldenstar": {
+      "value": 4100,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:vaseline": {
+      "value": 8800,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:m67": {
+      "value": 24000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:rgn": {
+      "value": 29000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:flash_grenade": {
+      "value": 17000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:smoke_grenade": {
+      "value": 12000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:molotov": {
+      "value": 9500,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:c4": {
+      "value": 62000,
+      "category": "tactical"
+    },
+    "lrtactical:flash_shield": {
+      "value": 34000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:baseball_bat": {
+      "value": 3200,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:dagger": {
+      "value": 6800,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:karambit": {
+      "value": 19000,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:condensed_milk": {
+      "value": 2400,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:blackhikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greenhikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:multicamhikingbackpack": {
+      "value": 23000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:urbanahikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:blacktacticalbackpack": {
+      "value": 34000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greentacticalbackpack": {
+      "value": 34000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:sportsbag": {
+      "value": 9500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:rps_smiersh": {
+      "value": 28000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:gasmaskmodule": {
+      "value": 31000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:nvgmodule": {
+      "value": 74000,
+      "category": "gear"
+    },
+    "caps_awim_tactical_gear_rework:helmet_multitool": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasses": {
+      "value": 8200,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasseswithoutrim": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasseswithoutrimred": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:tacticalglassesyellow": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:glovesblack": {
+      "value": 4400,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:arcticb": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:atacs_balaclava": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:blackbalaclava": {
+      "value": 2400,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:blackskullbalaclava": {
+      "value": 3100,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greenbalaklava": {
+      "value": 2400,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:multicam_balaclava": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greenms": {
+      "value": 2900,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:mhalataks": {
+      "value": 3400,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:brownarafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greenarafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:whitearafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:atacsuniform": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:gorka_uniform": {
+      "value": 13500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:grayurbana": {
+      "value": 11000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:greenuniform": {
+      "value": 10500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:multicamuniform": {
+      "value": 13000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:sportsuniform": {
+      "value": 5200,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformarcticbase": {
+      "value": 11500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformblacktiger": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformemr": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformgreencifra": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformgreenmulticam": {
+      "value": 13000,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformpmcstriker": {
+      "value": 15500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:uniformtigr": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:bandage": {
+      "value": 1400,
+      "category": "meds",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:bandagevp": {
+      "value": 1600,
+      "category": "meds",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:foodirp": {
+      "value": 5800,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:foodmre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:irp": {
+      "value": 5800,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:mre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:foodirpeat": {
+      "value": 120,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:foodmreeat": {
+      "value": 120,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovsix": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovseven": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovtree": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:vidra": {
+      "value": 2800,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:theappershovel": {
+      "value": 4200,
+      "category": "misc",
+      "buy": true
     }
   }
 }
