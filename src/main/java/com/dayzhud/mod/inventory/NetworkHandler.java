@@ -5,6 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
+import com.dayzhud.mod.market.MarketPackets;
 import com.dayzhud.mod.skill.SkillStatePacket;
 import com.dayzhud.mod.skill.SpendSkillPacket;
 
@@ -54,5 +55,43 @@ public class NetworkHandler {
                 SpendSkillPacket::encode,
                 SpendSkillPacket::decode,
                 SpendSkillPacket::handle);
+
+        // Market. Appended, per the note above - these are the newest packets, so they take
+        // the highest ids and nothing before them is renumbered.
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.WalletSync.class,
+                MarketPackets.WalletSync::encode,
+                MarketPackets.WalletSync::decode,
+                MarketPackets.WalletSync::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.PricesSync.class,
+                MarketPackets.PricesSync::encode,
+                MarketPackets.PricesSync::decode,
+                MarketPackets.PricesSync::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.Catalogue.class,
+                MarketPackets.Catalogue::encode,
+                MarketPackets.Catalogue::decode,
+                MarketPackets.Catalogue::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.Buy.class,
+                MarketPackets.Buy::encode,
+                MarketPackets.Buy::decode,
+                MarketPackets.Buy::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.Sell.class,
+                MarketPackets.Sell::encode,
+                MarketPackets.Sell::decode,
+                MarketPackets.Sell::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.Withdraw.class,
+                MarketPackets.Withdraw::encode,
+                MarketPackets.Withdraw::decode,
+                MarketPackets.Withdraw::handle);
     }
 }

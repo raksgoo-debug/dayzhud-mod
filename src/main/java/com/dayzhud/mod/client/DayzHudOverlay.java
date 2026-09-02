@@ -3,6 +3,9 @@ package com.dayzhud.mod.client;
 import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
+import com.dayzhud.mod.market.ClientWallet;
+import com.dayzhud.mod.market.MarketConfig;
+import com.dayzhud.mod.market.Money;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -106,9 +109,25 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawGaugeStat(graphics, col2Icon, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
 
+        drawBalance(graphics, rowY, rightX);
         drawStaminaBar(graphics, stamina01, screenWidth, screenHeight);
         drawXpBar(graphics, player, screenWidth, screenHeight);
         drawMovementIcon(graphics, player, screenWidth, screenHeight);
+    }
+
+    /**
+     * Rouble balance, sitting directly above the status row and right-aligned with it.
+     *
+     * Right-aligned rather than laid out in a fixed column because the number changes width
+     * constantly as money is spent, and anchoring the left edge would make the whole readout
+     * jitter sideways on every transaction.
+     */
+    private void drawBalance(GuiGraphics graphics, int rowY, int rightX) {
+        if (!MarketConfig.ENABLED.get()) return;
+        String text = Money.withSymbol(ClientWallet.get());
+        var font = Minecraft.getInstance().font;
+        graphics.drawString(font, text, rightX - font.width(text),
+                rowY - MARGIN_Y - font.lineHeight, 0xC9A227, true);
     }
 
     private void drawStaminaBar(GuiGraphics graphics, float stamina01, int screenWidth, int screenHeight) {

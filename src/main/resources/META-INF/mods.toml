@@ -67,3 +67,25 @@ description='''${mod_description}'''
     versionRange="[1.0,)"
     ordering="AFTER"
     side="CLIENT"
+
+# Soft dependency: tarkovdayz (Zcraft-Items). It supplies the rouble notes the wallet is
+# denominated in, most of what the trader stocks, and the desktop PC and laptop the market's
+# default access config points at. Nothing here is a hard reference - if the mod is absent,
+# those price entries drop out of the catalogue and the terminal ids never match anything.
+[[dependencies.${mod_id}]]
+    modId="tarkovdayz"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: TACZ. Guns and ammo are priced from their own ballistics, so the shop
+# follows whatever gun pack is installed. Reached entirely by reflection (TaczMarketCompat)
+# rather than a compile-time dependency, deliberately: a hard dependency would pin this mod
+# to one TACZ version.
+[[dependencies.${mod_id}]]
+    modId="tacz"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

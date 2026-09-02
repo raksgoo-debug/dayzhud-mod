@@ -293,3 +293,54 @@ icon's shape, replace its PNG under `src/main/resources/assets/dayzhud/textures/
 Inventory screen slot positions, panel colors, and which hotbar slots map to
 Primary/Secondary/Holster/Sheath are all plain constants near the top of
 `TarkovInventoryScreen.java` and in `TarkovInventoryMenu.java`'s constructor.
+
+
+## Trader market (roubles)
+
+An extraction-shooter economy: everything has a price, junk you find is worth money, and
+money is a single number rather than a stack of notes.
+
+**Currency.** Rouble notes (`tarkovdayz:rubble_100/1000/5000` by default) are absorbed into
+your balance the moment you walk over them, so cash never takes inventory space. The balance
+shows above the status row on the HUD and survives death. `WITHDRAW` at a trader prints notes
+back out, largest denomination first, if you want to hand money to another player.
+
+**Reaching a trader.** Two ways, both configurable and neither adding a new block:
+
+- **A terminal block** - the tarkovdayz desktop PC and safes by default. Right-click it. This
+  is your hideout: you had to place it and build around it, so it works without a safe zone.
+- **A laptop** (`tarkovdayz:laptop`) - portable, so it only works inside a registered safe
+  zone. Otherwise a trader is something you carry into a raid, which removes the reason to
+  extract with your loot.
+
+Safe zones are per-world save data, managed with `/market zone add <name> <radius>`,
+`remove` and `list`.
+
+**Prices** live in `data/dayzhud/market/prices.json` and are datapack-overridable at the same
+path. `value` is what one unit is worth; a trader pays `value x market.sellMultiplier` (0.55)
+and charges `value x count x market.buyMultiplier`. Entries without `"buy": true` can be sold
+but are not stocked - the barter junk that only flows one way.
+
+**TACZ guns and ammo are priced from their own ballistics** (damage x pellets x RPM, with
+separate premiums for pierce and armour-ignore, scaled by gun category), so the shop follows
+whatever gun pack is installed instead of needing a hand-written list. All of it is reflective
+- there is no compile-time TACZ dependency, and nothing breaks when TACZ changes version.
+`tacz:gun/<id>` and `tacz:ammo/<id>` keys in prices.json override the derived numbers.
+
+Commands: `/money`, `/money pay <player> <amount>`, and op-only `/money give|set`,
+`/market open`, `/market zone ...`.
+
+## Bottled Water
+
+`dayzhud:water_bottle` - a drinkable 0.5 L bottle. Restores Thirst Was Taken's thirst when
+that mod is present and falls back to vanilla saturation when it is not, the same way the
+HUD's water gauge does. It uses the DRINK use animation deliberately: TemperatureSystem
+already cools the player for anything drunk with that animation, so the bottle gets that for
+free and stays consistent with every other drink in the pack.
+
+The model is 386 elements at 256x256. Its UV layout wraps the label around 16 barrel facets
+with the bottle's axis running vertically in the texture, so the label artwork is drawn the
+right way up and reads left-to-right on the bottle. The geometry was re-oriented upright and
+centred on (8,8,8) rather than corrected with display translations - item display transforms
+rotate about the block centre, and a model parked off-centre swings through a wide arc under
+any GUI rotation.

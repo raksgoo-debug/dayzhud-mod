@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.market.MarketMenu;
 import net.minecraft.world.SimpleContainer;
 
 import java.util.ArrayList;
@@ -53,4 +54,13 @@ public class TarkovMenuTypes {
                         return new TarkovInventoryMenu(windowId, inv,
                                 new SimpleContainer(containerSize), curioIds, isCorpse);
                     }));
+
+    /**
+     * The trader screen. Nothing is written into the open buffer: the shop is a list rather
+     * than slots, so the only container involved is the client's own scratch sell tray, and
+     * the catalogue arrives afterwards on its own packet.
+     */
+    public static final RegistryObject<MenuType<MarketMenu>> MARKET =
+            MENU_TYPES.register("market",
+                    () -> IForgeMenuType.create((windowId, inv, buf) -> new MarketMenu(windowId, inv)));
 }

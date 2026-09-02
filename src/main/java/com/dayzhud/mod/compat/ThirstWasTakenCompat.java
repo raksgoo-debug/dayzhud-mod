@@ -44,6 +44,9 @@ public final class ThirstWasTakenCompat {
     private static Method getThirstMethod;
     private static Method getExhaustionMethod;
     private static Method setExhaustionMethod;
+    private static Method setThirstMethod;
+    private static Method getQuenchedMethod;
+    private static Method setQuenchedMethod;
 
     private ThirstWasTakenCompat() {}
 
@@ -89,6 +92,33 @@ public final class ThirstWasTakenCompat {
         }
     }
 
+    /**
+     * Adds thirst (and, optionally, quenched) the way a drink item would.
+     *
+     * Written through setThirst rather than TWT's own drink(Player,int,int) because drink()
+     * also plays its own effects and assumes it is being called from TWT's item logic;
+     * clamping and setting the value directly is the part this mod actually wants.
+     *
+     * @return false when TWT is absent or its API did not resolve, so the caller can fall
+     *         back to vanilla saturation instead of silently doing nothing.
+     */
+    public static boolean quench(Player player, int thirst, int quenched) {
+        Object cap = capabilityFor(player);
+        if (cap == null || getThirstMethod == null || setThirstMethod == null) return false;
+        try {
+            int current = (int) getThirstMethod.invoke(cap);
+            setThirstMethod.invoke(cap, Math.max(0, Math.min(MAX_THIRST, current + thirst)));
+            if (quenched > 0 && getQuenchedMethod != null && setQuenchedMethod != null) {
+                int q = (int) getQuenchedMethod.invoke(cap);
+                setQuenchedMethod.invoke(cap, Math.max(0, Math.min(MAX_THIRST, q + quenched)));
+            }
+            return true;
+        } catch (Exception e) {
+            DayzHudMod.LOGGER.debug("[dayzhud] Thirst write failed.", e);
+            return false;
+        }
+    }
+
     private static Object capabilityFor(Player player) {
         if (player == null || !isModLoaded()) return null;
         if (!resolved) resolve();
@@ -112,6 +142,16 @@ public final class ThirstWasTakenCompat {
             getThirstMethod = iThirstClass.getMethod("getThirst");
             getExhaustionMethod = iThirstClass.getMethod("getExhaustion");
             setExhaustionMethod = iThirstClass.getMethod("setExhaustion", float.class);
+            // Optional extras: a TWT release that drops these should still leave the gauge
+            // and Metabolism working, so they are resolved separately and allowed to fail.
+            try {
+                setThirstMethod = iThirstClass.getMethod("setThirst", int.class);
+                getQuenchedMethod = iThirstClass.getMethod("getQuenched");
+                setQuenchedMethod = iThirstClass.getMethod("setQuenched", int.class);
+            } catch (NoSuchMethodException missing) {
+                DayzHudMod.LOGGER.debug("[dayzhud] Thirst setters unavailable; drinks will fall "
+                        + "back to vanilla saturation.", missing);
+            }
         } catch (Exception e) {
             DayzHudMod.LOGGER.warn("[dayzhud] Thirst Was Taken is installed but its API couldn't be "
                     + "resolved (the mod may have changed internals) - the water gauge falls back "
@@ -120,6 +160,9 @@ public final class ThirstWasTakenCompat {
             getThirstMethod = null;
             getExhaustionMethod = null;
             setExhaustionMethod = null;
+            setThirstMethod = null;
+            getQuenchedMethod = null;
+            setQuenchedMethod = null;
         }
     }
 }

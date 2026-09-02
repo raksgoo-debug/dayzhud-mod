@@ -1,0 +1,414 @@
+{
+  "_comment": [
+    "Trader price data. 'value' is what ONE unit is worth; a trader pays",
+    "value * market.sellMultiplier for it and charges value * count *",
+    "market.buyMultiplier for a listing. Entries without \"buy\": true can be",
+    "sold but are not stocked - the barter junk that only flows one way.",
+    "Override this file from a datapack at the same path to retune the economy;",
+    "TACZ guns and ammo are priced from their own stats and do not need entries",
+    "here, but 'tacz:gun/<id>' and 'tacz:ammo/<id>' keys override them if you want."
+  ],
+  "entries": {
+    "tarkovdayz:bandgecivil": {
+      "value": 1100,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:bandge": {
+      "value": 2400,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:ai_2": {
+      "value": 6500,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:salewafirstaidkit": {
+      "value": 12000,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:grizzly": {
+      "value": 42000,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:salinebag": {
+      "value": 9500,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:salinebag_empty": {
+      "value": 800,
+      "category": "meds"
+    },
+    "tarkovdayz:defibrillator": {
+      "value": 38000,
+      "category": "meds"
+    },
+    "tarkovdayz:morphine": {
+      "value": 18000,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:painkillers": {
+      "value": 4200,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:ibuprofen": {
+      "value": 5600,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:tetracycline": {
+      "value": 7800,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:vitamin": {
+      "value": 3100,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:anti_radpill": {
+      "value": 9200,
+      "category": "meds",
+      "buy": true
+    },
+    "tarkovdayz:ledx": {
+      "value": 78000,
+      "category": "meds"
+    },
+    "tarkovdayz:cola": {
+      "value": 1900,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:mre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:rice": {
+      "value": 1400,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:tea": {
+      "value": 900,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:mayonnaise": {
+      "value": 2600,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:luckysmoke": {
+      "value": 2200,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:m_20smoke": {
+      "value": 2600,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:marlborosmoke": {
+      "value": 3400,
+      "category": "provisions",
+      "buy": true
+    },
+    "dayzhud:water_bottle": {
+      "value": 1500,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:circuitboard": {
+      "value": 12000,
+      "category": "electronics"
+    },
+    "tarkovdayz:militarycircuitboards": {
+      "value": 34000,
+      "category": "electronics"
+    },
+    "tarkovdayz:cpu": {
+      "value": 8600,
+      "category": "electronics"
+    },
+    "tarkovdayz:cpu_fan": {
+      "value": 3400,
+      "category": "electronics"
+    },
+    "tarkovdayz:gpu": {
+      "value": 46000,
+      "category": "electronics"
+    },
+    "tarkovdayz:psu": {
+      "value": 7400,
+      "category": "electronics"
+    },
+    "tarkovdayz:hdd": {
+      "value": 9800,
+      "category": "electronics"
+    },
+    "tarkovdayz:ssdc": {
+      "value": 16500,
+      "category": "electronics"
+    },
+    "tarkovdayz:sas": {
+      "value": 21000,
+      "category": "electronics"
+    },
+    "tarkovdayz:memorystick": {
+      "value": 14000,
+      "category": "electronics"
+    },
+    "tarkovdayz:laptop": {
+      "value": 52000,
+      "category": "electronics"
+    },
+    "tarkovdayz:lcd": {
+      "value": 5200,
+      "category": "electronics"
+    },
+    "tarkovdayz:led_light": {
+      "value": 2800,
+      "category": "electronics"
+    },
+    "tarkovdayz:relay": {
+      "value": 3600,
+      "category": "electronics"
+    },
+    "tarkovdayz:magnet": {
+      "value": 4900,
+      "category": "electronics"
+    },
+    "tarkovdayz:helix": {
+      "value": 33000,
+      "category": "electronics"
+    },
+    "tarkovdayz:ms_4000": {
+      "value": 18500,
+      "category": "electronics"
+    },
+    "tarkovdayz:tplug": {
+      "value": 2900,
+      "category": "electronics"
+    },
+    "tarkovdayz:sparkplug": {
+      "value": 3200,
+      "category": "electronics"
+    },
+    "tarkovdayz:sparkplugbox": {
+      "value": 11000,
+      "category": "electronics"
+    },
+    "tarkovdayz:controller": {
+      "value": 24000,
+      "category": "electronics"
+    },
+    "tarkovdayz:jammer": {
+      "value": 29000,
+      "category": "electronics"
+    },
+    "tarkovdayz:walkie_talkie": {
+      "value": 13500,
+      "category": "electronics"
+    },
+    "tarkovdayz:wificamera": {
+      "value": 27000,
+      "category": "electronics"
+    },
+    "tarkovdayz:xphone": {
+      "value": 31000,
+      "category": "electronics"
+    },
+    "tarkovdayz:zphone": {
+      "value": 41000,
+      "category": "electronics"
+    },
+    "tarkovdayz:potassium": {
+      "value": 6800,
+      "category": "electronics"
+    },
+    "tarkovdayz:gas_analyzer": {
+      "value": 26000,
+      "category": "electronics"
+    },
+    "tarkovdayz:tetriz": {
+      "value": 96000,
+      "category": "electronics"
+    },
+    "tarkovdayz:gold_coin": {
+      "value": 15000,
+      "category": "valuables"
+    },
+    "tarkovdayz:intelligence": {
+      "value": 15000,
+      "category": "valuables"
+    },
+    "tarkovdayz:intelligencefolder": {
+      "value": 43000,
+      "category": "valuables"
+    },
+    "tarkovdayz:kek": {
+      "value": 900,
+      "category": "materials"
+    },
+    "tarkovdayz:tape": {
+      "value": 1600,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:gunpowdergreen": {
+      "value": 5400,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:gunpowerred": {
+      "value": 7200,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:c_4explosives": {
+      "value": 58000,
+      "category": "materials"
+    },
+    "tarkovdayz:ammobox_919": {
+      "value": 4800,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:amobox_12ga": {
+      "value": 6200,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_545": {
+      "value": 7200,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_556": {
+      "value": 7600,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_762": {
+      "value": 9400,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_308": {
+      "value": 11800,
+      "category": "ammo",
+      "buy": true
+    },
+    "minecraft:bread": {
+      "value": 320,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:cooked_beef": {
+      "value": 640,
+      "category": "supplies",
+      "buy": true,
+      "count": 2
+    },
+    "minecraft:golden_apple": {
+      "value": 14000,
+      "category": "supplies",
+      "buy": true
+    },
+    "minecraft:torch": {
+      "value": 90,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:arrow": {
+      "value": 120,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:glass_bottle": {
+      "value": 220,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:iron_ingot": {
+      "value": 850,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:gold_ingot": {
+      "value": 3200,
+      "category": "supplies"
+    },
+    "minecraft:diamond": {
+      "value": 9500,
+      "category": "supplies"
+    },
+    "minecraft:emerald": {
+      "value": 2200,
+      "category": "supplies"
+    },
+    "minecraft:gunpowder": {
+      "value": 700,
+      "category": "supplies",
+      "buy": true,
+      "count": 8
+    },
+    "minecraft:redstone": {
+      "value": 240,
+      "category": "supplies"
+    },
+    "minecraft:coal": {
+      "value": 180,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:leather": {
+      "value": 520,
+      "category": "supplies"
+    },
+    "minecraft:string": {
+      "value": 130,
+      "category": "supplies"
+    },
+    "minecraft:paper": {
+      "value": 60,
+      "category": "supplies"
+    },
+    "minecraft:ender_pearl": {
+      "value": 3000,
+      "category": "supplies"
+    },
+    "minecraft:obsidian": {
+      "value": 1100,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:oak_planks": {
+      "value": 40,
+      "category": "supplies",
+      "buy": true,
+      "count": 32
+    },
+    "minecraft:cobblestone": {
+      "value": 20,
+      "category": "supplies",
+      "buy": true,
+      "count": 32
+    }
+  }
+}
