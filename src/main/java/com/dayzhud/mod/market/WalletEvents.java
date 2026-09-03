@@ -98,6 +98,8 @@ public final class WalletEvents {
     @SubscribeEvent
     public static void onDatapackSync(OnDatapackSyncEvent event) {
         CurrencyItems.invalidate();
+        NbtVariants.invalidate();
+        MarketAccess.invalidate();
         MarketCatalog.invalidate();
         if (event.getPlayer() != null) {
             MarketNetwork.sendPrices(event.getPlayer());

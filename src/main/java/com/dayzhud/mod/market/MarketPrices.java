@@ -53,7 +53,11 @@ public final class MarketPrices {
         if (gun != null) return "tacz:gun/" + gun;
         ResourceLocation ammo = TaczMarketCompat.ammoIdOf(stack).orElse(null);
         if (ammo != null) return "tacz:ammo/" + ammo;
+        String variant = NbtVariants.keyOf(stack);
+        if (variant != null) return variant;
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        String lr = LrTacticalCompat.keyOf(stack, id).orElse(null);
+        if (lr != null) return lr;
         return id == null ? "" : id.toString();
     }
 
@@ -77,6 +81,13 @@ public final class MarketPrices {
             ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:ammo/".length()));
             Integer price = id == null ? null : TaczMarketCompat.priceOfAmmo(id);
             return price == null ? MarketConfig.TACZ_AMMO_PRICE.get() : price;
+        }
+
+        if (key.startsWith(LrTacticalCompat.MOD_ID + ":")) {
+            // A LesRaisins entry with no row of its own. Consumables declare food properties,
+            // so those still derive; a grenade declares nothing useful, hence the flat floor.
+            int derived = DerivedPrices.valueOf(stack);
+            return derived > 0 ? derived : MarketConfig.LR_DEFAULT_PRICE.get();
         }
 
         // Nothing explicit and not a TACZ item: fall back to the item's own stats, so a pack

@@ -21,6 +21,7 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.DoubleValue SELL_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue BUY_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CURRENCY_ITEMS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> NBT_VARIANT_ITEMS;
 
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_BLOCKS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_ITEMS;
@@ -38,6 +39,16 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.BooleanValue DERIVE_ARMOR;
     public static final ForgeConfigSpec.BooleanValue DERIVE_FOOD;
     public static final ForgeConfigSpec.DoubleValue DERIVE_SCALE;
+    public static final ForgeConfigSpec.BooleanValue STOCK_ARMOR;
+    public static final ForgeConfigSpec.IntValue MAX_DERIVED_LISTINGS;
+    public static final ForgeConfigSpec.BooleanValue DERIVE_STOCK_ARMOR;
+
+    public static final ForgeConfigSpec.BooleanValue TACZ_STOCK_ATTACHMENTS;
+    public static final ForgeConfigSpec.IntValue TACZ_ATTACHMENT_PRICE;
+
+    public static final ForgeConfigSpec.BooleanValue LR_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue LR_STOCK;
+    public static final ForgeConfigSpec.IntValue LR_DEFAULT_PRICE;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -64,6 +75,18 @@ public final class MarketConfig {
                         "tarkovdayz:rubble_5000=5000",
                         "tarkovdayz:rubble_1000=1000",
                         "tarkovdayz:rubble_100=100"
+                ), o -> o instanceof String);
+        NBT_VARIANT_ITEMS = b.comment(
+                        "Items that are really many items sharing one registry name, told apart",
+                        "by a single NBT string, as 'itemid=NbtTag'. LesRaisins Tactical works",
+                        "this way: every medkit is lrtactical:consumable with a different",
+                        "ConsumableId. Without an entry here they all share one price and any",
+                        "price row naming the variant matches nothing, because no such item is",
+                        "registered. TACZ is handled separately and does not belong in this list.")
+                .defineList("nbtVariantItems", List.of(
+                        "lrtactical:consumable=ConsumableId",
+                        "lrtactical:throwable=ThrowableId",
+                        "lrtactical:melee=MeleeWeaponId"
                 ), o -> o instanceof String);
         b.pop();
 
@@ -118,6 +141,23 @@ public final class MarketConfig {
                 .defineInRange("ammoUnitPrice", 45, 1, 100000);
         TACZ_AMMO_BATCH = b.comment("How many rounds one ammo listing sells at a time.")
                 .defineInRange("ammoBatchSize", 30, 1, 64);
+        TACZ_STOCK_ATTACHMENTS = b.comment("List every installed attachment in its own tab.")
+                .define("stockAttachments", true);
+        TACZ_ATTACHMENT_PRICE = b.comment(
+                        "Base price of an attachment. Scoped by type and extended-mag level,",
+                        "since TACZ's attachment data carries no ballistics to derive from.")
+                .defineInRange("attachmentBasePrice", 9000, 1, 10000000);
+        b.pop();
+
+        b.push("lrtactical");
+        LR_ENABLED = b.comment(
+                        "Price LesRaisins Tactical grenades, medkits and melee weapons.",
+                        "Like TACZ, that mod registers a handful of items and keeps the real",
+                        "entries in NBT, so its price keys look like 'lrtactical:throwable/<id>'.")
+                .define("enabled", true);
+        LR_STOCK = b.comment("List its entries in the market.").define("stock", true);
+        LR_DEFAULT_PRICE = b.comment("Price for an entry with no row in the price data.")
+                .defineInRange("defaultPrice", 8000, 1, 10000000);
         b.pop();
 
         b.push("derived");
@@ -132,6 +172,10 @@ public final class MarketConfig {
                 .define("food", true);
         DERIVE_SCALE = b.comment("Multiplier on every derived price.")
                 .defineInRange("scale", 1.0D, 0.05D, 50.0D);
+        DERIVE_STOCK_ARMOR = b.comment(
+                        "Also STOCK derived armour, not just buy it back. Off means a gear mod's",
+                        "armour can be sold to a trader but never bought from one.")
+                .define("stockArmor", true);
         b.pop();
 
         SPEC = b.build();

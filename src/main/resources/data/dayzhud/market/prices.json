@@ -6,10 +6,14 @@
     "sold but are not stocked - the barter junk that only flows one way.",
     "Override this file from a datapack at the same path to retune the economy.",
     "NOT EVERYTHING NEEDS A ROW HERE. TACZ guns and ammo are priced from their own",
-    "ballistics, and any armour or food with no entry is priced from its own stats",
+    "ballistics, and armour with no entry is priced AND stocked from its own stats",
     "(see DerivedPrices and the [derived] config block) - which is what makes a gear",
-    "mod shipping 238 armour pieces workable. Add a row only to override.",
-    "TACZ overrides use 'tacz:gun/<id>' and 'tacz:ammo/<id>' keys."
+    "mod shipping 238 armour pieces workable.",
+    "KEY FORMATS: a plain item id; 'tacz:gun/<id>' or 'tacz:ammo/<id>'; or",
+    "'<item id>/<variant id>' for mods that put many items on one registry name via",
+    "NBT, listed in market.nbtVariantItems - LesRaisins Tactical works that way, so",
+    "its medkits are lrtactical:consumable/lrtactical:ai2 and NOT lrtactical:ai2,",
+    "which is not a registered item at all."
   ],
   "entries": {
     "tarkovdayz:bandgecivil": {
@@ -413,105 +417,6 @@
       "buy": true,
       "count": 32
     },
-    "lrtactical:ai2": {
-      "value": 6500,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:carfak": {
-      "value": 14000,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:cms": {
-      "value": 26000,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:surv12": {
-      "value": 48000,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:blood_pack": {
-      "value": 21000,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:amoxycillin": {
-      "value": 7400,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:ibuprofen": {
-      "value": 5600,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:goldenstar": {
-      "value": 4100,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:vaseline": {
-      "value": 8800,
-      "category": "meds",
-      "buy": true
-    },
-    "lrtactical:m67": {
-      "value": 24000,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:rgn": {
-      "value": 29000,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:flash_grenade": {
-      "value": 17000,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:smoke_grenade": {
-      "value": 12000,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:molotov": {
-      "value": 9500,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:c4": {
-      "value": 62000,
-      "category": "tactical"
-    },
-    "lrtactical:flash_shield": {
-      "value": 34000,
-      "category": "tactical",
-      "buy": true
-    },
-    "lrtactical:baseball_bat": {
-      "value": 3200,
-      "category": "weapons",
-      "buy": true
-    },
-    "lrtactical:dagger": {
-      "value": 6800,
-      "category": "weapons",
-      "buy": true
-    },
-    "lrtactical:karambit": {
-      "value": 19000,
-      "category": "weapons",
-      "buy": true
-    },
-    "lrtactical:condensed_milk": {
-      "value": 2400,
-      "category": "provisions",
-      "buy": true
-    },
     "caps_awim_tactical_gear_rework:blackhikingbackpack": {
       "value": 21000,
       "category": "gear",
@@ -768,6 +673,111 @@
     "caps_awim_tactical_gear_rework:theappershovel": {
       "value": 4200,
       "category": "misc",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:m67": {
+      "value": 24000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:rgn": {
+      "value": 29000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:flash_grenade": {
+      "value": 17000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:smoke_grenade": {
+      "value": 12000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:molotov": {
+      "value": 9500,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:c4": {
+      "value": 62000,
+      "buy": false,
+      "category": "tactical"
+    },
+    "lrtactical:consumable/lrtactical:ai2": {
+      "value": 6500,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:carfak": {
+      "value": 14000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:cms": {
+      "value": 26000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:surv12": {
+      "value": 48000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:blood_pack": {
+      "value": 21000,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:amoxycillin": {
+      "value": 7400,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:ibuprofen": {
+      "value": 5600,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:goldenstar": {
+      "value": 4100,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:vaseline": {
+      "value": 8800,
+      "category": "meds",
+      "buy": true
+    },
+    "lrtactical:consumable/lrtactical:condensed_milk": {
+      "value": 2400,
+      "category": "provisions",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:baseball_bat": {
+      "value": 3200,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:dagger": {
+      "value": 6800,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:karambit": {
+      "value": 19000,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:flash_shield": {
+      "value": 34000,
+      "category": "tactical",
+      "buy": true
+    },
+    "lrtactical:detonator": {
+      "value": 9000,
+      "category": "tactical",
       "buy": true
     }
   }

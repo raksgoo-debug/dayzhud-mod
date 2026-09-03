@@ -65,6 +65,8 @@ public final class MarketCommand {
                             MarketAccess.open(ctx.getSource().getPlayerOrException());
                             return 1;
                         }))
+                .then(Commands.literal("debug").requires(s -> s.hasPermission(2))
+                        .executes(ctx -> debug(ctx.getSource())))
                 .then(Commands.literal("zone").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("name", StringArgumentType.word())
@@ -78,6 +80,23 @@ public final class MarketCommand {
                                                 StringArgumentType.getString(ctx, "name")))))
                         .then(Commands.literal("list")
                                 .executes(ctx -> listZones(ctx.getSource())))));
+    }
+
+    /** Reports what the catalogue actually contains, rather than what it looks like. */
+    private static int debug(CommandSourceStack source) {
+        var offers = MarketCatalog.offers();
+        source.sendSuccess(() -> Component.literal(
+                "Market: " + offers.size() + " offers, " + MarketPrices.all().size()
+                        + " price rows, rev " + MarketCatalog.revision()), false);
+        java.util.Map<String, Integer> byCat = new java.util.LinkedHashMap<>();
+        for (MarketOffer o : offers) byCat.merge(o.category(), 1, Integer::sum);
+        for (String cat : MarketCatalog.categories()) {
+            source.sendSuccess(() -> Component.literal("  " + cat + ": " + byCat.get(cat)), false);
+        }
+        for (String line : TaczMarketCompat.debugReport()) {
+            source.sendSuccess(() -> Component.literal("  " + line), false);
+        }
+        return 1;
     }
 
     private static int pay(CommandSourceStack source, ServerPlayer target, long amount) throws com.mojang.brigadier.exceptions.CommandSyntaxException {

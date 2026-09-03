@@ -24,11 +24,11 @@ public class MarketMenu extends AbstractContainerMenu {
     public static final int SELL_SLOTS = 9;
 
     /** Slot origins, in screen-relative pixels. The screen reads these so the two agree. */
-    public static final int TRAY_X = 30;
-    public static final int TRAY_Y = 62;
-    public static final int INV_X = 111;
-    public static final int INV_Y = 162;
-    public static final int HOTBAR_Y = 220;
+    public static final int TRAY_X = 20;
+    public static final int TRAY_Y = 76;
+    public static final int INV_X = 114;
+    public static final int INV_Y = 170;
+    public static final int HOTBAR_Y = 228;
 
     /**
      * Client-side: whether the SELL tab is showing. The tray slots hide themselves when it is

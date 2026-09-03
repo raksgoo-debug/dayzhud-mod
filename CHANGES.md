@@ -1,67 +1,68 @@
-# dayzhud 1.2.0 - market UI rebuild, confirmations, and two more mods
+# dayzhud 1.3.0 - lrtactical, armour on the shelves, firearms tab, UI pass
 
-**Cumulative.** This replaces both earlier fix zips - if you have not applied them, this one
-is enough on top of the original 1.1.0 update. Eleven files, all replacements.
+**Cumulative.** Replaces every earlier fix zip; apply straight onto the original 1.1.0
+update. Fourteen files.
 
-## New UI (MarketScreen, rebuilt)
+## Why nothing from lrtactical showed up
 
-BUY and SELL tabs across the top; balance top right; a scrolling stock list (not pages) with
-icon, name, category and price; an ITEM DETAILS panel on the right with a large preview, an
-x1 / x5 / x16 quantity selector and a BUY button. SELL shows the tray, a per-item payout
-breakdown and a TOTAL, with SELL ALL and WITHDRAW beneath it.
+It is NBT-driven like TACZ, and I priced it as if it were not. There is no `lrtactical:ai2`
+item registered - there are five base items, and every medkit is `lrtactical:consumable`
+carrying `ConsumableId: lrtactical:ai2`. Throwables use `ThrowableId`, melee uses
+`MeleeWeaponId`. So all twenty rows matched nothing and the mod was silently absent.
 
-**Categories moved from a horizontal strip to a vertical sidebar, and that is a bug fix, not
-decoration.** The strip laid tabs left to right and stopped when it ran out of panel width -
-so with your modpack installed WEAPONS, SUPPLIES and VALUABLES were unreachable. The stock
-was there; the way to reach it was not. That is why the old screen looked ammo-only.
+`NbtVariants` now handles that shape generally, driven by `market.nbtVariantItems` in config
+rather than hardcoded, so the next mod built this way needs a config line and not a code
+change. Keys are `<item id>/<variant id>`, e.g. `lrtactical:consumable/lrtactical:ai2`. All 20
+items are priced: medkits under MEDS; M67 / RGN / flash / smoke / molotov / flash shield /
+detonator under TACTICAL; karambit / dagger / bat under WEAPONS; condensed milk under
+PROVISIONS.
 
-The panel is 384x246 now, up from 336x250, to fit three columns.
+## Why FIREARMS was missing, and it was not what it looked like
 
-## Confirmations
+The guns were almost certainly in the catalogue the whole time. The category sidebar drew
+seven rows and stopped - the same overflow bug as the old horizontal tab strip, turned ninety
+degrees. Alphabetical order filled those seven slots with AMMO, GEAR, MATERIALS, MEDS, MISC,
+PROVISIONS and pushed weapons off the bottom.
 
-Buying, selling and withdrawing all raise a confirm panel naming the item and the exact
-amount. It dims the screen behind it and swallows every click until CONFIRM or CANCEL - Enter
-and Escape work too. Buying is irreversible at a 55% buyback and the tray can hold a rifle,
-so a misclick was expensive.
+Fixed twice over: the sidebar scrolls (mouse wheel over it), and categories sort by a shared
+display order - FIREARMS, AMMO, ARMOR, GEAR, TACTICAL, MEDS, PROVISIONS, SUPPLIES, MATERIALS,
+WEAPONS, ELECTRONICS, VALUABLES, MISC - so what you shop for is at the top and anything a pack
+invents falls to the end instead of vanishing. TACZ guns moved from "weapons" into their own
+**FIREARMS** category; "weapons" is melee now.
 
-## The sell tray now hides itself on the BUY tab
+**`/market debug` (op) is new** and reports offers per category, price-row count, and TACZ
+status including how many guns priced successfully. The catalogue also logs a summary line on
+every rebuild. "The shop is missing X" and "the shop has X and the UI is hiding it" look
+identical from outside, and that ambiguity has now cost two rounds.
 
-`Slot.x`/`y` are final in 1.20.1, so the tray cannot be moved off-screen. It uses a
-`SellSlot.isActive()` override instead, which is what AbstractContainerScreen already gates
-rendering and hit-testing on. The flag is only ever written by the screen, so the server side
-stays active and quick-move keeps working.
+## All the caps_awim armour is on the shelves
 
-## Pricing: derived, not hand-written
+238 pieces, stocked automatically under **ARMOR**, priced from their own defence, toughness,
+knockback resistance and durability. The catalogue walks the item registry for any ArmorItem
+with no explicit price row, so it also picks up Fracture Point and vanilla armour, and will
+pick up whatever gear mod you add next. `derived.stockArmor` and `derived.maxListings` (600)
+control it; explicit rows still win.
 
-`caps_awim_tactical_gear_rework` ships **238 armour pieces**. A row each in prices.json does
-not survive contact with a real modpack, so `DerivedPrices` now prices any unlisted armour
-from its own defence, toughness, knockback resistance and durability, and any unlisted food
-from nutrition and saturation. Damaged gear is worth less, which also stops a trader paying
-full price for a helmet that ate a rifle round. Explicit entries always win. Toggles and a
-scale live in the new `[derived]` config block.
+## UI pass
 
-Added by hand where stats cannot say anything useful: **20 lrtactical entries** (medkits,
-M67 / RGN / flash / smoke / molotov / C4, karambit and dagger, condensed milk) and **54 caps
-entries** for the parts that are curios rather than armour - backpacks, balaclavas, shemaghs,
-uniforms, glasses, gas mask, NVG module, rations. 160 entries total.
-
-**TACZ ammo is no longer one flat price.** Every calibre cost 1 350 because TACZ's ammo index
-carries no ballistics - damage lives on the *gun's* bullet data. `priceOfAmmo` now finds the
-hardest-hitting gun that chambers each round and prices from that, with pierce and
-armour-ignore premiums, so 12 gauge and .338 Lapua no longer cost the same.
-
-## Also fixed
-
-The TOTAL readout was drawing on top of the "drag items here" caption (visible in your
-screenshot). Both moved in the rebuild.
-
-## Verification
-
-Parse-checked over the merged tree, 76 source files, no errors outside the expected
-missing-Minecraft noise. As always that proves the syntax and this mod's own cross-class
-references and nothing about MC/Forge calls - CI is the real check.
+- Panel 400x256, up from 384x246, laid out on a grid.
+- Title and subtitle share one line instead of the subtitle colliding with the tab row.
+- Balance gets a BALANCE caption above it rather than floating in the corner.
+- Search moved to the TOP of the sidebar - it sat under the last category and read as one.
+- Detail panel re-spaced: preview, name, then a right-aligned total that turns red when you
+  cannot afford it, with a UNIT caption under it when quantity is above one.
+- Quantity buttons outlined when selected and sized so all three fit the column.
+- WITHDRAW reads "WITHDRAW CASH" with the amount as a caption; the old label was being
+  truncated mid-number.
+- Bigger tabs, list rows tightened to 21px.
 
 ## Config note
 
-`[derived]` is a new config section. Forge only writes defaults into a config file that does
-not exist yet, so delete `config/dayzhud-common.toml` or hand-add the block to pick it up.
+New: `market.nbtVariantItems`, `derived.stockArmor`, `derived.maxListings`. Forge only writes
+defaults into a config file that does not exist yet - delete `config/dayzhud-common.toml`.
+
+## Verification
+
+Parse-checked over the merged tree. Minecraft and Forge are not on the classpath here, so this
+proves syntax and this mod's own cross-class references and nothing about MC/Forge calls. CI
+is the real check.

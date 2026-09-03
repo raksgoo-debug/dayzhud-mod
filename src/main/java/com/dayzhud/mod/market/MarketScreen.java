@@ -35,21 +35,21 @@ import java.util.Locale;
 public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     // ---- layout ------------------------------------------------------------
-    private static final int CONTENT_Y = 38;
-    private static final int CONTENT_H = 114;
+    private static final int CONTENT_Y = 56;
+    private static final int CONTENT_H = 100;
 
     private static final int SIDEBAR_X = 8;
-    private static final int SIDEBAR_W = 72;
-    private static final int SIDEBAR_ROW_H = 14;
+    private static final int SIDEBAR_W = 74;
+    private static final int SIDEBAR_ROW_H = 12;
 
-    private static final int LIST_X = 84;
-    private static final int LIST_W = 176;
-    private static final int ROW_H = 22;
+    private static final int LIST_X = 86;
+    private static final int LIST_W = 182;
+    private static final int ROW_H = 20;
     private static final int VISIBLE_ROWS = 5;
-    private static final int SCROLLBAR_X = 262;
+    private static final int SCROLLBAR_X = 270;
 
-    private static final int DETAIL_X = 270;
-    private static final int DETAIL_W = 106;
+    private static final int DETAIL_X = 278;
+    private static final int DETAIL_W = 104;
 
     private static final int TAB_Y = 20;
     private static final int TAB_W = 56;
@@ -62,11 +62,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     private static final int[] QUANTITIES = {1, 5, 16};
 
+    private static final int SEARCH_Y = 40;
+    private static final int SEARCH_H = 14;
+
     // ---- state -------------------------------------------------------------
     private EditBox search;
     private boolean sellTab;
     private String category = "";
     private int scroll;
+    private int sidebarScroll;
     private int selected = -1;          // index into ClientMarketState.offers()
     private int quantity = 1;
     private List<Integer> filtered = new ArrayList<>();
@@ -78,21 +82,20 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     public MarketScreen(MarketMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = 384;
-        this.imageHeight = 246;
+        this.imageWidth = 390;
+        this.imageHeight = 252;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.titleLabelX = 8;
-        this.titleLabelY = 7;
+        this.titleLabelX = 10;
+        this.titleLabelY = 9;
         this.inventoryLabelX = MarketMenu.INV_X;
         this.inventoryLabelY = MarketMenu.INV_Y - 11;
 
-        search = new EditBox(this.font, leftPos + SIDEBAR_X + 2,
-                topPos + CONTENT_Y + CONTENT_H - 11, SIDEBAR_W - 4, 10,
-                Component.translatable("gui.dayzhud.market.search"));
+        search = new EditBox(this.font, leftPos + LIST_X + 5, topPos + SEARCH_Y + 3,
+                LIST_W - 10, 10, Component.translatable("gui.dayzhud.market.search"));
         search.setBordered(false);
         search.setMaxLength(48);
         search.setTextColor(StyledTheme.TEXT_COLOR);
@@ -124,11 +127,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     private List<String> categories() {
         LinkedHashSet<String> seen = new LinkedHashSet<>();
-        seen.add("");
-        // Catalogue order, not alphabetical: the server already puts weapons and ammo first,
-        // which is the order a player looks for them in.
         for (MarketOffer o : ClientMarketState.offers()) seen.add(o.category());
-        return new ArrayList<>(seen);
+        List<String> out = new ArrayList<>();
+        out.add("");                                    // ALL always first
+        out.addAll(MarketCatalog.sortCategories(seen));  // then firearms, ammo, armor, ...
+        return out;
     }
 
     // ---- background --------------------------------------------------------
@@ -165,7 +168,6 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         g.drawString(font, "MARKET", titleLabelX, titleLabelY, StyledTheme.TEXT_COLOR, false);
-        StyledTheme.caption(g, font, "BUY, SELL AND TRADE EQUIPMENT", titleLabelX, titleLabelY + 10);
         g.drawString(font, "INVENTORY", inventoryLabelX, inventoryLabelY,
                 StyledTheme.HEADER_COLOR, false);
         if (sellTab) {
@@ -179,6 +181,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         menu.sellTabActive = sellTab;
+        search.visible = !sellTab;
         super.render(g, mouseX, mouseY, partialTick);
 
         drawBalance(g);
@@ -187,6 +190,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             drawSellList(g);
             drawSellDetails(g, mouseX, mouseY);
         } else {
+            drawSearch(g);
             drawSidebar(g, mouseX, mouseY);
             drawOffers(g, mouseX, mouseY);
             drawBuyDetails(g, mouseX, mouseY);
@@ -202,11 +206,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     private void drawBalance(GuiGraphics g) {
         String text = Money.withSymbol(ClientWallet.get());
-        g.drawString(font, text, leftPos + imageWidth - 8 - font.width(text), topPos + 8,
-                0xFFC9A227, false);
-        if (!sellTab && search.getValue().isEmpty() && !search.isFocused()) {
-            StyledTheme.caption(g, font, "SEARCH", leftPos + SIDEBAR_X + 4,
-                    topPos + CONTENT_Y + CONTENT_H - 9);
+        int x = leftPos + imageWidth - 8 - font.width(text);
+        StyledTheme.caption(g, font, "BALANCE", x, topPos + 4);
+        g.drawString(font, text, x, topPos + 11, 0xFFC9A227, false);
+    }
+
+    private void drawSearch(GuiGraphics g) {
+        int x = leftPos + LIST_X;
+        int y = topPos + SEARCH_Y;
+        g.fill(x, y, x + LIST_W, y + SEARCH_H, StyledTheme.SLOT_BG);
+        g.renderOutline(x, y, LIST_W, SEARCH_H,
+                search.isFocused() ? StyledTheme.ACCENT : StyledTheme.SLOT_BORDER);
+        if (search.getValue().isEmpty() && !search.isFocused()) {
+            StyledTheme.caption(g, font, "SEARCH STOCK", x + 5, y + 5);
         }
     }
 
@@ -231,10 +243,17 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
     }
 
+    private int sidebarRows() {
+        return (CONTENT_H - 4) / SIDEBAR_ROW_H;
+    }
+
     private void drawSidebar(GuiGraphics g, int mouseX, int mouseY) {
         int y = topPos + CONTENT_Y + 2;
-        for (String cat : categories()) {
-            if (y + SIDEBAR_ROW_H > topPos + CONTENT_Y + CONTENT_H - 14) break;
+        List<String> cats = categories();
+        int max = Math.max(0, cats.size() - sidebarRows());
+        sidebarScroll = Math.max(0, Math.min(sidebarScroll, max));
+        for (String cat : cats.subList(sidebarScroll,
+                Math.min(cats.size(), sidebarScroll + sidebarRows()))) {
             String label = cat.isEmpty() ? "ALL" : cat.toUpperCase(Locale.ROOT);
             boolean active = cat.equals(category);
             boolean hovered = inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, y,
@@ -247,10 +266,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 g.fill(leftPos + SIDEBAR_X + 1, y, leftPos + SIDEBAR_X + 3, y + SIDEBAR_ROW_H,
                         StyledTheme.ACCENT);
             }
-            g.drawString(font, trim(label, SIDEBAR_W - 12), leftPos + SIDEBAR_X + 7, y + 3,
+            g.drawString(font, trim(label, SIDEBAR_W - 14), leftPos + SIDEBAR_X + 7, y + 3,
                     active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
             y += SIDEBAR_ROW_H;
         }
+        // A column can hold seven; a modpack can define more than seven. The first version
+        // just stopped drawing, which is how FIREARMS became unreachable.
+        if (cats.size() > SIDEBAR_ROWS) {
+            int trackTop = topPos + SIDEBAR_LIST_Y;
+            int trackH = SIDEBAR_ROWS * SIDEBAR_ROW_H;
+            int thumb = Math.max(8, trackH * SIDEBAR_ROWS / cats.size());
+            int ty = trackTop + (trackH - thumb) * sidebarScroll
+                    / Math.max(1, cats.size() - SIDEBAR_ROWS);
+            g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, trackTop,
+                    leftPos + SIDEBAR_X + SIDEBAR_W - 1, trackTop + trackH, StyledTheme.SLOT_BG);
+            g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, ty,
+                    leftPos + SIDEBAR_X + SIDEBAR_W - 1, ty + thumb, StyledTheme.SLOT_BORDER);
+        }
+    }
+
+    private void clampSidebar(int total) {
+        sidebarScroll = Math.max(0, Math.min(sidebarScroll, Math.max(0, total - SIDEBAR_ROWS)));
     }
 
     private void drawOffers(GuiGraphics g, int mouseX, int mouseY) {
@@ -324,32 +360,32 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         ItemStack stack = offer.prototype();
 
         g.pose().pushPose();
-        g.pose().translate(leftPos + DETAIL_X + DETAIL_W / 2f - 16, topPos + CONTENT_Y + 20, 0);
+        g.pose().translate(leftPos + DETAIL_X + DETAIL_W / 2f - 16, topPos + CONTENT_Y + 14, 0);
         g.pose().scale(2f, 2f, 1f);
         g.renderItem(stack, 0, 0);
         g.pose().popPose();
 
-        int y = topPos + CONTENT_Y + 58;
+        int y = topPos + CONTENT_Y + 50;
         for (String line : wrap(stack.getHoverName().getString(), DETAIL_W - 10, 2)) {
             g.drawString(font, line, leftPos + DETAIL_X + 5, y, StyledTheme.TEXT_COLOR, false);
             y += 10;
         }
-        g.drawString(font, Money.withSymbol(offer.price()), leftPos + DETAIL_X + 5, y + 2,
-                StyledTheme.ACCENT, false);
-        if (quantity > 1) {
-            StyledTheme.caption(g, font,
-                    "x" + quantity + " = " + Money.withSymbol(offer.price() * quantity),
-                    leftPos + DETAIL_X + 5, y + 14);
-        }
+        long total = offer.price() * quantity;
+        String price = Money.withSymbol(total);
+        g.drawString(font, price, leftPos + DETAIL_X + DETAIL_W - 5 - font.width(price), y + 3,
+                ClientWallet.get() >= total ? StyledTheme.ACCENT : 0xFFB04A3A, false);
+        StyledTheme.caption(g, font, quantity > 1 ? ("UNIT " + Money.withSymbol(offer.price())) : "PRICE",
+                leftPos + DETAIL_X + 5, y + 6);
 
         for (int i = 0; i < QUANTITIES.length; i++) {
-            int x = leftPos + DETAIL_X + 5 + i * 33;
+            int x = leftPos + DETAIL_X + 5 + i * 31;
             boolean active = quantity == QUANTITIES[i];
-            boolean hovered = inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 30, 12);
-            g.fill(x, topPos + QTY_ROW_Y, x + 30, topPos + QTY_ROW_Y + 12,
+            boolean hovered = inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 29, 12);
+            g.fill(x, topPos + QTY_ROW_Y, x + 29, topPos + QTY_ROW_Y + 12,
                     active || hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
+            if (active) g.renderOutline(x, topPos + QTY_ROW_Y, 29, 12, StyledTheme.ACCENT);
             String label = "x" + QUANTITIES[i];
-            g.drawString(font, label, x + (30 - font.width(label)) / 2, topPos + QTY_ROW_Y + 2,
+            g.drawString(font, label, x + (29 - font.width(label)) / 2, topPos + QTY_ROW_Y + 2,
                     active ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
         }
 
@@ -396,12 +432,14 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 topPos + CONTENT_Y + 22,
                 total > 0 ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
         StyledTheme.caption(g, font, "TRADERS PAY BELOW LIST PRICE",
-                leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 36);
+                leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 34);
+        StyledTheme.caption(g, font, "WITHDRAW PAYS OUT UP TO " + Money.withSymbol(10_000),
+                leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 44);
 
         drawWideButton(g, mouseX, mouseY, DETAIL_X + 4, SELL_ALL_Y, DETAIL_W - 8, "SELL ALL",
                 total > 0);
         drawWideButton(g, mouseX, mouseY, DETAIL_X + 4, WITHDRAW_Y, DETAIL_W - 8,
-                "WITHDRAW " + Money.withSymbol(10_000), ClientWallet.get() > 0);
+                "WITHDRAW CASH", ClientWallet.get() > 0);
     }
 
     private void drawWideButton(GuiGraphics g, int mouseX, int mouseY, int x, int y, int w,
@@ -510,8 +548,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
 
         int sy = topPos + CONTENT_Y + 2;
-        for (String cat : categories()) {
-            if (sy + SIDEBAR_ROW_H > topPos + CONTENT_Y + CONTENT_H - 14) break;
+        List<String> cats = categories();
+        for (String cat : cats.subList(Math.min(sidebarScroll, cats.size()),
+                Math.min(cats.size(), sidebarScroll + sidebarRows()))) {
             if (inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, sy, SIDEBAR_W - 2, SIDEBAR_ROW_H)) {
                 category = cat;
                 scroll = 0;
@@ -528,8 +567,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
 
         for (int i = 0; i < QUANTITIES.length; i++) {
-            int x = leftPos + DETAIL_X + 5 + i * 33;
-            if (inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 30, 12)) {
+            int x = leftPos + DETAIL_X + 5 + i * 31;
+            if (inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 29, 12)) {
                 quantity = QUANTITIES[i];
                 return true;
             }
@@ -557,6 +596,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (confirm != null) return true;
+        if (!sellTab && inBox(mouseX, mouseY, leftPos + SIDEBAR_X, topPos + CONTENT_Y,
+                SIDEBAR_W, CONTENT_H)) {
+            sidebarScroll = Math.max(0, sidebarScroll - (int) Math.signum(delta));
+            return true;
+        }
         if (!sellTab && inBox(mouseX, mouseY, leftPos + LIST_X, topPos + CONTENT_Y,
                 LIST_W + 8, CONTENT_H)) {
             int max = Math.max(0, filtered.size() - VISIBLE_ROWS);

@@ -48,6 +48,10 @@ public final class TaczMarketCompat {
 
     private static Method gunBuilderCreate, gunBuilderSetId, gunBuilderSetAmmoCount, gunBuilderBuild;
     private static Method ammoBuilderCreate, ammoBuilderSetId, ammoBuilderSetCount, ammoBuilderBuild;
+    private static Method attachBuilderCreate, attachBuilderSetId, attachBuilderBuild;
+    private static Method getAllCommonAttachmentIndex, attachIndexGetType, attachIndexGetData,
+            attachDataGetExtendedMagLevel;
+    private static boolean gunPriceFailureLogged;
 
     private static Method getIGunOrNull, iGunGetGunId;
     private static Method getIAmmoOrNull, iAmmoGetAmmoId;
@@ -101,6 +105,21 @@ public final class TaczMarketCompat {
             ammoBuilderSetId = ammoB.getMethod("setId", ResourceLocation.class);
             ammoBuilderSetCount = ammoB.getMethod("setCount", int.class);
             ammoBuilderBuild = ammoB.getMethod("build");
+
+            Class<?> attachB = Class.forName(
+                    "com.tacz.guns.api.item.builder.AttachmentItemBuilder", false, cl);
+            attachBuilderCreate = attachB.getMethod("create");
+            attachBuilderSetId = attachB.getMethod("setId", ResourceLocation.class);
+            attachBuilderBuild = attachB.getMethod("build");
+
+            getAllCommonAttachmentIndex = api.getMethod("getAllCommonAttachmentIndex");
+            Class<?> attachIndex = Class.forName(
+                    "com.tacz.guns.resource.index.CommonAttachmentIndex", false, cl);
+            attachIndexGetType = attachIndex.getMethod("getType");
+            attachIndexGetData = attachIndex.getMethod("getData");
+            Class<?> attachData = Class.forName(
+                    "com.tacz.guns.resource.pojo.data.attachment.AttachmentData", false, cl);
+            attachDataGetExtendedMagLevel = attachData.getMethod("getExtendedMagLevel");
 
             Class<?> iGun = Class.forName("com.tacz.guns.api.item.IGun", false, cl);
             getIGunOrNull = iGun.getMethod("getIGunOrNull", ItemStack.class);
@@ -168,7 +187,65 @@ public final class TaczMarketCompat {
             DayzHudMod.LOGGER.warn("Could not enumerate TACZ guns: {}", t.toString());
         }
         out.sort((a, b) -> Integer.compare(a.price(), b.price()));
+        DayzHudMod.LOGGER.info("TACZ: {} gun(s) priced for the market", out.size());
         return out;
+    }
+
+    public record AttachmentEntry(ResourceLocation id, String type, int price) {}
+
+    /**
+     * Attachments, priced by type and extended-mag level.
+     *
+     * TACZ's attachment data carries no ballistics of its own - the effect lives in a
+     * modifier map keyed by strings a third party cannot safely interpret - so this is a
+     * type table rather than a derivation. Honest about what it is, and overridable per id.
+     */
+    public static List<AttachmentEntry> listAttachments() {
+        List<AttachmentEntry> out = new ArrayList<>();
+        if (!isActive() || getAllCommonAttachmentIndex == null) return out;
+        int base = MarketConfig.TACZ_ATTACHMENT_PRICE.get();
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> all =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonAttachmentIndex.invoke(null);
+            for (Map.Entry<ResourceLocation, Object> e : all) {
+                String type = String.valueOf(attachIndexGetType.invoke(e.getValue())).toLowerCase();
+                double price = base * switch (type) {
+                    case "scope" -> 2.2;
+                    case "muzzle" -> 1.4;
+                    case "stock" -> 0.9;
+                    case "grip" -> 0.7;
+                    case "laser" -> 1.1;
+                    case "extended_mag" -> 1.0;
+                    default -> 1.0;
+                };
+                try {
+                    Object data = attachIndexGetData.invoke(e.getValue());
+                    int mag = ((Number) attachDataGetExtendedMagLevel.invoke(data)).intValue();
+                    if (mag > 0) price *= 1.0 + mag * 0.6;
+                } catch (Throwable ignored) {
+                }
+                price *= MarketConfig.TACZ_PRICE_SCALE.get();
+                out.add(new AttachmentEntry(e.getKey(), type,
+                        (int) Math.max(100, Math.round(price / 100.0) * 100)));
+            }
+        } catch (Throwable t) {
+            DayzHudMod.LOGGER.warn("Could not enumerate TACZ attachments: {}", t.toString());
+        }
+        out.sort((a, b) -> Integer.compare(a.price(), b.price()));
+        return out;
+    }
+
+    public static ItemStack makeAttachment(ResourceLocation id) {
+        if (!isActive() || attachBuilderCreate == null) return ItemStack.EMPTY;
+        try {
+            Object b = attachBuilderCreate.invoke(null);
+            b = attachBuilderSetId.invoke(b, id);
+            Object stack = attachBuilderBuild.invoke(b);
+            return stack instanceof ItemStack s ? s : ItemStack.EMPTY;
+        } catch (Throwable t) {
+            return ItemStack.EMPTY;
+        }
     }
 
     public static List<ResourceLocation> listAmmo() {
@@ -242,6 +319,13 @@ public final class TaczMarketCompat {
             long rounded = Math.round(base / 100.0) * 100L;
             return (int) Math.max(100L, Math.min(Integer.MAX_VALUE, rounded));
         } catch (Throwable t) {
+            // Log ONCE rather than per gun. A silent null here drops the whole WEAPONS tab
+            // with no trace anywhere, which is exactly how it went unnoticed the first time.
+            if (!gunPriceFailureLogged) {
+                gunPriceFailureLogged = true;
+                DayzHudMod.LOGGER.warn("TACZ gun pricing failed; weapons will be missing "
+                        + "from the market", t);
+            }
             return null;
         }
     }
@@ -287,6 +371,46 @@ public final class TaczMarketCompat {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /**
+     * One-line status for /market debug. Exists because "no guns in the shop" and "guns in
+     * the shop the UI is not showing" look identical from the outside, and telling them apart
+     * by reasoning cost a round already.
+     */
+    public static List<String> debugReport() {
+        List<String> out = new ArrayList<>();
+        out.add("tacz loaded: " + isModLoaded() + ", config enabled: " + MarketConfig.TACZ_ENABLED.get());
+        if (!isModLoaded()) return out;
+        out.add("api resolved: " + resolve());
+        if (!resolve()) return out;
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> guns =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonGunIndex.invoke(null);
+            out.add("gun index entries: " + guns.size());
+            int priced = 0;
+            String sample = "none";
+            for (Map.Entry<ResourceLocation, Object> e : guns) {
+                Integer p = priceGun(e.getValue());
+                if (p == null) continue;
+                priced++;
+                if (sample.equals("none")) sample = e.getKey() + " = " + p;
+            }
+            out.add("guns priced ok: " + priced + " (first: " + sample + ")");
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> ammo =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonAmmoIndex.invoke(null);
+            out.add("ammo index entries: " + ammo.size());
+            for (Map.Entry<ResourceLocation, Object> e : ammo) {
+                Integer p = priceOfAmmo(e.getKey());
+                out.add("  ammo " + e.getKey() + " -> " + (p == null ? "NO GUN CHAMBERS IT" : p));
+                break;
+            }
+        } catch (Throwable t) {
+            out.add("index walk threw: " + t);
+        }
+        return out;
     }
 
     public static ItemStack makeGun(ResourceLocation id) {
