@@ -16,54 +16,45 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * The trader: BUY and SELL tabs, a category sidebar, a scrolling stock list, and a details
- * panel for whatever is selected.
+ * The trader. BUY and SELL tabs, a category sidebar that expands into sections, a scrolling
+ * stock list, and a details panel.
  *
- * Scrolling rather than paging, deliberately. A page control costs a click per screenful and
- * makes a shop feel like a website; the list is virtualised to five visible rows either way,
- * so paging would buy nothing.
+ * THE PANEL IS NOT THE MENU. Slot x/y are final in 1.20.1, so a container screen that resizes
+ * with the window cannot move its slots the way it moves its artwork. Everything here is
+ * therefore drawn in ABSOLUTE screen coordinates from {@link #panelX}/{@link #panelY}, and
+ * leftPos/topPos are set by hand in {@link #init()} to drop the menu's fixed 162x106 slot
+ * block where the layout wants it. Anything that mixes the two systems up will look right at
+ * one window size and wrong at every other, so: panel geometry absolute, slots via
+ * leftPos/topPos, and never the two in one expression.
  *
- * Categories are a VERTICAL sidebar rather than a tab strip, and that is a bug fix. The strip
- * laid tabs out left to right and stopped when it ran out of panel width, so with a full
- * modpack installed WEAPONS, SUPPLIES and VALUABLES were simply unreachable - the stock was
- * there, the way to it was not. A column cannot run out of room the same way and scales to
- * however many categories a pack's price data defines.
- *
- * Every purchase and every sale goes through a confirmation panel. Buying is irreversible at
- * a 55% buyback, and the sell tray can hold a rifle, so a misclick is expensive.
+ * Row counts are computed from the space available rather than fixed, which is what lets a
+ * bigger window show more stock instead of the same five rows with more padding.
  */
 public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
-    // ---- layout ------------------------------------------------------------
-    private static final int CONTENT_Y = 56;
-    private static final int CONTENT_H = 100;
+    private static final int MARGIN = 6;
+    private static final int MAX_W = 640;
+    private static final int MAX_H = 400;
 
-    private static final int SIDEBAR_X = 8;
-    private static final int SIDEBAR_W = 74;
-    private static final int SIDEBAR_ROW_H = 12;
+    private static final int ROW_H = 24;
+    private static final int SIDEBAR_ROW_H = 14;
+    private static final int SIDEBAR_W_MAX = 104;
+    private static final int SIDEBAR_W_MIN = 62;
+    private static final int DETAIL_W_MAX = 152;
+    private static final int DETAIL_W_MIN = 94;
+    private static final int LIST_W_MIN = 92;
+    private static final int TAB_W = 78;
+    private static final int TAB_H = 17;
 
-    private static final int LIST_X = 86;
-    private static final int LIST_W = 182;
-    private static final int ROW_H = 20;
-    private static final int VISIBLE_ROWS = 5;
-    private static final int SCROLLBAR_X = 270;
+    private static final int[] QUANTITIES = {1, 5, 16, 64};
 
-    private static final int DETAIL_X = 278;
-    private static final int DETAIL_W = 104;
-
-    private static final int TAB_Y = 20;
-    private static final int TAB_W = 56;
-    private static final int TAB_H = 14;
-
-    private static final int BUY_BUTTON_Y = CONTENT_Y + CONTENT_H - 16;
-    private static final int QTY_ROW_Y = CONTENT_Y + CONTENT_H - 32;
-    private static final int SELL_ALL_Y = CONTENT_Y + CONTENT_H - 34;
-    private static final int WITHDRAW_Y = CONTENT_Y + CONTENT_H - 16;
-
-    private static final int[] QUANTITIES = {1, 5, 16};
-
-    private static final int SEARCH_Y = 40;
-    private static final int SEARCH_H = 14;
+    // ---- computed layout ---------------------------------------------------
+    private int panelX, panelY, panelW, panelH;
+    private int contentY, contentH, tabY;
+    private int sidebarX, sidebarW, listX, listW, scrollbarX, detailX, detailW;
+    private int visibleRows, sidebarRowsVisible;
+    private int groupX, groupY;
+    private boolean compact;
 
     // ---- state -------------------------------------------------------------
     private EditBox search;
@@ -72,31 +63,27 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     private String sub = "";
     private int scroll;
     private int sidebarScroll;
-    private int selected = -1;          // index into ClientMarketState.offers()
+    private int selected = -1;
     private int quantity = 1;
     private List<Integer> filtered = new ArrayList<>();
-
-    /** Non-null while a confirmation panel is up. Blocks every other click. */
     private Confirm confirm;
 
     private record Confirm(String title, String line, String cost, Runnable onConfirm) {}
 
+    /** A sidebar line: a category, or a section nested under the open one. */
+    private record Row(String category, String sub, boolean nested) {}
+
     public MarketScreen(MarketMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = 390;
-        this.imageHeight = 252;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.titleLabelX = 10;
-        this.titleLabelY = 9;
-        this.inventoryLabelX = MarketMenu.INV_X;
-        this.inventoryLabelY = MarketMenu.INV_Y - 11;
+        layout();
 
-        search = new EditBox(this.font, leftPos + LIST_X + 5, topPos + SEARCH_Y + 3,
-                LIST_W - 10, 10, Component.translatable("gui.dayzhud.market.search"));
+        search = new EditBox(this.font, sidebarX + 4, contentY + 4, sidebarW - 8, 12,
+                Component.translatable("gui.dayzhud.market.search"));
         search.setBordered(false);
         search.setMaxLength(48);
         search.setTextColor(StyledTheme.TEXT_COLOR);
@@ -107,6 +94,67 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         addRenderableWidget(search);
         menu.sellTabActive = sellTab;
         rebuild();
+    }
+
+    private void layout() {
+        panelW = Math.min(this.width - MARGIN * 2, MAX_W);
+        panelH = Math.min(this.height - MARGIN * 2, MAX_H);
+        panelX = (this.width - panelW) / 2;
+        panelY = (this.height - panelH) / 2;
+
+        // The slot block is fixed size, so it is placed first and the content region takes
+        // whatever is left above it.
+        groupX = panelX + (panelW - MarketMenu.GROUP_W) / 2;
+        groupY = panelY + panelH - 10 - MarketMenu.GROUP_H;
+        this.leftPos = groupX - MarketMenu.INV_X;
+        this.topPos = groupY - MarketMenu.TRAY_Y;
+        this.imageWidth = panelW;
+        this.imageHeight = panelH;
+
+        // A short window gets a compressed header rather than losing its only list row to
+        // decoration. Minecraft guarantees no less than 320x240 GUI units, and at that size
+        // the full header leaves room for exactly one row.
+        compact = panelH < 300;
+        int headerH = compact ? 40 : 54;
+        tabY = panelY + headerH - 19;
+        contentY = panelY + headerH;
+        contentH = Math.max(ROW_H, groupY - 16 - contentY);
+
+        // Columns are proportional with floors, then the side columns give ground to the list
+        // if it is still too narrow. Fixed widths looked fine at 640 and collapsed the stock
+        // list to six pixels at 320 - verified by walking the arithmetic across window sizes
+        // rather than by eye, because a compiler cannot catch a negative column.
+        sidebarW = clamp((int) (panelW * 0.20), SIDEBAR_W_MIN, SIDEBAR_W_MAX);
+        detailW = clamp((int) (panelW * 0.28), DETAIL_W_MIN, DETAIL_W_MAX);
+        for (int guard = 0; guard < 8 && listWidthFor(sidebarW, detailW) < LIST_W_MIN; guard++) {
+            if (detailW > DETAIL_W_MIN) detailW -= Math.min(8, detailW - DETAIL_W_MIN);
+            else if (sidebarW > SIDEBAR_W_MIN) sidebarW -= Math.min(8, sidebarW - SIDEBAR_W_MIN);
+            else break;
+        }
+
+        sidebarX = panelX + 10;
+        detailX = panelX + panelW - 10 - detailW;
+        listX = sidebarX + sidebarW + 10;
+        scrollbarX = detailX - 12;
+        listW = Math.max(24, scrollbarX - 4 - listX);
+
+        visibleRows = Math.max(1, contentH / ROW_H);
+        sidebarRowsVisible = Math.max(1, (contentH - 22) / SIDEBAR_ROW_H);
+    }
+
+    private int listWidthFor(int sidebar, int detail) {
+        return (panelX + panelW - 10 - detail - 12) - 4 - (panelX + 10 + sidebar + 10);
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    @Override
+    public void resize(net.minecraft.client.Minecraft mc, int w, int h) {
+        String query = search == null ? "" : search.getValue();
+        super.resize(mc, w, h);
+        if (search != null) search.setValue(query);
     }
 
     private void rebuild() {
@@ -123,33 +171,30 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             }
             filtered.add(i);
         }
-        scroll = Math.max(0, Math.min(scroll, Math.max(0, filtered.size() - VISIBLE_ROWS)));
+        scroll = Math.max(0, Math.min(scroll, Math.max(0, filtered.size() - visibleRows)));
         if (!filtered.contains(selected)) selected = filtered.isEmpty() ? -1 : filtered.get(0);
     }
 
-    /** A sidebar line: either a category, or a section nested under the open one. */
-    private record Row(String category, String sub, boolean nested) {}
-
     /**
-     * The sidebar, with the selected category expanded into its own sections.
+     * Sidebar rows, with the selected category expanded into its sections.
      *
-     * Nesting rather than a second horizontal strip along the top of the list: a strip has a
-     * fixed width and would hit the same overflow that hid FIREARMS twice already, whereas a
-     * column just gets longer and the column already scrolls.
+     * Nested in the column rather than added as a second strip along the top: a strip has a
+     * fixed width and would hit exactly the overflow that hid FIREARMS twice, while a column
+     * only gets longer and this one scrolls.
      */
     private List<Row> sidebarRows() {
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         for (MarketOffer o : ClientMarketState.offers()) seen.add(o.category());
 
         List<Row> rows = new ArrayList<>();
-        rows.add(new Row("", "", false));               // ALL
+        rows.add(new Row("", "", false));
         for (String cat : MarketCatalog.sortCategories(seen)) {
             rows.add(new Row(cat, "", false));
             if (!cat.equals(category)) continue;
             List<String> subs = MarketCatalog.subcategories(ClientMarketState.offers(), cat);
-            // One section is not a section - showing "ARMOR > helmets" alone is just noise.
+            // One section is not a section - "ARMOR > helmets" alone is just noise.
             if (subs.size() < 2) continue;
-            rows.add(new Row(cat, "", true));           // "ALL" within the category
+            rows.add(new Row(cat, "", true));
             for (String s : subs) rows.add(new Row(cat, s, true));
         }
         return rows;
@@ -159,20 +204,18 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
-        StyledTheme.panel(g, leftPos, topPos, imageWidth, imageHeight);
-        StyledTheme.zone(g, leftPos + SIDEBAR_X, topPos + CONTENT_Y,
-                leftPos + SIDEBAR_X + SIDEBAR_W, topPos + CONTENT_Y + CONTENT_H);
-        StyledTheme.zone(g, leftPos + DETAIL_X, topPos + CONTENT_Y,
-                leftPos + DETAIL_X + DETAIL_W, topPos + CONTENT_Y + CONTENT_H);
+        StyledTheme.panel(g, panelX, panelY, panelW, panelH);
         if (!sellTab) {
-            StyledTheme.zone(g, leftPos + LIST_X, topPos + CONTENT_Y,
-                    leftPos + LIST_X + LIST_W, topPos + CONTENT_Y + CONTENT_H);
+            StyledTheme.zone(g, sidebarX, contentY, sidebarX + sidebarW, contentY + contentH);
+            StyledTheme.zone(g, listX, contentY, listX + listW, contentY + contentH);
+        } else {
+            StyledTheme.zone(g, sidebarX, contentY, scrollbarX - 4, contentY + contentH);
         }
+        StyledTheme.zone(g, detailX, contentY, detailX + detailW, contentY + contentH);
 
         if (sellTab) {
             for (int i = 0; i < MarketMenu.SELL_SLOTS; i++) {
-                StyledTheme.slot(g, leftPos + MarketMenu.TRAY_X + (i % 3) * 18,
-                        topPos + MarketMenu.TRAY_Y + (i / 3) * 18);
+                StyledTheme.slot(g, leftPos + MarketMenu.TRAY_X + i * 18, topPos + MarketMenu.TRAY_Y);
             }
         }
         for (int row = 0; row < 3; row++) {
@@ -186,15 +229,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
     }
 
+    /** Labels are drawn absolutely in {@link #render}; this stays empty on purpose. */
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, "MARKET", titleLabelX, titleLabelY, StyledTheme.TEXT_COLOR, false);
-        g.drawString(font, "INVENTORY", inventoryLabelX, inventoryLabelY,
-                StyledTheme.HEADER_COLOR, false);
-        if (sellTab) {
-            StyledTheme.header(g, font, "SELL TRAY", MarketMenu.TRAY_X - 2,
-                    MarketMenu.TRAY_Y - 14, 58);
-        }
+    }
+
+    /**
+     * Clicking anywhere in the panel is inside the window, not a drop.
+     *
+     * Vanilla measures this from leftPos/topPos plus imageWidth/imageHeight, and leftPos here
+     * points at the slot block rather than the panel corner - so without this, clicking the
+     * stock list while holding an item would throw it on the floor.
+     */
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top, int button) {
+        return mouseX < panelX || mouseY < panelY
+                || mouseX >= panelX + panelW || mouseY >= panelY + panelH;
     }
 
     // ---- render ------------------------------------------------------------
@@ -202,20 +252,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         menu.sellTabActive = sellTab;
-        search.visible = !sellTab;
         super.render(g, mouseX, mouseY, partialTick);
 
-        drawBalance(g);
+        drawHeader(g);
         drawTabs(g, mouseX, mouseY);
         if (sellTab) {
             drawSellList(g);
             drawSellDetails(g, mouseX, mouseY);
         } else {
-            drawSearch(g);
             drawSidebar(g, mouseX, mouseY);
             drawOffers(g, mouseX, mouseY);
             drawBuyDetails(g, mouseX, mouseY);
         }
+        drawSlotLabels(g);
 
         if (confirm == null) {
             renderTooltip(g, mouseX, mouseY);
@@ -225,101 +274,114 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
     }
 
-    private void drawBalance(GuiGraphics g) {
+    private void drawHeader(GuiGraphics g) {
+        float titleScale = compact ? 1.0f : 1.6f;
+        g.pose().pushPose();
+        g.pose().translate(panelX + 12, panelY + (compact ? 8 : 10), 0);
+        g.pose().scale(titleScale, titleScale, 1f);
+        g.drawString(font, "MARKET", 0, 0, StyledTheme.TEXT_COLOR, false);
+        g.pose().popPose();
+        if (!compact) {
+            StyledTheme.caption(g, font, "BUY, SELL AND TRADE EQUIPMENT", panelX + 13, panelY + 27);
+        }
+
         String text = Money.withSymbol(ClientWallet.get());
-        int x = leftPos + imageWidth - 8 - font.width(text);
-        StyledTheme.caption(g, font, "BALANCE", x, topPos + 4);
-        g.drawString(font, text, x, topPos + 11, 0xFFC9A227, false);
+        int right = panelX + panelW - 12;
+        StyledTheme.caption(g, font, "BALANCE", right - 24, panelY + 8);
+        g.pose().pushPose();
+        g.pose().translate(right, panelY + (compact ? 14 : 17), 0);
+        float moneyScale = compact ? 1.0f : 1.3f;
+        g.pose().scale(moneyScale, moneyScale, 1f);
+        g.drawString(font, text, -font.width(text), 0, 0xFFC9A227, false);
+        g.pose().popPose();
+
+        if (!sellTab && search.getValue().isEmpty() && !search.isFocused()) {
+            StyledTheme.caption(g, font, "SEARCH ITEMS", sidebarX + 6, contentY + 8);
+        }
     }
 
-    private void drawSearch(GuiGraphics g) {
-        int x = leftPos + LIST_X;
-        int y = topPos + SEARCH_Y;
-        g.fill(x, y, x + LIST_W, y + SEARCH_H, StyledTheme.SLOT_BG);
-        g.renderOutline(x, y, LIST_W, SEARCH_H,
-                search.isFocused() ? StyledTheme.ACCENT : StyledTheme.SLOT_BORDER);
-        if (search.getValue().isEmpty() && !search.isFocused()) {
-            StyledTheme.caption(g, font, "SEARCH STOCK", x + 5, y + 5);
+    private void drawSlotLabels(GuiGraphics g) {
+        g.drawString(font, "INVENTORY", groupX, groupY + MarketMenu.INV_Y - 11,
+                StyledTheme.HEADER_COLOR, false);
+        if (sellTab) {
+            StyledTheme.header(g, font, "SELL TRAY - DROP ITEMS HERE", groupX,
+                    groupY + MarketMenu.TRAY_Y - 12, MarketMenu.GROUP_W);
         }
     }
 
     private void drawTabs(GuiGraphics g, int mouseX, int mouseY) {
         drawTab(g, mouseX, mouseY, 0, "BUY", !sellTab);
         drawTab(g, mouseX, mouseY, 1, "SELL", sellTab);
-        g.fill(leftPos + 8, topPos + TAB_Y + TAB_H, leftPos + imageWidth - 8,
-                topPos + TAB_Y + TAB_H + 1, StyledTheme.HEADER_ACCENT);
+        int y = tabY + TAB_H;
+        g.fill(panelX + 10, y, panelX + panelW - 10, y + 1, StyledTheme.HEADER_ACCENT);
     }
+
 
     private void drawTab(GuiGraphics g, int mouseX, int mouseY, int index, String label,
                          boolean active) {
-        int x = leftPos + 8 + index * (TAB_W + 2);
-        boolean hovered = inBox(mouseX, mouseY, x, topPos + TAB_Y, TAB_W, TAB_H);
-        g.fill(x, topPos + TAB_Y, x + TAB_W, topPos + TAB_Y + TAB_H,
+        int x = tabX(index);
+        int y = tabY;
+        boolean hovered = inBox(mouseX, mouseY, x, y, TAB_W, TAB_H);
+        g.fill(x, y, x + TAB_W, y + TAB_H,
                 active || hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
-        if (active) {
-            g.fill(x, topPos + TAB_Y + TAB_H - 1, x + TAB_W, topPos + TAB_Y + TAB_H,
-                    StyledTheme.ACCENT);
-        }
-        g.drawString(font, label, x + (TAB_W - font.width(label)) / 2, topPos + TAB_Y + 3,
+        if (active) g.fill(x, y + TAB_H - 1, x + TAB_W, y + TAB_H, StyledTheme.ACCENT);
+        g.drawString(font, label, x + (TAB_W - font.width(label)) / 2, y + 5,
                 active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
+    }
+
+    private int tabX(int index) {
+        return panelX + 10 + index * (TAB_W + 3);
     }
 
     private void drawSidebar(GuiGraphics g, int mouseX, int mouseY) {
         List<Row> rows = sidebarRows();
         clampSidebar(rows.size());
-        int y = topPos + SIDEBAR_LIST_Y;
-        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + SIDEBAR_ROWS); i++) {
+        int y = contentY + 22;
+        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + sidebarRowsVisible); i++) {
             Row row = rows.get(i);
             boolean active = isActiveRow(row);
-            boolean hovered = inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, y,
-                    SIDEBAR_W - 2, SIDEBAR_ROW_H);
+            boolean hovered = inBox(mouseX, mouseY, sidebarX + 1, y, sidebarW - 2, SIDEBAR_ROW_H);
             if (active || hovered) {
-                g.fill(leftPos + SIDEBAR_X + 1, y, leftPos + SIDEBAR_X + SIDEBAR_W - 1,
-                        y + SIDEBAR_ROW_H, StyledTheme.BUTTON_BG_HOVER);
+                g.fill(sidebarX + 1, y, sidebarX + sidebarW - 1, y + SIDEBAR_ROW_H,
+                        StyledTheme.BUTTON_BG_HOVER);
             }
             if (active) {
-                g.fill(leftPos + SIDEBAR_X + 1, y, leftPos + SIDEBAR_X + 3, y + SIDEBAR_ROW_H,
-                        StyledTheme.ACCENT);
+                g.fill(sidebarX + 1, y, sidebarX + 3, y + SIDEBAR_ROW_H, StyledTheme.ACCENT);
             }
-            int indent = row.nested() ? 15 : 7;
+            int indent = row.nested() ? 18 : 8;
             String label = labelFor(row);
             if (row.nested()) {
-                // Sections are drawn small and indented so the eye reads the hierarchy
-                // without needing a tree line or an arrow glyph.
-                StyledTheme.caption(g, font, label, leftPos + SIDEBAR_X + indent, y + 5);
+                // Sections are drawn small and indented, so the hierarchy reads without a
+                // tree line or an arrow glyph.
+                StyledTheme.caption(g, font, label, sidebarX + indent, y + 5);
             } else {
-                g.drawString(font, trim(label, SIDEBAR_W - indent - 7),
-                        leftPos + SIDEBAR_X + indent, y + 3,
+                g.drawString(font, trim(label, sidebarW - indent - 8), sidebarX + indent, y + 3,
                         active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
             }
             y += SIDEBAR_ROW_H;
         }
-        // A column holds seven rows; a modpack defines more than seven categories, and with a
-        // category expanded into sections there are more still. The first version just stopped
-        // drawing, which is how FIREARMS became unreachable twice.
-        if (rows.size() > SIDEBAR_ROWS) {
-            int trackTop = topPos + SIDEBAR_LIST_Y;
-            int trackH = SIDEBAR_ROWS * SIDEBAR_ROW_H;
-            int thumb = Math.max(8, trackH * SIDEBAR_ROWS / rows.size());
+        if (rows.size() > sidebarRowsVisible) {
+            int trackTop = contentY + 22;
+            int trackH = sidebarRowsVisible * SIDEBAR_ROW_H;
+            int thumb = Math.max(8, trackH * sidebarRowsVisible / rows.size());
             int ty = trackTop + (trackH - thumb) * sidebarScroll
-                    / Math.max(1, rows.size() - SIDEBAR_ROWS);
-            g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, trackTop,
-                    leftPos + SIDEBAR_X + SIDEBAR_W - 1, trackTop + trackH, StyledTheme.SLOT_BG);
-            g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, ty,
-                    leftPos + SIDEBAR_X + SIDEBAR_W - 1, ty + thumb, StyledTheme.SLOT_BORDER);
+                    / Math.max(1, rows.size() - sidebarRowsVisible);
+            g.fill(sidebarX + sidebarW - 4, trackTop, sidebarX + sidebarW - 1, trackTop + trackH,
+                    StyledTheme.SLOT_BG);
+            g.fill(sidebarX + sidebarW - 4, ty, sidebarX + sidebarW - 1, ty + thumb,
+                    StyledTheme.SLOT_BORDER);
         }
     }
 
     private void clampSidebar(int total) {
-        sidebarScroll = Math.max(0, Math.min(sidebarScroll, Math.max(0, total - SIDEBAR_ROWS)));
+        sidebarScroll = Math.max(0, Math.min(sidebarScroll, Math.max(0, total - sidebarRowsVisible)));
     }
 
     private boolean isActiveRow(Row row) {
         if (!row.category().equals(category)) return false;
-        if (row.nested()) return row.sub().equals(sub);
         // A category header stays lit while one of its sections is selected, so it is still
-        // obvious where you are after scrolling the header out of view and back.
-        return true;
+        // obvious where you are after scrolling the header out of view.
+        return !row.nested() || row.sub().equals(sub);
     }
 
     private String labelFor(Row row) {
@@ -329,211 +391,219 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     private void drawOffers(GuiGraphics g, int mouseX, int mouseY) {
         List<MarketOffer> offers = ClientMarketState.offers();
-        int top = topPos + CONTENT_Y + 2;
-        g.enableScissor(leftPos + LIST_X, top, leftPos + LIST_X + LIST_W, top + ROW_H * VISIBLE_ROWS);
-        for (int row = 0; row < VISIBLE_ROWS; row++) {
+        g.enableScissor(listX, contentY, listX + listW, contentY + visibleRows * ROW_H);
+        for (int row = 0; row < visibleRows; row++) {
             int idx = scroll + row;
             if (idx >= filtered.size()) break;
             int offerIndex = filtered.get(idx);
             MarketOffer offer = offers.get(offerIndex);
-            int y = top + row * ROW_H;
-            boolean hovered = inBox(mouseX, mouseY, leftPos + LIST_X, y, LIST_W, ROW_H);
+            int y = contentY + row * ROW_H;
+            boolean hovered = inBox(mouseX, mouseY, listX, y, listW, ROW_H);
             if (offerIndex == selected) {
-                g.fill(leftPos + LIST_X, y, leftPos + LIST_X + LIST_W, y + ROW_H,
-                        StyledTheme.BUTTON_BG_HOVER);
-                g.fill(leftPos + LIST_X, y, leftPos + LIST_X + 2, y + ROW_H, StyledTheme.ACCENT);
+                g.fill(listX, y, listX + listW, y + ROW_H, StyledTheme.BUTTON_BG_HOVER);
+                g.fill(listX, y, listX + 2, y + ROW_H, StyledTheme.ACCENT);
             } else if (hovered) {
-                g.fill(leftPos + LIST_X, y, leftPos + LIST_X + LIST_W, y + ROW_H,
-                        StyledTheme.BUTTON_BG);
+                g.fill(listX, y, listX + listW, y + ROW_H, StyledTheme.BUTTON_BG);
             }
-            g.fill(leftPos + LIST_X, y + ROW_H - 1, leftPos + LIST_X + LIST_W, y + ROW_H,
-                    StyledTheme.HEADER_ACCENT);
+            g.fill(listX, y + ROW_H - 1, listX + listW, y + ROW_H, StyledTheme.HEADER_ACCENT);
 
             ItemStack stack = offer.prototype();
-            g.renderItem(stack, leftPos + LIST_X + 5, y + 3);
-            g.renderItemDecorations(font, stack, leftPos + LIST_X + 5, y + 3);
+            g.renderItem(stack, listX + 6, y + 4);
+            g.renderItemDecorations(font, stack, listX + 6, y + 4);
 
             String price = Money.withSymbol(offer.price());
             int priceW = font.width(price);
-            int nameW = LIST_W - 28 - priceW - 8;
-            g.drawString(font, trim(stack.getHoverName().getString(), nameW),
-                    leftPos + LIST_X + 26, y + 4, StyledTheme.TEXT_COLOR, false);
+            g.drawString(font, trim(stack.getHoverName().getString(), listW - 34 - priceW - 10),
+                    listX + 28, y + 5, StyledTheme.TEXT_COLOR, false);
             String tag = offer.sub().isEmpty() ? offer.category() : offer.sub();
-            StyledTheme.caption(g, font, tag.toUpperCase(Locale.ROOT),
-                    leftPos + LIST_X + 26, y + 14);
-            g.drawString(font, price, leftPos + LIST_X + LIST_W - 5 - priceW, y + 8,
+            StyledTheme.caption(g, font, tag.toUpperCase(Locale.ROOT), listX + 28, y + 16);
+            g.drawString(font, price, listX + listW - 6 - priceW, y + 9,
                     ClientWallet.get() >= offer.price() ? StyledTheme.ACCENT : 0xFFB04A3A, false);
         }
         g.disableScissor();
 
         if (filtered.isEmpty()) {
             String msg = ClientMarketState.offers().isEmpty() ? "NO STOCK" : "NOTHING MATCHES";
-            g.drawString(font, msg, leftPos + LIST_X + 8, top + 8, StyledTheme.LABEL_DIM, false);
+            g.drawString(font, msg, listX + 10, contentY + 10, StyledTheme.LABEL_DIM, false);
         }
-        drawScrollbar(g, filtered.size());
+        drawListScrollbar(g);
     }
 
-    private void drawScrollbar(GuiGraphics g, int total) {
-        int top = topPos + CONTENT_Y + 2;
-        int trackH = ROW_H * VISIBLE_ROWS;
-        g.fill(leftPos + SCROLLBAR_X, top, leftPos + SCROLLBAR_X + 4, top + trackH,
-                StyledTheme.SLOT_BG);
-        if (total <= VISIBLE_ROWS) return;
-        int thumb = Math.max(10, trackH * VISIBLE_ROWS / total);
-        int y = top + (trackH - thumb) * scroll / Math.max(1, total - VISIBLE_ROWS);
-        g.fill(leftPos + SCROLLBAR_X, y, leftPos + SCROLLBAR_X + 4, y + thumb,
-                StyledTheme.SLOT_BORDER);
+    private void drawListScrollbar(GuiGraphics g) {
+        int trackH = visibleRows * ROW_H;
+        g.fill(scrollbarX, contentY, scrollbarX + 5, contentY + trackH, StyledTheme.SLOT_BG);
+        int total = filtered.size();
+        if (total <= visibleRows) return;
+        int thumb = Math.max(12, trackH * visibleRows / total);
+        int y = contentY + (trackH - thumb) * scroll / Math.max(1, total - visibleRows);
+        g.fill(scrollbarX, y, scrollbarX + 5, y + thumb, StyledTheme.SLOT_BORDER);
     }
 
-    // ---- details panels ----------------------------------------------------
+    // ---- details -----------------------------------------------------------
+
+    private int qtyRowY() {
+        return contentY + contentH - 38;
+    }
+
+    private int buyButtonY() {
+        return contentY + contentH - 20;
+    }
 
     private void drawBuyDetails(GuiGraphics g, int mouseX, int mouseY) {
-        StyledTheme.header(g, font, "ITEM DETAILS", leftPos + DETAIL_X + 4,
-                topPos + CONTENT_Y + 4, DETAIL_W - 8);
+        StyledTheme.header(g, font, "ITEM DETAILS", detailX + 6, contentY + 5, detailW - 12);
         MarketOffer offer = selectedOffer();
         if (offer == null) {
-            g.drawString(font, "SELECT AN ITEM", leftPos + DETAIL_X + 6, topPos + CONTENT_Y + 24,
+            g.drawString(font, "SELECT AN ITEM", detailX + 8, contentY + 28,
                     StyledTheme.LABEL_DIM, false);
             return;
         }
         ItemStack stack = offer.prototype();
 
         g.pose().pushPose();
-        g.pose().translate(leftPos + DETAIL_X + DETAIL_W / 2f - 16, topPos + CONTENT_Y + 14, 0);
-        g.pose().scale(2f, 2f, 1f);
+        g.pose().translate(detailX + detailW / 2f - 24, contentY + 20, 0);
+        g.pose().scale(3f, 3f, 1f);
         g.renderItem(stack, 0, 0);
         g.pose().popPose();
 
-        int y = topPos + CONTENT_Y + 50;
-        for (String line : wrap(stack.getHoverName().getString(), DETAIL_W - 10, 2)) {
-            g.drawString(font, line, leftPos + DETAIL_X + 5, y, StyledTheme.TEXT_COLOR, false);
+        int y = contentY + 76;
+        for (String line : wrap(stack.getHoverName().getString(), detailW - 16, 2)) {
+            g.drawString(font, line, detailX + 8, y, StyledTheme.TEXT_COLOR, false);
             y += 10;
         }
+        StyledTheme.caption(g, font, offer.sub().isEmpty()
+                ? offer.category().toUpperCase(Locale.ROOT)
+                : (offer.category() + " / " + offer.sub()).toUpperCase(Locale.ROOT),
+                detailX + 8, y + 3);
+
         long total = offer.price() * quantity;
         String price = Money.withSymbol(total);
-        g.drawString(font, price, leftPos + DETAIL_X + DETAIL_W - 5 - font.width(price), y + 3,
+        StyledTheme.caption(g, font, quantity > 1
+                ? "UNIT " + Money.withSymbol(offer.price()) : "PRICE", detailX + 8, qtyRowY() - 12);
+        g.drawString(font, price, detailX + detailW - 8 - font.width(price), qtyRowY() - 16,
                 ClientWallet.get() >= total ? StyledTheme.ACCENT : 0xFFB04A3A, false);
-        StyledTheme.caption(g, font, quantity > 1 ? ("UNIT " + Money.withSymbol(offer.price())) : "PRICE",
-                leftPos + DETAIL_X + 5, y + 6);
 
+        int bw = (detailW - 16 - 3 * 3) / 4;
         for (int i = 0; i < QUANTITIES.length; i++) {
-            int x = leftPos + DETAIL_X + 5 + i * 31;
+            int x = detailX + 8 + i * (bw + 3);
             boolean active = quantity == QUANTITIES[i];
-            boolean hovered = inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 29, 12);
-            g.fill(x, topPos + QTY_ROW_Y, x + 29, topPos + QTY_ROW_Y + 12,
+            boolean hovered = inBox(mouseX, mouseY, x, qtyRowY(), bw, 13);
+            g.fill(x, qtyRowY(), x + bw, qtyRowY() + 13,
                     active || hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
-            if (active) g.renderOutline(x, topPos + QTY_ROW_Y, 29, 12, StyledTheme.ACCENT);
+            if (active) g.renderOutline(x, qtyRowY(), bw, 13, StyledTheme.ACCENT);
             String label = "x" + QUANTITIES[i];
-            g.drawString(font, label, x + (29 - font.width(label)) / 2, topPos + QTY_ROW_Y + 2,
+            g.drawString(font, label, x + (bw - font.width(label)) / 2, qtyRowY() + 3,
                     active ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
         }
 
-        boolean affordable = ClientWallet.get() >= offer.price() * (long) quantity;
-        drawWideButton(g, mouseX, mouseY, DETAIL_X + 4, BUY_BUTTON_Y, DETAIL_W - 8, "BUY", affordable);
+        drawWideButton(g, mouseX, mouseY, detailX + 8, buyButtonY(), detailW - 16, "BUY",
+                ClientWallet.get() >= total);
     }
 
     private void drawSellList(GuiGraphics g) {
-        StyledTheme.header(g, font, "TO SELL", leftPos + LIST_X + 4, topPos + CONTENT_Y + 4,
-                LIST_W - 8);
-        int y = topPos + CONTENT_Y + 20;
+        StyledTheme.header(g, font, "TO SELL", sidebarX + 6, contentY + 5,
+                scrollbarX - 12 - sidebarX);
+        int y = contentY + 24;
         int shown = 0;
         for (int i = 0; i < menu.sellTray().getContainerSize(); i++) {
             ItemStack stack = menu.sellTray().getItem(i);
             if (stack.isEmpty()) continue;
             long value = MarketPrices.sellPrice(stack, stack.getCount());
-            g.renderItem(stack, leftPos + LIST_X + 4, y - 4);
-            g.renderItemDecorations(font, stack, leftPos + LIST_X + 4, y - 4);
+            g.renderItem(stack, sidebarX + 6, y - 4);
+            g.renderItemDecorations(font, stack, sidebarX + 6, y - 4);
             String price = value > 0 ? Money.withSymbol(value) : "NO VALUE";
             int priceW = font.width(price);
-            g.drawString(font, trim(stack.getHoverName().getString(), LIST_W - 32 - priceW),
-                    leftPos + LIST_X + 24, y, StyledTheme.TEXT_COLOR, false);
-            g.drawString(font, price, leftPos + LIST_X + LIST_W - 4 - priceW, y,
+            int rowRight = scrollbarX - 8;
+            g.drawString(font, trim(stack.getHoverName().getString(),
+                            rowRight - sidebarX - 40 - priceW),
+                    sidebarX + 28, y, StyledTheme.TEXT_COLOR, false);
+            g.drawString(font, price, rowRight - priceW, y,
                     value > 0 ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
-            y += 18;
+            y += 20;
             shown++;
         }
         if (shown == 0) {
-            g.drawString(font, "TRAY IS EMPTY", leftPos + LIST_X + 6, topPos + CONTENT_Y + 24,
+            g.drawString(font, "TRAY IS EMPTY", sidebarX + 8, contentY + 30,
                     StyledTheme.LABEL_DIM, false);
-            StyledTheme.caption(g, font, "SHIFT-CLICK ITEMS TO MOVE THEM IN",
-                    leftPos + LIST_X + 6, topPos + CONTENT_Y + 40);
+            StyledTheme.caption(g, font,
+                    "SHIFT-CLICK ITEMS IN YOUR INVENTORY TO MOVE THEM INTO THE TRAY",
+                    sidebarX + 8, contentY + 46);
         }
     }
 
     private void drawSellDetails(GuiGraphics g, int mouseX, int mouseY) {
-        StyledTheme.header(g, font, "PAYOUT", leftPos + DETAIL_X + 4, topPos + CONTENT_Y + 4,
-                DETAIL_W - 8);
+        StyledTheme.header(g, font, "PAYOUT", detailX + 6, contentY + 5, detailW - 12);
         long total = menu.trayValue();
-        g.drawString(font, "TOTAL", leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 22,
-                StyledTheme.LABEL_DIM, false);
+        g.drawString(font, "TOTAL", detailX + 8, contentY + 26, StyledTheme.LABEL_DIM, false);
         String text = Money.withSymbol(total);
-        g.drawString(font, text, leftPos + DETAIL_X + DETAIL_W - 5 - font.width(text),
-                topPos + CONTENT_Y + 22,
+        g.drawString(font, text, detailX + detailW - 8 - font.width(text), contentY + 26,
                 total > 0 ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, false);
-        StyledTheme.caption(g, font, "TRADERS PAY BELOW LIST PRICE",
-                leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 34);
+        StyledTheme.caption(g, font, "TRADERS PAY BELOW LIST PRICE", detailX + 8, contentY + 40);
         StyledTheme.caption(g, font, "WITHDRAW PAYS OUT UP TO " + Money.withSymbol(10_000),
-                leftPos + DETAIL_X + 5, topPos + CONTENT_Y + 44);
+                detailX + 8, contentY + 50);
 
-        drawWideButton(g, mouseX, mouseY, DETAIL_X + 4, SELL_ALL_Y, DETAIL_W - 8, "SELL ALL",
+        drawWideButton(g, mouseX, mouseY, detailX + 8, qtyRowY(), detailW - 16, "SELL ALL",
                 total > 0);
-        drawWideButton(g, mouseX, mouseY, DETAIL_X + 4, WITHDRAW_Y, DETAIL_W - 8,
+        drawWideButton(g, mouseX, mouseY, detailX + 8, buyButtonY(), detailW - 16,
                 "WITHDRAW CASH", ClientWallet.get() > 0);
     }
 
     private void drawWideButton(GuiGraphics g, int mouseX, int mouseY, int x, int y, int w,
                                 String label, boolean enabled) {
-        int px = leftPos + x;
-        int py = topPos + y;
-        boolean hovered = enabled && inBox(mouseX, mouseY, px, py, w, 14);
-        g.fill(px, py, px + w, py + 14,
-                hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
-        g.renderOutline(px, py, w, 14, enabled ? StyledTheme.SLOT_BORDER : StyledTheme.HEADER_ACCENT);
+        boolean hovered = enabled && inBox(mouseX, mouseY, x, y, w, 16);
+        g.fill(x, y, x + w, y + 16, hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
+        g.renderOutline(x, y, w, 16, enabled ? StyledTheme.SLOT_BORDER : StyledTheme.HEADER_ACCENT);
         int colour = enabled ? (hovered ? StyledTheme.ACCENT : StyledTheme.TEXT_COLOR)
                              : StyledTheme.LABEL_DIM;
-        String shown = trim(label, w - 6);
-        g.drawString(font, shown, px + (w - font.width(shown)) / 2, py + 3, colour, false);
+        String shown = trim(label, w - 8);
+        g.drawString(font, shown, x + (w - font.width(shown)) / 2, y + 4, colour, false);
     }
 
     // ---- confirmation ------------------------------------------------------
 
-    private static final int CONFIRM_W = 210;
-    private static final int CONFIRM_H = 76;
+    private static final int CONFIRM_W = 230;
+    private static final int CONFIRM_H = 84;
+
+    private int confirmX() {
+        return panelX + (panelW - CONFIRM_W) / 2;
+    }
+
+    private int confirmY() {
+        return panelY + (panelH - CONFIRM_H) / 2;
+    }
 
     private void drawConfirm(GuiGraphics g, int mouseX, int mouseY) {
         // Dim everything behind it, so it is obvious the rest of the screen is inert.
-        g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xC0000000);
-
-        int x = leftPos + (imageWidth - CONFIRM_W) / 2;
-        int y = topPos + (imageHeight - CONFIRM_H) / 2;
+        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xC0000000);
+        int x = confirmX();
+        int y = confirmY();
         StyledTheme.panel(g, x, y, CONFIRM_W, CONFIRM_H);
-        g.drawString(font, confirm.title(), x + 8, y + 8, StyledTheme.TEXT_COLOR, false);
-        g.drawString(font, trim(confirm.line(), CONFIRM_W - 16), x + 8, y + 24,
+        g.drawString(font, confirm.title(), x + 10, y + 10, StyledTheme.TEXT_COLOR, false);
+        g.drawString(font, trim(confirm.line(), CONFIRM_W - 20), x + 10, y + 28,
                 StyledTheme.HEADER_COLOR, false);
-        g.drawString(font, confirm.cost(), x + 8, y + 38, StyledTheme.ACCENT, false);
+        g.drawString(font, confirm.cost(), x + 10, y + 42, StyledTheme.ACCENT, false);
 
-        int bw = (CONFIRM_W - 24) / 2;
-        drawConfirmButton(g, mouseX, mouseY, x + 8, y + CONFIRM_H - 22, bw, "CONFIRM", true);
-        drawConfirmButton(g, mouseX, mouseY, x + 16 + bw, y + CONFIRM_H - 22, bw, "CANCEL", false);
+        int bw = (CONFIRM_W - 28) / 2;
+        drawConfirmButton(g, mouseX, mouseY, x + 10, y + CONFIRM_H - 24, bw, "CONFIRM", true);
+        drawConfirmButton(g, mouseX, mouseY, x + 18 + bw, y + CONFIRM_H - 24, bw, "CANCEL", false);
     }
 
     private void drawConfirmButton(GuiGraphics g, int mouseX, int mouseY, int x, int y, int w,
                                    String label, boolean primary) {
-        boolean hovered = inBox(mouseX, mouseY, x, y, w, 14);
-        g.fill(x, y, x + w, y + 14, hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
-        g.renderOutline(x, y, w, 14, primary ? StyledTheme.ACCENT : StyledTheme.SLOT_BORDER);
-        g.drawString(font, label, x + (w - font.width(label)) / 2, y + 3,
+        boolean hovered = inBox(mouseX, mouseY, x, y, w, 16);
+        g.fill(x, y, x + w, y + 16, hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
+        g.renderOutline(x, y, w, 16, primary ? StyledTheme.ACCENT : StyledTheme.SLOT_BORDER);
+        g.drawString(font, label, x + (w - font.width(label)) / 2, y + 4,
                 hovered ? StyledTheme.TEXT_COLOR : StyledTheme.HEADER_COLOR, false);
     }
 
     /** Every click is swallowed while the panel is up - that is the point of it. */
     private boolean confirmClick(double mouseX, double mouseY) {
-        int x = leftPos + (imageWidth - CONFIRM_W) / 2;
-        int y = topPos + (imageHeight - CONFIRM_H) / 2;
-        int bw = (CONFIRM_W - 24) / 2;
-        if (inBox(mouseX, mouseY, x + 8, y + CONFIRM_H - 22, bw, 14)) {
+        int x = confirmX();
+        int y = confirmY();
+        int bw = (CONFIRM_W - 28) / 2;
+        if (inBox(mouseX, mouseY, x + 10, y + CONFIRM_H - 24, bw, 16)) {
             accept();
-        } else if (inBox(mouseX, mouseY, x + 16 + bw, y + CONFIRM_H - 22, bw, 14)) {
+        } else if (inBox(mouseX, mouseY, x + 18 + bw, y + CONFIRM_H - 24, bw, 16)) {
             confirm = null;
         }
         return true;
@@ -553,8 +623,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
         for (int i = 0; i < 2; i++) {
-            int x = leftPos + 8 + i * (TAB_W + 2);
-            if (inBox(mouseX, mouseY, x, topPos + TAB_Y, TAB_W, TAB_H)) {
+            if (inBox(mouseX, mouseY, tabX(i), tabY, TAB_W, TAB_H)) {
                 sellTab = i == 1;
                 menu.sellTabActive = sellTab;
                 return true;
@@ -562,19 +631,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
 
         if (sellTab) {
-            if (inBox(mouseX, mouseY, leftPos + DETAIL_X + 4, topPos + SELL_ALL_Y,
-                    DETAIL_W - 8, 14)) {
+            if (inBox(mouseX, mouseY, detailX + 8, qtyRowY(), detailW - 16, 16)) {
                 long total = menu.trayValue();
                 if (total > 0) {
-                    confirm = new Confirm("SELL ITEMS?",
-                            countTrayItems() + " stack(s) in the tray",
+                    confirm = new Confirm("SELL ITEMS?", countTrayItems() + " stack(s) in the tray",
                             "You receive " + Money.withSymbol(total),
                             () -> NetworkHandler.CHANNEL.sendToServer(new MarketPackets.Sell()));
                 }
                 return true;
             }
-            if (inBox(mouseX, mouseY, leftPos + DETAIL_X + 4, topPos + WITHDRAW_Y,
-                    DETAIL_W - 8, 14)) {
+            if (inBox(mouseX, mouseY, detailX + 8, buyButtonY(), detailW - 16, 16)) {
                 if (ClientWallet.get() > 0) {
                     confirm = new Confirm("WITHDRAW CASH?", "Paid out in notes",
                             "Up to " + Money.withSymbol(10_000),
@@ -588,12 +654,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
         List<Row> rows = sidebarRows();
         clampSidebar(rows.size());
-        int sy = topPos + SIDEBAR_LIST_Y;
-        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + SIDEBAR_ROWS); i++) {
-            if (inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, sy, SIDEBAR_W - 2, SIDEBAR_ROW_H)) {
+        int sy = contentY + 22;
+        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + sidebarRowsVisible); i++) {
+            if (inBox(mouseX, mouseY, sidebarX + 1, sy, sidebarW - 2, SIDEBAR_ROW_H)) {
                 Row row = rows.get(i);
-                // Picking a category clears the section, so switching category never leaves
-                // an inherited filter behind that silently empties the list.
+                // Picking a category clears the section, so switching never leaves an
+                // inherited filter behind that silently empties the list.
                 category = row.category();
                 sub = row.sub();
                 scroll = 0;
@@ -609,15 +675,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             return true;
         }
 
+        int bw = (detailW - 16 - 3 * 3) / 4;
         for (int i = 0; i < QUANTITIES.length; i++) {
-            int x = leftPos + DETAIL_X + 5 + i * 31;
-            if (inBox(mouseX, mouseY, x, topPos + QTY_ROW_Y, 29, 12)) {
+            if (inBox(mouseX, mouseY, detailX + 8 + i * (bw + 3), qtyRowY(), bw, 13)) {
                 quantity = QUANTITIES[i];
                 return true;
             }
         }
 
-        if (inBox(mouseX, mouseY, leftPos + DETAIL_X + 4, topPos + BUY_BUTTON_Y, DETAIL_W - 8, 14)) {
+        if (inBox(mouseX, mouseY, detailX + 8, buyButtonY(), detailW - 16, 16)) {
             MarketOffer offer = selectedOffer();
             if (offer != null) {
                 long cost = offer.price() * quantity;
@@ -639,15 +705,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (confirm != null) return true;
-        if (!sellTab && inBox(mouseX, mouseY, leftPos + SIDEBAR_X, topPos + SIDEBAR_LIST_Y,
-                SIDEBAR_W, SIDEBAR_ROWS * SIDEBAR_ROW_H)) {
-            int max = Math.max(0, sidebarRows().size() - SIDEBAR_ROWS);
+        if (!sellTab && inBox(mouseX, mouseY, sidebarX, contentY, sidebarW, contentH)) {
+            int max = Math.max(0, sidebarRows().size() - sidebarRowsVisible);
             sidebarScroll = Math.max(0, Math.min(max, sidebarScroll - (int) Math.signum(delta)));
             return true;
         }
-        if (!sellTab && inBox(mouseX, mouseY, leftPos + LIST_X, topPos + CONTENT_Y,
-                LIST_W + 8, CONTENT_H)) {
-            int max = Math.max(0, filtered.size() - VISIBLE_ROWS);
+        if (!sellTab && inBox(mouseX, mouseY, listX, contentY, listW + 10, contentH)) {
+            int max = Math.max(0, filtered.size() - visibleRows);
             scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(delta)));
             return true;
         }
@@ -698,9 +762,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     /** Index into {@link #filtered}, or -1. */
     private int rowAt(double mouseX, double mouseY) {
         if (sellTab) return -1;
-        if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W) return -1;
-        int rel = (int) (mouseY - (topPos + CONTENT_Y + 2));
-        if (rel < 0 || rel >= ROW_H * VISIBLE_ROWS) return -1;
+        if (mouseX < listX || mouseX >= listX + listW) return -1;
+        int rel = (int) (mouseY - contentY);
+        if (rel < 0 || rel >= visibleRows * ROW_H) return -1;
         int idx = scroll + rel / ROW_H;
         return idx < filtered.size() ? idx : -1;
     }
@@ -721,6 +785,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     }
 
     private String trim(String text, int maxWidth) {
+        if (maxWidth <= 8) return "";
         if (font.width(text) <= maxWidth) return text;
         return font.plainSubstrByWidth(text, Math.max(4, maxWidth - 8)) + "...";
     }

@@ -23,12 +23,26 @@ public class MarketMenu extends AbstractContainerMenu {
 
     public static final int SELL_SLOTS = 9;
 
-    /** Slot origins, in screen-relative pixels. The screen reads these so the two agree. */
-    public static final int TRAY_X = 20;
-    public static final int TRAY_Y = 76;
-    public static final int INV_X = 114;
-    public static final int INV_Y = 170;
-    public static final int HOTBAR_Y = 228;
+    /**
+     * Slot layout, as offsets from the MENU ORIGIN - not from the corner of the panel.
+     *
+     * Slot x/y are final in 1.20.1, so a panel that resizes with the window cannot move its
+     * slots. The screen instead moves leftPos/topPos to place this fixed 162x106 block, and
+     * draws everything else in absolute screen coordinates.
+     *
+     * That same constraint is why the sell tray is one row of nine directly above the
+     * inventory rather than a 3x3 off to one side: its offset from the inventory is frozen at
+     * construction, so the only placement that stays right at every panel size is one defined
+     * relative to the inventory itself.
+     */
+    public static final int GROUP_W = 162;
+    public static final int GROUP_H = 106;
+
+    public static final int TRAY_X = 0;
+    public static final int TRAY_Y = 0;
+    public static final int INV_X = 0;
+    public static final int INV_Y = 30;
+    public static final int HOTBAR_Y = 88;
 
     /**
      * Client-side: whether the SELL tab is showing. The tray slots hide themselves when it is
@@ -53,7 +67,7 @@ public class MarketMenu extends AbstractContainerMenu {
         checkContainerSize(sellTray, SELL_SLOTS);
 
         for (int i = 0; i < SELL_SLOTS; i++) {
-            addSlot(new SellSlot(sellTray, i, TRAY_X + (i % 3) * 18, TRAY_Y + (i / 3) * 18));
+            addSlot(new SellSlot(sellTray, i, TRAY_X + i * 18, TRAY_Y));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
