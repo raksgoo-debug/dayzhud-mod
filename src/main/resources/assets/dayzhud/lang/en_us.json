@@ -21,5 +21,7 @@
   "command.dayzhud.zone.added": "Safe zone '%s' added with radius %s",
   "command.dayzhud.zone.removed": "Safe zone '%s' removed",
   "command.dayzhud.zone.missing": "No safe zone named '%s'",
-  "command.dayzhud.zone.none": "No safe zones in this dimension."
+  "command.dayzhud.zone.none": "No safe zones in this dimension.",
+  "message.dayzhud.market.zone_enter": "§aSafe zone — you cannot be harmed here.",
+  "message.dayzhud.market.zone_leave": "§cLeaving the safe zone."
 }

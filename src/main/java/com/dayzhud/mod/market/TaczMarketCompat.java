@@ -40,6 +40,11 @@ public final class TaczMarketCompat {
     private static Method gunDataGetRpm;
     private static Method gunDataGetBulletData;
     private static Method gunDataGetAmmoId;
+    private static Method gunDataGetAmmoAmount;
+    private static Method gunDataGetWeight;
+    private static Method gunDataGetFireModeSet;
+    private static Method bulletGetSpeed;
+    private static Method extraGetHeadshot;
     private static Method bulletGetDamage;
     private static Method bulletGetAmount;
     private static Method bulletGetPierce;
@@ -86,13 +91,26 @@ public final class TaczMarketCompat {
             gunDataGetAmmoId = gunData.getMethod("getAmmoId");
 
             Class<?> bullet = Class.forName("com.tacz.guns.resource.pojo.data.gun.BulletData", false, cl);
+            Class<?> extra = Class.forName("com.tacz.guns.resource.pojo.data.gun.ExtraDamage", false, cl);
             bulletGetDamage = bullet.getMethod("getDamageAmount");
             bulletGetAmount = bullet.getMethod("getBulletAmount");
             bulletGetPierce = bullet.getMethod("getPierce");
             bulletGetExtraDamage = bullet.getMethod("getExtraDamage");
 
-            Class<?> extra = Class.forName("com.tacz.guns.resource.pojo.data.gun.ExtraDamage", false, cl);
             extraGetArmorIgnore = extra.getMethod("getArmorIgnore");
+
+            // Presentation-only extras, resolved after the classes they live on and allowed
+            // to fail: a TACZ release renaming one of these should cost a line in the stat
+            // card, not the whole gun-pricing integration.
+            try {
+                gunDataGetAmmoAmount = gunData.getMethod("getAmmoAmount");
+                gunDataGetWeight = gunData.getMethod("getWeight");
+                gunDataGetFireModeSet = gunData.getMethod("getFireModeSet");
+                bulletGetSpeed = bullet.getMethod("getSpeed");
+                extraGetHeadshot = extra.getMethod("getHeadShotMultiplier");
+            } catch (NoSuchMethodException missing) {
+                DayzHudMod.LOGGER.debug("TACZ stat-card extras unavailable: {}", missing.toString());
+            }
 
             Class<?> gunB = Class.forName("com.tacz.guns.api.item.builder.GunItemBuilder", false, cl);
             gunBuilderCreate = gunB.getMethod("create");
@@ -411,6 +429,67 @@ public final class TaczMarketCompat {
             out.add("index walk threw: " + t);
         }
         return out;
+    }
+
+    /** Everything the details panel wants about one gun. Client-safe. */
+    public record GunStats(float damage, int pellets, int rpm, int pierce, float armorIgnore,
+                           float speed, float headshot, int magazine, String ammoId,
+                           String fireModes, float weight) {}
+
+    /** Stats for a gun stack, or null when it is not a TACZ gun. */
+    public static GunStats statsOf(ItemStack stack) {
+        ResourceLocation id = gunIdOf(stack).orElse(null);
+        if (id == null || !isActive()) return null;
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> all =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonGunIndex.invoke(null);
+            for (Map.Entry<ResourceLocation, Object> e : all) {
+                if (!e.getKey().equals(id)) continue;
+                Object gunData = gunIndexGetGunData.invoke(e.getValue());
+                Object bullet = gunDataGetBulletData.invoke(gunData);
+
+                float damage = ((Number) bulletGetDamage.invoke(bullet)).floatValue();
+                int pellets = Math.max(1, ((Number) bulletGetAmount.invoke(bullet)).intValue());
+                int rpm = ((Number) gunDataGetRpm.invoke(gunData)).intValue();
+                int pierce = ((Number) bulletGetPierce.invoke(bullet)).intValue();
+
+                float ignore = 0f;
+                float headshot = 0f;
+                Object extra = bulletGetExtraDamage.invoke(bullet);
+                if (extra != null) {
+                    Object ai = extraGetArmorIgnore.invoke(extra);
+                    if (ai != null) ignore = ((Number) ai).floatValue();
+                    if (extraGetHeadshot != null) {
+                        Object hs = extraGetHeadshot.invoke(extra);
+                        if (hs != null) headshot = ((Number) hs).floatValue();
+                    }
+                }
+                float speed = bulletGetSpeed == null ? 0f
+                        : ((Number) bulletGetSpeed.invoke(bullet)).floatValue();
+                int mag = gunDataGetAmmoAmount == null ? 0
+                        : ((Number) gunDataGetAmmoAmount.invoke(gunData)).intValue();
+                float weight = gunDataGetWeight == null ? 0f
+                        : ((Number) gunDataGetWeight.invoke(gunData)).floatValue();
+                Object ammo = gunDataGetAmmoId.invoke(gunData);
+                String modes = "";
+                if (gunDataGetFireModeSet != null) {
+                    Object set = gunDataGetFireModeSet.invoke(gunData);
+                    if (set instanceof List<?> list && !list.isEmpty()) {
+                        StringBuilder sb = new StringBuilder();
+                        for (Object m : list) {
+                            if (sb.length() > 0) sb.append('/');
+                            sb.append(String.valueOf(m).toUpperCase(java.util.Locale.ROOT));
+                        }
+                        modes = sb.toString();
+                    }
+                }
+                return new GunStats(damage, pellets, rpm, pierce, ignore, speed, headshot, mag,
+                        ammo == null ? null : ammo.toString(), modes, weight);
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
     }
 
     public static ItemStack makeGun(ResourceLocation id) {

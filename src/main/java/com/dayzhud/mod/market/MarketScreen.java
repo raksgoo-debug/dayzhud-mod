@@ -118,7 +118,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         int headerH = compact ? 40 : 54;
         tabY = panelY + headerH - 19;
         contentY = panelY + headerH;
-        contentH = Math.max(ROW_H, groupY - 16 - contentY);
+        // The tray row only exists on the SELL tab, so on BUY its band is dead space between
+        // the stock list and the inventory - give it to the list instead of leaving a gap.
+        int contentBottom = groupY - 16
+                + (sellTab ? 0 : MarketMenu.INV_Y - MarketMenu.TRAY_Y);
+        contentH = Math.max(ROW_H, contentBottom - contentY);
 
         // Columns are proportional with floors, then the side columns give ground to the list
         // if it is still too narrow. Fixed widths looked fine at 640 and collapsed the stock
@@ -139,6 +143,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         listW = Math.max(24, scrollbarX - 4 - listX);
 
         visibleRows = Math.max(1, contentH / ROW_H);
+        contentH = visibleRows * ROW_H;          // no ragged remainder under the last row
         sidebarRowsVisible = Math.max(1, (contentH - 22) / SIDEBAR_ROW_H);
     }
 
@@ -385,7 +390,12 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     }
 
     private String labelFor(Row row) {
-        if (row.nested()) return row.sub().isEmpty() ? "ALL" : row.sub().toUpperCase(Locale.ROOT);
+        if (row.nested()) {
+            // "ALL" directly under "ALL" reads as a duplicate; name the scope.
+            return row.sub().isEmpty()
+                    ? "ALL " + row.category().toUpperCase(Locale.ROOT)
+                    : row.sub().toUpperCase(Locale.ROOT);
+        }
         return row.category().isEmpty() ? "ALL" : row.category().toUpperCase(Locale.ROOT);
     }
 
@@ -474,6 +484,32 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 ? offer.category().toUpperCase(Locale.ROOT)
                 : (offer.category() + " / " + offer.sub()).toUpperCase(Locale.ROOT),
                 detailX + 8, y + 3);
+        y += 14;
+
+        // Stat block. Bars only where there is an honest ceiling to measure against - see
+        // ItemStatCard. Clipped to the space above the price row so a gun with many stats
+        // cannot run over the buttons.
+        int statTop = y;
+        int statBottom = qtyRowY() - 26;
+        List<ItemStatCard.Stat> stats = ItemStatCard.forStack(stack);
+        g.enableScissor(detailX, statTop, detailX + detailW, Math.max(statTop, statBottom));
+        for (ItemStatCard.Stat stat : stats) {
+            if (y > statBottom) break;
+            StyledTheme.caption(g, font, stat.label(), detailX + 8, y + 2);
+            String value = stat.value();
+            g.drawString(font, value, detailX + detailW - 8 - font.width(value), y,
+                    StyledTheme.TEXT_COLOR, false);
+            if (stat.bar() >= 0f) {
+                int bx = detailX + 8;
+                int bw2 = detailW - 16;
+                g.fill(bx, y + 9, bx + bw2, y + 10, StyledTheme.SLOT_BG);
+                g.fill(bx, y + 9, bx + (int) (bw2 * stat.bar()), y + 10, StyledTheme.ACCENT);
+                y += 13;
+            } else {
+                y += 11;
+            }
+        }
+        g.disableScissor();
 
         long total = offer.price() * quantity;
         String price = Money.withSymbol(total);
@@ -626,6 +662,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             if (inBox(mouseX, mouseY, tabX(i), tabY, TAB_W, TAB_H)) {
                 sellTab = i == 1;
                 menu.sellTabActive = sellTab;
+                layout();
+                if (search != null) search.setPosition(sidebarX + 4, contentY + 4);
                 return true;
             }
         }

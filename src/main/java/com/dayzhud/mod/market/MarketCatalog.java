@@ -122,6 +122,10 @@ public final class MarketCatalog {
             if (!entry.buy()) continue;
             ItemStack stack = stackFor(e.getKey(), entry.count());
             if (stack.isEmpty()) continue;   // item belongs to a mod that isn't installed
+            // An ammo box that cannot resolve its rounds is worse than an absent one: a
+            // player buys it, right-clicks, and nothing happens. Either it works or it is
+            // not for sale.
+            if (AmmoBoxes.of(stack) != null && !AmmoBoxes.isUsable(stack)) continue;
             out.add(new MarketOffer(stack, MarketPrices.buyPrice(entry.value(), entry.count()),
                     entry.category(), entry.sub()));
             listed++;

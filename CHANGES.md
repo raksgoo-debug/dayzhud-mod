@@ -1,48 +1,62 @@
-# dayzhud 1.6.0 - build fix, plus attachments in the shop
+# dayzhud 1.7.0 - safe zones that are safe, working ammo boxes, gun stat cards
 
-**Complete, not incremental.** 39 files: 28 new, 10 changed, plus gradle.properties. Unzip
-over the repo root and the whole market feature is in one consistent state.
+**Complete, not incremental.** 42 files. Unzip over the repo root.
 
-## What broke the 1.5.1 build
+## 1. Safes are no longer terminals
 
-`MarketConfig` declared `STOCK_ARMOR` and never assigned it. A `static final` with no
-assignment on every path is a compile error, and it is the second time this exact trap has
-bitten a config class in this project.
+`access.terminalBlocks` defaults to `tarkovdayz:pc` only. Existing configs keep whatever
+they already say - delete `config/dayzhud-common.toml` to pick up the new default.
 
-**My local compile could not see it, and that is the point worth recording.** ForgeConfigSpec
-is not on the classpath here, so every field resolved to an error type and javac skipped
-definite-assignment analysis entirely - the file looked clean. The fix is a ~25-line stub
-ForgeConfigSpec that exists only so the compiler will actually run flow analysis on that one
-file. Run against the shipped 1.5.1 it reproduces CI's error exactly; run against this build
-it is silent.
+## 2. Ammo boxes open
 
-I also now **verify the extracted zip over a pristine copy of the repo**, not my working tree.
-Both of the last two failures were the artifact and the thing I checked being different trees.
-That loop is closed: build zip, extract, check, and only then send.
+Right-click a tarkovdayz ammo box and it becomes TACZ rounds. The mapping is config
+(`ammoBoxes.boxes`, `itemid=<tacz ammo id>,<count>`) because ammo ids belong to whatever gun
+pack you run; defaults target TACZ's own `9mm`, `12g`, `545x39`, `556x45`, `762x39`, `308`.
 
-## Attachments are now stocked
+Both halves of your ask are covered, because they are the same rule: **a box whose ammo id
+does not resolve is dropped from the shop as well as being unopenable.** Selling something
+that does nothing is worse than not selling it - the player pays, clicks, and gets silence.
+The handler also hooks RightClickBlock, since RightClickItem does not fire when the crosshair
+is on a block - the same trap the laptop hit.
 
-`tacz.stockAttachments` and `tacz.attachmentPrice` existed in the config but nothing read
-them - the config promised a feature that could never appear. TACZ attachments are now a real
-**ATTACHMENTS** category, priced from their own index, with sections for OPTICS, MUZZLE,
-GRIPS, STOCKS and EXTENDED mags. `tacz:attachment/<id>` overrides the derived price.
+## 3. Item details, properly
 
-Two lrtactical config keys orphaned by removing `LrTacticalCompat` are gone with it. Nothing
-in the config now describes behaviour that does not exist.
+The details panel now shows a real stat block. Guns get DAMAGE (with the pellet breakdown for
+shotguns), FIRE RATE, DPS, PENETRATION, ARMOUR IGNORE, MUZZLE VELOCITY, HEADSHOT multiplier,
+MAGAZINE, CALIBRE, FIRE MODE and WEIGHT. Armour gets defence, toughness, knockback resistance,
+slot and durability. Food gets nutrition and saturation; tools get attack and tier; anything
+damageable shows condition.
+
+All of it read client-side through the same reflective TACZ compat that prices weapons, so it
+follows the installed gun pack with no extra packet.
+
+One judgement worth stating: **bars are only drawn where there is an honest ceiling.** Damage,
+rate, penetration and velocity get bars; weight, calibre and magazine size get numbers. A bar
+against an invented maximum looks informative and is not.
+
+## 4. Safe zones are actually safe
+
+Players take no damage inside a registered zone. Cancelled at `LivingAttackEvent`, not
+`LivingHurtEvent` - attack fires first, so cancelling there also kills the hurt animation, the
+sound and the knockback. Cancel only the damage and you get a player visibly flinching under
+fire while taking nothing, which reads as a bug. Priority HIGHEST, because the point of a safe
+zone is that nothing else gets a say.
+
+You also get a message on entering and leaving, checked twice a second rather than every tick.
+A zone edge is invisible and the alternative way to learn you have crossed it is dying.
+Both toggles: `access.safeZoneProtection`, `access.safeZoneMessages`.
+
+## 5. Layout
+
+The dead band under the stock list is gone. It was the sell tray's row, which only exists on
+the SELL tab - on BUY that space is now more list rows, and the list tiles the region exactly
+instead of leaving a ragged remainder. The nested "ALL" under an open category now reads
+"ALL FIREARMS" rather than sitting under a second "ALL".
 
 ## Verification
 
-Four checks, run against the extracted zip:
-
-1. Config definite-assignment, via the ForgeConfigSpec stub.
-2. No references to removed classes.
-3. No unresolved first-party symbols (the 1.5.0 failure).
-4. No errors outside the expected missing-Minecraft noise.
-
-Minecraft and Forge still are not on the classpath, so MC/Forge calls remain unverified. CI is
-the real check - but these three specific failure modes cannot reach it again.
-
-## Config note
-
-Delete `config/dayzhud-common.toml`. There are keys from every version in this range, and two
-removed ones.
+Four checks against the extracted zip: config definite-assignment via the ForgeConfigSpec
+stub, no references to removed classes, no unresolved first-party symbols, no errors outside
+the expected missing-Minecraft noise. MC/Forge calls remain unverified here - CI is the real
+check. New MC surface this round: `LivingAttackEvent`, `ServerTickEvent`,
+`TieredItem.getTier()`, `FoodProperties.getEffects()`, `EditBox.setPosition`.

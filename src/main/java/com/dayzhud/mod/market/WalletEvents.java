@@ -99,6 +99,7 @@ public final class WalletEvents {
     public static void onDatapackSync(OnDatapackSyncEvent event) {
         CurrencyItems.invalidate();
         NbtVariants.invalidate();
+        AmmoBoxes.invalidate();
         MarketAccess.invalidate();
         MarketCatalog.invalidate();
         if (event.getPlayer() != null) {

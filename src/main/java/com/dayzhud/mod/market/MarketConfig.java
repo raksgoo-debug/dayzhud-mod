@@ -26,8 +26,12 @@ public final class MarketConfig {
 
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_BLOCKS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_ITEMS;
+    public static final ForgeConfigSpec.BooleanValue SAFE_ZONE_PROTECTION;
+    public static final ForgeConfigSpec.BooleanValue SAFE_ZONE_FEEDBACK;
     public static final ForgeConfigSpec.BooleanValue BLOCK_REQUIRES_SAFE_ZONE;
     public static final ForgeConfigSpec.BooleanValue ITEM_REQUIRES_SAFE_ZONE;
+
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> AMMO_BOXES;
 
     public static final ForgeConfigSpec.BooleanValue TACZ_ENABLED;
     public static final ForgeConfigSpec.BooleanValue TACZ_SELL_GUNS;
@@ -99,9 +103,7 @@ public final class MarketConfig {
                         "PC from tarkovdayz - no new block is registered, so this works with",
                         "whatever decoration mods a pack already has.")
                 .defineList("terminalBlocks", List.of(
-                        "tarkovdayz:pc",
-                        "tarkovdayz:safe",
-                        "tarkovdayz:safe_2"
+                        "tarkovdayz:pc"
                 ), o -> o instanceof String);
         TERMINAL_ITEMS = b.comment(
                         "Items that open the market when right-clicked while held.",
@@ -109,6 +111,14 @@ public final class MarketConfig {
                 .defineList("terminalItems", List.of(
                         "tarkovdayz:laptop"
                 ), o -> o instanceof String);
+        SAFE_ZONE_PROTECTION = b.comment(
+                        "Players take no damage inside a registered safe zone.",
+                        "A hideout you can be shot in is not a hideout, and the market is the one",
+                        "place a player stands still with their inventory open.")
+                .define("safeZoneProtection", true);
+        SAFE_ZONE_FEEDBACK = b.comment(
+                        "Tell a player when they enter or leave a safe zone.")
+                .define("safeZoneMessages", true);
         BLOCK_REQUIRES_SAFE_ZONE = b.comment(
                         "Require a terminal BLOCK to also stand inside a registered safe zone.",
                         "Off by default: a terminal you had to place and build around already is",
@@ -119,6 +129,23 @@ public final class MarketConfig {
                         "On by default - otherwise a laptop in your pack is a trader you can carry",
                         "into a raid, which removes the reason to extract with your loot.")
                 .define("itemRequiresSafeZone", true);
+        b.pop();
+
+        b.push("ammoBoxes");
+        b.comment(
+                "Ammo boxes that can be opened for TACZ rounds, as",
+                "'itemid=<tacz ammo id>,<count>'. Boxes whose ammo id does not resolve are",
+                "dropped from the shop AND cannot be opened, so a box is never something you",
+                "can buy and then find does nothing - which is what these were before.",
+                "Change the ammo ids to match whatever gun pack you run.");
+        AMMO_BOXES = b.defineList("boxes", List.of(
+                "tarkovdayz:ammobox_919=tacz:9mm,30",
+                "tarkovdayz:amobox_12ga=tacz:12g,20",
+                "tarkovdayz:ammobox_545=tacz:545x39,30",
+                "tarkovdayz:ammobox_556=tacz:556x45,30",
+                "tarkovdayz:ammobox_762=tacz:762x39,30",
+                "tarkovdayz:ammobox_308=tacz:308,20"
+        ), o -> o instanceof String);
         b.pop();
 
         b.push("tacz");
