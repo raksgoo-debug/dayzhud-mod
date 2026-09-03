@@ -42,13 +42,10 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.DoubleValue DERIVE_SCALE;
     public static final ForgeConfigSpec.BooleanValue STOCK_ARMOR;
     public static final ForgeConfigSpec.IntValue MAX_DERIVED_LISTINGS;
-    public static final ForgeConfigSpec.BooleanValue DERIVE_STOCK_ARMOR;
 
     public static final ForgeConfigSpec.BooleanValue TACZ_STOCK_ATTACHMENTS;
     public static final ForgeConfigSpec.IntValue TACZ_ATTACHMENT_PRICE;
 
-    public static final ForgeConfigSpec.BooleanValue LR_ENABLED;
-    public static final ForgeConfigSpec.BooleanValue LR_STOCK;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -156,12 +153,6 @@ public final class MarketConfig {
         b.pop();
 
         b.push("lrtactical");
-        LR_ENABLED = b.comment(
-                        "Price LesRaisins Tactical grenades, medkits and melee weapons.",
-                        "Like TACZ, that mod registers a handful of items and keeps the real",
-                        "entries in NBT, so its price keys look like 'lrtactical:throwable/<id>'.")
-                .define("enabled", true);
-        LR_STOCK = b.comment("List its entries in the market.").define("stock", true);
         b.pop();
 
         b.push("derived");
@@ -176,10 +167,16 @@ public final class MarketConfig {
                 .define("food", true);
         DERIVE_SCALE = b.comment("Multiplier on every derived price.")
                 .defineInRange("scale", 1.0D, 0.05D, 50.0D);
-        DERIVE_STOCK_ARMOR = b.comment(
-                        "Also STOCK derived armour, not just buy it back. Off means a gear mod's",
-                        "armour can be sold to a trader but never bought from one.")
+        STOCK_ARMOR = b.comment(
+                        "Also STOCK derived armour, not just buy it back. One gear mod in this",
+                        "pack ships 238 pieces; listing them from their own stats is the only way",
+                        "the trader carries armour at all without a price row each. Off means a",
+                        "gear mod's armour can be sold to a trader but never bought from one.")
                 .define("stockArmor", true);
+        MAX_DERIVED_LISTINGS = b.comment(
+                        "Ceiling on automatically stocked items, as a safety net against a pack",
+                        "with an enormous item registry.")
+                .defineInRange("maxListings", 600, 0, 5000);
         b.pop();
 
         SPEC = b.build();

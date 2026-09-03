@@ -1,52 +1,48 @@
-# dayzhud 1.5.1 - build fix, and a packaging fix so this cannot recur
+# dayzhud 1.6.0 - build fix, plus attachments in the shop
 
-**This is the COMPLETE market feature, not a patch on top of earlier zips.** 38 files: 28 new,
-9 changed, plus gradle.properties. Unzip over the repo root and you have everything from 1.1.0
-through 1.5.0 in one consistent state. If you have applied earlier zips, this simply overwrites
-them.
+**Complete, not incremental.** 39 files: 28 new, 10 changed, plus gradle.properties. Unzip
+over the repo root and the whole market feature is in one consistent state.
 
-## What broke the build
+## What broke the 1.5.1 build
 
-`MarketPrices.java` referenced `LrTacticalCompat`, a class that exists in my working tree and
-that **I never put in a zip**. Every pack since 1.2.0 was assembled from a hand-written list of
-filenames, so a class added later was silently left out while the file that calls it shipped.
-My local compile passed because it ran against the working tree, where the class is present -
-the check and the artifact were not the same thing, which is the whole failure.
+`MarketConfig` declared `STOCK_ARMOR` and never assigned it. A `static final` with no
+assignment on every path is a compile error, and it is the second time this exact trap has
+bitten a config class in this project.
 
-Two fixes:
+**My local compile could not see it, and that is the point worth recording.** ForgeConfigSpec
+is not on the classpath here, so every field resolved to an error type and javac skipped
+definite-assignment analysis entirely - the file looked clean. The fix is a ~25-line stub
+ForgeConfigSpec that exists only so the compiler will actually run flow analysis on that one
+file. Run against the shipped 1.5.1 it reproduces CI's error exactly; run against this build
+it is silent.
 
-1. **`LrTacticalCompat` is deleted rather than shipped.** It produced byte-identical keys to
-   `NbtVariants` (`lrtactical:consumable/lrtactical:ai2` from both), so it was pure
-   duplication - and two mechanisms deciding the same thing drift apart the moment one is
-   edited. NbtVariants is the one that stays: it is config-driven and covers the next mod
-   built this way. `market.lrDefaultPrice` is gone with it.
-2. **This zip was built by diffing the merged tree against the pristine repo**, not from a
-   filename list. Every file that differs from your last upload is in here by construction, so
-   a new class cannot be forgotten again. Future zips will be built the same way.
+I also now **verify the extracted zip over a pristine copy of the repo**, not my working tree.
+Both of the last two failures were the artifact and the thing I checked being different trees.
+That loop is closed: build zip, extract, check, and only then send.
 
-## Everything included, in one place
+## Attachments are now stocked
 
-- Rouble wallet, absorbed from notes on pickup, survives death; `/money`, `/money pay`.
-- Trader on a terminal block (tarkovdayz PC/safes) or a laptop inside a safe zone;
-  `/market zone add`.
-- Full-window responsive market UI with BUY/SELL tabs, category sidebar expanding into
-  sections, scrolling stock, details panel, and confirmation on buy/sell/withdraw.
-- 161 price rows; TACZ guns and per-calibre ammo priced from their own ballistics; unlisted
-  armour priced AND stocked from its own stats (all 238 caps_awim pieces); lrtactical's 20
-  NBT-variant items.
-- `/market debug` for when the shop looks empty.
-- Bottled water item, model and texture.
+`tacz.stockAttachments` and `tacz.attachmentPrice` existed in the config but nothing read
+them - the config promised a feature that could never appear. TACZ attachments are now a real
+**ATTACHMENTS** category, priced from their own index, with sections for OPTICS, MUZZLE,
+GRIPS, STOCKS and EXTENDED mags. `tacz:attachment/<id>` overrides the derived price.
 
-Version bumped to 1.5.1.
-
-## Config note
-
-Delete `config/dayzhud-common.toml` - there are keys from every version in this range and Forge
-only writes defaults into a file that does not exist yet.
+Two lrtactical config keys orphaned by removing `LrTacticalCompat` are gone with it. Nothing
+in the config now describes behaviour that does not exist.
 
 ## Verification
 
-Parse-checked over the merged tree with a targeted scan for unresolved FIRST-PARTY symbols,
-which is exactly the class of error CI caught here and my earlier filtering hid among the
-expected missing-Minecraft noise. Minecraft and Forge are still not on the classpath, so
-MC/Forge calls remain unverified. CI is the real check.
+Four checks, run against the extracted zip:
+
+1. Config definite-assignment, via the ForgeConfigSpec stub.
+2. No references to removed classes.
+3. No unresolved first-party symbols (the 1.5.0 failure).
+4. No errors outside the expected missing-Minecraft noise.
+
+Minecraft and Forge still are not on the classpath, so MC/Forge calls remain unverified. CI is
+the real check - but these three specific failure modes cannot reach it again.
+
+## Config note
+
+Delete `config/dayzhud-common.toml`. There are keys from every version in this range, and two
+removed ones.

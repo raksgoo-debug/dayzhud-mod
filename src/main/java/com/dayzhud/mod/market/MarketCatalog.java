@@ -26,6 +26,7 @@ public final class MarketCatalog {
     public static final String CAT_FIREARMS = "firearms";
     public static final String CAT_AMMO = "ammo";
     public static final String CAT_ARMOR = "armor";
+    public static final String CAT_ATTACHMENTS = "attachments";
 
     /**
      * Display order for category tabs. Shared with the screen so the sidebar puts what a
@@ -33,7 +34,7 @@ public final class MarketCatalog {
      * alphabetically rather than disappearing.
      */
     public static final List<String> CATEGORY_ORDER = List.of(
-            CAT_FIREARMS, CAT_AMMO, CAT_ARMOR, "gear", "tactical", "meds", "provisions",
+            CAT_FIREARMS, CAT_AMMO, CAT_ATTACHMENTS, CAT_ARMOR, "gear", "tactical", "meds", "provisions",
             "supplies", "materials", "weapons", "electronics", "valuables", "misc");
 
     /**
@@ -44,6 +45,7 @@ public final class MarketCatalog {
     public static final List<String> SUB_ORDER = List.of(
             "helmets", "body armor", "legs", "boots",
             "pistols", "smgs", "rifles", "marksman", "shotguns", "machine guns", "launchers",
+            "optics", "muzzle", "grips", "stocks", "extended",
             "backpacks", "rigs", "masks", "eyewear", "headwear", "uniforms", "gloves",
             "grenades", "explosives", "shields",
             "kits", "pills", "injectors", "bandages");
@@ -152,6 +154,19 @@ public final class MarketCatalog {
             }
         }
 
+        int attachments = 0;
+        if (TaczMarketCompat.isActive() && MarketConfig.TACZ_STOCK_ATTACHMENTS.get()) {
+            for (TaczMarketCompat.AttachmentEntry a : TaczMarketCompat.listAttachments()) {
+                ItemStack stack = TaczMarketCompat.makeAttachment(a.id());
+                if (stack.isEmpty()) continue;
+                MarketPrices.Entry override = MarketPrices.all().get("tacz:attachment/" + a.id());
+                int unit = override != null ? override.value() : a.price();
+                out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_ATTACHMENTS,
+                        attachmentSection(a.type())));
+                attachments++;
+            }
+        }
+
         armour = addDerivedArmour(out);
 
         out.sort((a, b) -> {
@@ -167,8 +182,8 @@ public final class MarketCatalog {
         // "the shop has X and the UI is not showing it", and that ambiguity has already cost
         // one round of guessing.
         DayzHudMod.LOGGER.info("Market catalogue rebuilt: {} offers ({} listed, {} guns, "
-                        + "{} ammo, {} derived armour) in categories {}",
-                out.size(), listed, guns, ammo, armour, categoriesOf(out));
+                        + "{} ammo, {} attachments, {} derived armour) in categories {}",
+                out.size(), listed, guns, ammo, attachments, armour, categoriesOf(out));
         return Collections.unmodifiableList(out);
     }
 
@@ -215,6 +230,18 @@ public final class MarketCatalog {
             case "mg" -> "machine guns";
             case "rpg" -> "launchers";
             default -> "rifles";
+        };
+    }
+
+    /** TACZ attachment types, mapped to shop sections. */
+    private static String attachmentSection(String type) {
+        return switch (type == null ? "" : type.toLowerCase(java.util.Locale.ROOT)) {
+            case "scope" -> "optics";
+            case "muzzle" -> "muzzle";
+            case "grip" -> "grips";
+            case "stock" -> "stocks";
+            case "extended_mag" -> "extended";
+            default -> "";
         };
     }
 
