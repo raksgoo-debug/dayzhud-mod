@@ -27,7 +27,7 @@ import java.util.Map;
 public final class MarketPrices {
 
     /** value / buyable / listing size / tab, per key. */
-    public record Entry(int value, boolean buy, int count, String category) {}
+    public record Entry(int value, boolean buy, int count, String category, String sub) {}
 
     public static final String CAT_DEFAULT = "misc";
 
@@ -127,6 +127,7 @@ public final class MarketPrices {
             buf.writeBoolean(e.getValue().buy());
             buf.writeVarInt(e.getValue().count());
             buf.writeUtf(e.getValue().category());
+            buf.writeUtf(e.getValue().sub());
         }
     }
 
@@ -139,7 +140,8 @@ public final class MarketPrices {
             boolean buy = buf.readBoolean();
             int count = buf.readVarInt();
             String cat = buf.readUtf();
-            out.put(key, new Entry(value, buy, count, cat));
+            String sub = buf.readUtf();
+            out.put(key, new Entry(value, buy, count, cat, sub));
         }
         return out;
     }
@@ -160,7 +162,8 @@ public final class MarketPrices {
                 boolean buy = v.has("buy") && v.get("buy").getAsBoolean();
                 int count = v.has("count") ? Math.max(1, v.get("count").getAsInt()) : 1;
                 String cat = v.has("category") ? v.get("category").getAsString() : CAT_DEFAULT;
-                out.put(e.getKey(), new Entry(value, buy, count, cat));
+                String sub = v.has("sub") ? v.get("sub").getAsString() : "";
+                out.put(e.getKey(), new Entry(value, buy, count, cat, sub));
             } catch (Exception ex) {
                 DayzHudMod.LOGGER.warn("Skipping malformed market price entry '{}': {}",
                         e.getKey(), ex.toString());

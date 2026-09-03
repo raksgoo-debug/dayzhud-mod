@@ -22,6 +22,7 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.DoubleValue BUY_MULTIPLIER;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CURRENCY_ITEMS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> NBT_VARIANT_ITEMS;
+    public static final ForgeConfigSpec.BooleanValue SHOW_BALANCE_ON_HUD;
 
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_BLOCKS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> TERMINAL_ITEMS;
@@ -88,6 +89,12 @@ public final class MarketConfig {
                         "lrtactical:throwable=ThrowableId",
                         "lrtactical:melee=MeleeWeaponId"
                 ), o -> o instanceof String);
+        SHOW_BALANCE_ON_HUD = b.comment(
+                        "Draw the rouble balance on the HUD above the status row.",
+                        "Off by default: the terminal already shows it, and a number parked over",
+                        "the gauges is one more thing competing for the corner of the screen that",
+                        "health, water and food already own.")
+                .define("showBalanceOnHud", false);
         b.pop();
 
         b.push("access");

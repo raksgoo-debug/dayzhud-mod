@@ -1,68 +1,54 @@
-# dayzhud 1.3.0 - lrtactical, armour on the shelves, firearms tab, UI pass
+# dayzhud 1.4.0 - sections inside categories, HUD balance off
 
-**Cumulative.** Replaces every earlier fix zip; apply straight onto the original 1.1.0
-update. Fourteen files.
+**Cumulative.** Replaces every earlier zip except the original 1.1.0 update; apply on top of
+that. Sixteen files.
 
-## Why nothing from lrtactical showed up
+## Sections inside each category
 
-It is NBT-driven like TACZ, and I priced it as if it were not. There is no `lrtactical:ai2`
-item registered - there are five base items, and every medkit is `lrtactical:consumable`
-carrying `ConsumableId: lrtactical:ai2`. Throwables use `ThrowableId`, melee uses
-`MeleeWeaponId`. So all twenty rows matched nothing and the mod was silently absent.
+Offers now carry a section as well as a category, and the sidebar expands the selected
+category into its sections, indented and drawn small underneath it. ARMOR opens into HELMETS,
+BODY ARMOR, LEGS, BOOTS; FIREARMS into PISTOLS, SMGS, RIFLES, MARKSMAN, SHOTGUNS, MACHINE
+GUNS, LAUNCHERS; GEAR into BACKPACKS, RIGS, MASKS, EYEWEAR, HEADWEAR, UNIFORMS, GLOVES; MEDS
+into KITS, PILLS, INJECTORS, BANDAGES; TACTICAL into GRENADES, EXPLOSIVES, SHIELDS.
 
-`NbtVariants` now handles that shape generally, driven by `market.nbtVariantItems` in config
-rather than hardcoded, so the next mod built this way needs a config line and not a code
-change. Keys are `<item id>/<variant id>`, e.g. `lrtactical:consumable/lrtactical:ai2`. All 20
-items are priced: medkits under MEDS; M67 / RGN / flash / smoke / molotov / flash shield /
-detonator under TACTICAL; karambit / dagger / bat under WEAPONS; condensed milk under
-PROVISIONS.
+Nested in the sidebar rather than a second strip along the top of the list. A horizontal strip
+has a fixed width and would hit exactly the overflow that hid FIREARMS twice already; a column
+just gets longer, and the column already scrolls.
 
-## Why FIREARMS was missing, and it was not what it looked like
+Armour and firearm sections are **derived**, not authored - from the item's equipment slot and
+from TACZ's own gun type - so all 238 caps_awim pieces file themselves, and so does whatever
+gear or gun pack you add next. Hand-written rows can set a section with an optional `"sub"`
+field in prices.json.
 
-The guns were almost certainly in the catalogue the whole time. The category sidebar drew
-seven rows and stopped - the same overflow bug as the old horizontal tab strip, turned ninety
-degrees. Alphabetical order filled those seven slots with AMMO, GEAR, MATERIALS, MEDS, MISC,
-PROVISIONS and pushed weapons off the bottom.
+Two details worth knowing:
 
-Fixed twice over: the sidebar scrolls (mouse wheel over it), and categories sort by a shared
-display order - FIREARMS, AMMO, ARMOR, GEAR, TACTICAL, MEDS, PROVISIONS, SUPPLIES, MATERIALS,
-WEAPONS, ELECTRONICS, VALUABLES, MISC - so what you shop for is at the top and anything a pack
-invents falls to the end instead of vanishing. TACZ guns moved from "weapons" into their own
-**FIREARMS** category; "weapons" is melee now.
+- A category with only one section does not expand. "ARMOR > helmets" on its own is noise.
+- Picking a category clears the section, so switching category never leaves an inherited
+  filter behind that silently shows an empty list.
+- The list rows now show the section under the item name instead of repeating the category
+  you are already standing in.
 
-**`/market debug` (op) is new** and reports offers per category, price-row count, and TACZ
-status including how many guns priced successfully. The catalogue also logs a summary line on
-every rebuild. "The shop is missing X" and "the shop has X and the UI is hiding it" look
-identical from outside, and that ambiguity has now cost two rounds.
+## Balance off the HUD
 
-## All the caps_awim armour is on the shelves
-
-238 pieces, stocked automatically under **ARMOR**, priced from their own defence, toughness,
-knockback resistance and durability. The catalogue walks the item registry for any ArmorItem
-with no explicit price row, so it also picks up Fracture Point and vanilla armour, and will
-pick up whatever gear mod you add next. `derived.stockArmor` and `derived.maxListings` (600)
-control it; explicit rows still win.
-
-## UI pass
-
-- Panel 400x256, up from 384x246, laid out on a grid.
-- Title and subtitle share one line instead of the subtitle colliding with the tab row.
-- Balance gets a BALANCE caption above it rather than floating in the corner.
-- Search moved to the TOP of the sidebar - it sat under the last category and read as one.
-- Detail panel re-spaced: preview, name, then a right-aligned total that turns red when you
-  cannot afford it, with a UNIT caption under it when quantity is above one.
-- Quantity buttons outlined when selected and sized so all three fit the column.
-- WITHDRAW reads "WITHDRAW CASH" with the amount as a caption; the old label was being
-  truncated mid-number.
-- Bigger tabs, list rows tightened to 21px.
+`market.showBalanceOnHud`, now **false** by default - the terminal shows it and that is
+enough. The code stayed rather than being deleted, so it is one config flip if you ever want
+it back.
 
 ## Config note
 
-New: `market.nbtVariantItems`, `derived.stockArmor`, `derived.maxListings`. Forge only writes
-defaults into a config file that does not exist yet - delete `config/dayzhud-common.toml`.
+New keys: `market.showBalanceOnHud`. Forge only writes defaults into a config file that does
+not exist yet - delete `config/dayzhud-common.toml`.
+
+## A note on how this one went
+
+Patching MarketScreen left a stale copy of the old sidebar loop behind a working one - two
+`drawSidebar` bodies, one reading a list of category strings and one reading the new row
+model. It parsed as a duplicate-method error rather than doing something subtle, which is the
+good outcome, but it is the second time editing this file in place has produced a half-applied
+change. Both stale blocks are removed and the merged tree parses clean.
 
 ## Verification
 
-Parse-checked over the merged tree. Minecraft and Forge are not on the classpath here, so this
-proves syntax and this mod's own cross-class references and nothing about MC/Forge calls. CI
-is the real check.
+Parse-checked over the merged tree, 78 source files, nothing outside the expected
+missing-Minecraft noise. That proves syntax and this mod's own cross-class references and
+nothing about MC/Forge calls. CI is the real check.

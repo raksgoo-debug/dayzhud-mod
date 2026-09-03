@@ -36,6 +36,18 @@ public final class MarketCatalog {
             CAT_FIREARMS, CAT_AMMO, CAT_ARMOR, "gear", "tactical", "meds", "provisions",
             "supplies", "materials", "weapons", "electronics", "valuables", "misc");
 
+    /**
+     * Display order for the sections inside a category. Armour reads head-down because that
+     * is how a loadout is put together, not alphabetically - "body armor, boots, helmets,
+     * legs" is the order a sort gives you and it is the wrong one.
+     */
+    public static final List<String> SUB_ORDER = List.of(
+            "helmets", "body armor", "legs", "boots",
+            "pistols", "smgs", "rifles", "marksman", "shotguns", "machine guns", "launchers",
+            "backpacks", "rigs", "masks", "eyewear", "headwear", "uniforms", "gloves",
+            "grenades", "explosives", "shields",
+            "kits", "pills", "injectors", "bandages");
+
     private static List<MarketOffer> cached;
 
     /**
@@ -69,12 +81,25 @@ public final class MarketCatalog {
         return sortCategories(seen);
     }
 
+    /** Sections present in one category, in {@link #SUB_ORDER}. */
+    public static List<String> subcategories(List<MarketOffer> offers, String category) {
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for (MarketOffer o : offers) {
+            if (o.category().equals(category) && !o.sub().isEmpty()) seen.add(o.sub());
+        }
+        return sortBy(seen, SUB_ORDER);
+    }
+
     public static List<String> sortCategories(Iterable<String> input) {
+        return sortBy(input, CATEGORY_ORDER);
+    }
+
+    private static List<String> sortBy(Iterable<String> input, List<String> order) {
         List<String> ordered = new ArrayList<>();
         for (String s : input) ordered.add(s);
         ordered.sort((a, b) -> {
-            int ia = CATEGORY_ORDER.indexOf(a);
-            int ib = CATEGORY_ORDER.indexOf(b);
+            int ia = order.indexOf(a);
+            int ib = order.indexOf(b);
             if (ia < 0 && ib < 0) return a.compareTo(b);
             if (ia < 0) return 1;
             if (ib < 0) return -1;
@@ -96,7 +121,7 @@ public final class MarketCatalog {
             ItemStack stack = stackFor(e.getKey(), entry.count());
             if (stack.isEmpty()) continue;   // item belongs to a mod that isn't installed
             out.add(new MarketOffer(stack, MarketPrices.buyPrice(entry.value(), entry.count()),
-                    entry.category()));
+                    entry.category(), entry.sub()));
             listed++;
         }
 
@@ -107,7 +132,8 @@ public final class MarketCatalog {
                     if (stack.isEmpty()) continue;
                     MarketPrices.Entry override = MarketPrices.all().get("tacz:gun/" + gun.id());
                     int unit = override != null ? override.value() : gun.price();
-                    out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_FIREARMS));
+                    out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_FIREARMS,
+                            gunSection(gun.type())));
                     guns++;
                 }
             }
@@ -172,10 +198,34 @@ public final class MarketCatalog {
             ItemStack stack = new ItemStack(item);
             int value = DerivedPrices.valueOf(stack);
             if (value <= 0) continue;
-            out.add(new MarketOffer(stack, MarketPrices.buyPrice(value, 1), CAT_ARMOR));
+            out.add(new MarketOffer(stack, MarketPrices.buyPrice(value, 1), CAT_ARMOR,
+                    armourSection((ArmorItem) item)));
             added++;
         }
         return added;
+    }
+
+    /** TACZ's gun categories, renamed to shop sections. */
+    private static String gunSection(String type) {
+        return switch (type == null ? "" : type.toLowerCase(java.util.Locale.ROOT)) {
+            case "pistol" -> "pistols";
+            case "smg" -> "smgs";
+            case "shotgun" -> "shotguns";
+            case "sniper" -> "marksman";
+            case "mg" -> "machine guns";
+            case "rpg" -> "launchers";
+            default -> "rifles";
+        };
+    }
+
+    private static String armourSection(ArmorItem item) {
+        return switch (item.getEquipmentSlot()) {
+            case HEAD -> "helmets";
+            case CHEST -> "body armor";
+            case LEGS -> "legs";
+            case FEET -> "boots";
+            default -> "";
+        };
     }
 
     static ItemStack stackFor(String key, int count) {

@@ -69,6 +69,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     private EditBox search;
     private boolean sellTab;
     private String category = "";
+    private String sub = "";
     private int scroll;
     private int sidebarScroll;
     private int selected = -1;          // index into ClientMarketState.offers()
@@ -115,6 +116,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         for (int i = 0; i < offers.size(); i++) {
             MarketOffer offer = offers.get(i);
             if (!category.isEmpty() && !category.equals(offer.category())) continue;
+            if (!sub.isEmpty() && !sub.equals(offer.sub())) continue;
             if (!query.isEmpty()) {
                 String name = offer.prototype().getHoverName().getString().toLowerCase(Locale.ROOT);
                 if (!name.contains(query)) continue;
@@ -125,13 +127,32 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (!filtered.contains(selected)) selected = filtered.isEmpty() ? -1 : filtered.get(0);
     }
 
-    private List<String> categories() {
+    /** A sidebar line: either a category, or a section nested under the open one. */
+    private record Row(String category, String sub, boolean nested) {}
+
+    /**
+     * The sidebar, with the selected category expanded into its own sections.
+     *
+     * Nesting rather than a second horizontal strip along the top of the list: a strip has a
+     * fixed width and would hit the same overflow that hid FIREARMS twice already, whereas a
+     * column just gets longer and the column already scrolls.
+     */
+    private List<Row> sidebarRows() {
         LinkedHashSet<String> seen = new LinkedHashSet<>();
         for (MarketOffer o : ClientMarketState.offers()) seen.add(o.category());
-        List<String> out = new ArrayList<>();
-        out.add("");                                    // ALL always first
-        out.addAll(MarketCatalog.sortCategories(seen));  // then firearms, ammo, armor, ...
-        return out;
+
+        List<Row> rows = new ArrayList<>();
+        rows.add(new Row("", "", false));               // ALL
+        for (String cat : MarketCatalog.sortCategories(seen)) {
+            rows.add(new Row(cat, "", false));
+            if (!cat.equals(category)) continue;
+            List<String> subs = MarketCatalog.subcategories(ClientMarketState.offers(), cat);
+            // One section is not a section - showing "ARMOR > helmets" alone is just noise.
+            if (subs.size() < 2) continue;
+            rows.add(new Row(cat, "", true));           // "ALL" within the category
+            for (String s : subs) rows.add(new Row(cat, s, true));
+        }
+        return rows;
     }
 
     // ---- background --------------------------------------------------------
@@ -243,19 +264,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
     }
 
-    private int sidebarRows() {
-        return (CONTENT_H - 4) / SIDEBAR_ROW_H;
-    }
-
     private void drawSidebar(GuiGraphics g, int mouseX, int mouseY) {
-        int y = topPos + CONTENT_Y + 2;
-        List<String> cats = categories();
-        int max = Math.max(0, cats.size() - sidebarRows());
-        sidebarScroll = Math.max(0, Math.min(sidebarScroll, max));
-        for (String cat : cats.subList(sidebarScroll,
-                Math.min(cats.size(), sidebarScroll + sidebarRows()))) {
-            String label = cat.isEmpty() ? "ALL" : cat.toUpperCase(Locale.ROOT);
-            boolean active = cat.equals(category);
+        List<Row> rows = sidebarRows();
+        clampSidebar(rows.size());
+        int y = topPos + SIDEBAR_LIST_Y;
+        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + SIDEBAR_ROWS); i++) {
+            Row row = rows.get(i);
+            boolean active = isActiveRow(row);
             boolean hovered = inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, y,
                     SIDEBAR_W - 2, SIDEBAR_ROW_H);
             if (active || hovered) {
@@ -266,18 +281,28 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
                 g.fill(leftPos + SIDEBAR_X + 1, y, leftPos + SIDEBAR_X + 3, y + SIDEBAR_ROW_H,
                         StyledTheme.ACCENT);
             }
-            g.drawString(font, trim(label, SIDEBAR_W - 14), leftPos + SIDEBAR_X + 7, y + 3,
-                    active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
+            int indent = row.nested() ? 15 : 7;
+            String label = labelFor(row);
+            if (row.nested()) {
+                // Sections are drawn small and indented so the eye reads the hierarchy
+                // without needing a tree line or an arrow glyph.
+                StyledTheme.caption(g, font, label, leftPos + SIDEBAR_X + indent, y + 5);
+            } else {
+                g.drawString(font, trim(label, SIDEBAR_W - indent - 7),
+                        leftPos + SIDEBAR_X + indent, y + 3,
+                        active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
+            }
             y += SIDEBAR_ROW_H;
         }
-        // A column can hold seven; a modpack can define more than seven. The first version
-        // just stopped drawing, which is how FIREARMS became unreachable.
-        if (cats.size() > SIDEBAR_ROWS) {
+        // A column holds seven rows; a modpack defines more than seven categories, and with a
+        // category expanded into sections there are more still. The first version just stopped
+        // drawing, which is how FIREARMS became unreachable twice.
+        if (rows.size() > SIDEBAR_ROWS) {
             int trackTop = topPos + SIDEBAR_LIST_Y;
             int trackH = SIDEBAR_ROWS * SIDEBAR_ROW_H;
-            int thumb = Math.max(8, trackH * SIDEBAR_ROWS / cats.size());
+            int thumb = Math.max(8, trackH * SIDEBAR_ROWS / rows.size());
             int ty = trackTop + (trackH - thumb) * sidebarScroll
-                    / Math.max(1, cats.size() - SIDEBAR_ROWS);
+                    / Math.max(1, rows.size() - SIDEBAR_ROWS);
             g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, trackTop,
                     leftPos + SIDEBAR_X + SIDEBAR_W - 1, trackTop + trackH, StyledTheme.SLOT_BG);
             g.fill(leftPos + SIDEBAR_X + SIDEBAR_W - 4, ty,
@@ -287,6 +312,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     private void clampSidebar(int total) {
         sidebarScroll = Math.max(0, Math.min(sidebarScroll, Math.max(0, total - SIDEBAR_ROWS)));
+    }
+
+    private boolean isActiveRow(Row row) {
+        if (!row.category().equals(category)) return false;
+        if (row.nested()) return row.sub().equals(sub);
+        // A category header stays lit while one of its sections is selected, so it is still
+        // obvious where you are after scrolling the header out of view and back.
+        return true;
+    }
+
+    private String labelFor(Row row) {
+        if (row.nested()) return row.sub().isEmpty() ? "ALL" : row.sub().toUpperCase(Locale.ROOT);
+        return row.category().isEmpty() ? "ALL" : row.category().toUpperCase(Locale.ROOT);
     }
 
     private void drawOffers(GuiGraphics g, int mouseX, int mouseY) {
@@ -320,7 +358,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             int nameW = LIST_W - 28 - priceW - 8;
             g.drawString(font, trim(stack.getHoverName().getString(), nameW),
                     leftPos + LIST_X + 26, y + 4, StyledTheme.TEXT_COLOR, false);
-            StyledTheme.caption(g, font, offer.category().toUpperCase(Locale.ROOT),
+            String tag = offer.sub().isEmpty() ? offer.category() : offer.sub();
+            StyledTheme.caption(g, font, tag.toUpperCase(Locale.ROOT),
                     leftPos + LIST_X + 26, y + 14);
             g.drawString(font, price, leftPos + LIST_X + LIST_W - 5 - priceW, y + 8,
                     ClientWallet.get() >= offer.price() ? StyledTheme.ACCENT : 0xFFB04A3A, false);
@@ -547,12 +586,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
-        int sy = topPos + CONTENT_Y + 2;
-        List<String> cats = categories();
-        for (String cat : cats.subList(Math.min(sidebarScroll, cats.size()),
-                Math.min(cats.size(), sidebarScroll + sidebarRows()))) {
+        List<Row> rows = sidebarRows();
+        clampSidebar(rows.size());
+        int sy = topPos + SIDEBAR_LIST_Y;
+        for (int i = sidebarScroll; i < Math.min(rows.size(), sidebarScroll + SIDEBAR_ROWS); i++) {
             if (inBox(mouseX, mouseY, leftPos + SIDEBAR_X + 1, sy, SIDEBAR_W - 2, SIDEBAR_ROW_H)) {
-                category = cat;
+                Row row = rows.get(i);
+                // Picking a category clears the section, so switching category never leaves
+                // an inherited filter behind that silently empties the list.
+                category = row.category();
+                sub = row.sub();
                 scroll = 0;
                 rebuild();
                 return true;
@@ -596,9 +639,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (confirm != null) return true;
-        if (!sellTab && inBox(mouseX, mouseY, leftPos + SIDEBAR_X, topPos + CONTENT_Y,
-                SIDEBAR_W, CONTENT_H)) {
-            sidebarScroll = Math.max(0, sidebarScroll - (int) Math.signum(delta));
+        if (!sellTab && inBox(mouseX, mouseY, leftPos + SIDEBAR_X, topPos + SIDEBAR_LIST_Y,
+                SIDEBAR_W, SIDEBAR_ROWS * SIDEBAR_ROW_H)) {
+            int max = Math.max(0, sidebarRows().size() - SIDEBAR_ROWS);
+            sidebarScroll = Math.max(0, Math.min(max, sidebarScroll - (int) Math.signum(delta)));
             return true;
         }
         if (!sellTab && inBox(mouseX, mouseY, leftPos + LIST_X, topPos + CONTENT_Y,

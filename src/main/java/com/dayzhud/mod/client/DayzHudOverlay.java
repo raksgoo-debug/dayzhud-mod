@@ -118,12 +118,15 @@ public class DayzHudOverlay implements IGuiOverlay {
     /**
      * Rouble balance, sitting directly above the status row and right-aligned with it.
      *
+     * Off by default (market.showBalanceOnHud). The terminal already shows the balance, and
+     * the HUD corner is already carrying health, water, food and temperature.
+     *
      * Right-aligned rather than laid out in a fixed column because the number changes width
      * constantly as money is spent, and anchoring the left edge would make the whole readout
      * jitter sideways on every transaction.
      */
     private void drawBalance(GuiGraphics graphics, int rowY, int rightX) {
-        if (!MarketConfig.ENABLED.get()) return;
+        if (!MarketConfig.ENABLED.get() || !MarketConfig.SHOW_BALANCE_ON_HUD.get()) return;
         String text = Money.withSymbol(ClientWallet.get());
         var font = Minecraft.getInstance().font;
         graphics.drawString(font, text, rightX - font.width(text),

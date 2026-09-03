@@ -13,80 +13,98 @@
     "'<item id>/<variant id>' for mods that put many items on one registry name via",
     "NBT, listed in market.nbtVariantItems - LesRaisins Tactical works that way, so",
     "its medkits are lrtactical:consumable/lrtactical:ai2 and NOT lrtactical:ai2,",
-    "which is not a registered item at all."
+    "which is not a registered item at all.",
+    "Optional \"sub\" on an entry files it into a section inside its category",
+    "(e.g. \"category\": \"gear\", \"sub\": \"backpacks\"). Armour sections and gun",
+    "sections are derived from equipment slot and TACZ gun type automatically."
   ],
   "entries": {
     "tarkovdayz:bandgecivil": {
       "value": 1100,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "bandages"
     },
     "tarkovdayz:bandge": {
       "value": 2400,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "bandages"
     },
     "tarkovdayz:ai_2": {
       "value": 6500,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "tarkovdayz:salewafirstaidkit": {
       "value": 12000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "tarkovdayz:grizzly": {
       "value": 42000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "tarkovdayz:salinebag": {
       "value": 9500,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "injectors"
     },
     "tarkovdayz:salinebag_empty": {
       "value": 800,
-      "category": "meds"
+      "category": "meds",
+      "sub": "injectors"
     },
     "tarkovdayz:defibrillator": {
       "value": 38000,
-      "category": "meds"
+      "category": "meds",
+      "sub": "kits"
     },
     "tarkovdayz:morphine": {
       "value": 18000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "injectors"
     },
     "tarkovdayz:painkillers": {
       "value": 4200,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "tarkovdayz:ibuprofen": {
       "value": 5600,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "tarkovdayz:tetracycline": {
       "value": 7800,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "tarkovdayz:vitamin": {
       "value": 3100,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "tarkovdayz:anti_radpill": {
       "value": 9200,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "tarkovdayz:ledx": {
       "value": 78000,
-      "category": "meds"
+      "category": "meds",
+      "sub": "kits"
     },
     "tarkovdayz:cola": {
       "value": 1900,
@@ -420,211 +438,253 @@
     "caps_awim_tactical_gear_rework:blackhikingbackpack": {
       "value": 21000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:greenhikingbackpack": {
       "value": 21000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:multicamhikingbackpack": {
       "value": 23000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:urbanahikingbackpack": {
       "value": 21000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:blacktacticalbackpack": {
       "value": 34000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:greentacticalbackpack": {
       "value": 34000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:sportsbag": {
       "value": 9500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "backpacks"
     },
     "caps_awim_tactical_gear_rework:rps_smiersh": {
       "value": 28000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "rigs"
     },
     "caps_awim_tactical_gear_rework:gasmaskmodule": {
       "value": 31000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:nvgmodule": {
       "value": 74000,
-      "category": "gear"
+      "category": "gear",
+      "sub": "headwear"
     },
     "caps_awim_tactical_gear_rework:helmet_multitool": {
       "value": 12000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "headwear"
     },
     "caps_awim_tactical_gear_rework:tacticalglasses": {
       "value": 8200,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "eyewear"
     },
     "caps_awim_tactical_gear_rework:tacticalglasseswithoutrim": {
       "value": 7600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "eyewear"
     },
     "caps_awim_tactical_gear_rework:tacticalglasseswithoutrimred": {
       "value": 7600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "eyewear"
     },
     "caps_awim_tactical_gear_rework:tacticalglassesyellow": {
       "value": 7600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "eyewear"
     },
     "caps_awim_tactical_gear_rework:glovesblack": {
       "value": 4400,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "gloves"
     },
     "caps_awim_tactical_gear_rework:arcticb": {
       "value": 2600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:atacs_balaclava": {
       "value": 2600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:blackbalaclava": {
       "value": 2400,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:blackskullbalaclava": {
       "value": 3100,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:greenbalaklava": {
       "value": 2400,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:multicam_balaclava": {
       "value": 2600,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:greenms": {
       "value": 2900,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:mhalataks": {
       "value": 3400,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:brownarafatka": {
       "value": 2200,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:greenarafatka": {
       "value": 2200,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:whitearafatka": {
       "value": 2200,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "masks"
     },
     "caps_awim_tactical_gear_rework:atacsuniform": {
       "value": 12000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:gorka_uniform": {
       "value": 13500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:grayurbana": {
       "value": 11000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:greenuniform": {
       "value": 10500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:multicamuniform": {
       "value": 13000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:sportsuniform": {
       "value": 5200,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformarcticbase": {
       "value": 11500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformblacktiger": {
       "value": 12500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformemr": {
       "value": 12500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformgreencifra": {
       "value": 12000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformgreenmulticam": {
       "value": 13000,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformpmcstriker": {
       "value": 15500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:uniformtigr": {
       "value": 12500,
       "category": "gear",
-      "buy": true
+      "buy": true,
+      "sub": "uniforms"
     },
     "caps_awim_tactical_gear_rework:bandage": {
       "value": 1400,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "bandages"
     },
     "caps_awim_tactical_gear_rework:bandagevp": {
       "value": 1600,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "bandages"
     },
     "caps_awim_tactical_gear_rework:foodirp": {
       "value": 5800,
@@ -678,77 +738,92 @@
     "lrtactical:throwable/lrtactical:m67": {
       "value": 24000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "grenades"
     },
     "lrtactical:throwable/lrtactical:rgn": {
       "value": 29000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "grenades"
     },
     "lrtactical:throwable/lrtactical:flash_grenade": {
       "value": 17000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "grenades"
     },
     "lrtactical:throwable/lrtactical:smoke_grenade": {
       "value": 12000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "grenades"
     },
     "lrtactical:throwable/lrtactical:molotov": {
       "value": 9500,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "explosives"
     },
     "lrtactical:throwable/lrtactical:c4": {
       "value": 62000,
       "buy": false,
-      "category": "tactical"
+      "category": "tactical",
+      "sub": "explosives"
     },
     "lrtactical:consumable/lrtactical:ai2": {
       "value": 6500,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "lrtactical:consumable/lrtactical:carfak": {
       "value": 14000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "lrtactical:consumable/lrtactical:cms": {
       "value": 26000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "lrtactical:consumable/lrtactical:surv12": {
       "value": 48000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "kits"
     },
     "lrtactical:consumable/lrtactical:blood_pack": {
       "value": 21000,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "injectors"
     },
     "lrtactical:consumable/lrtactical:amoxycillin": {
       "value": 7400,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "lrtactical:consumable/lrtactical:ibuprofen": {
       "value": 5600,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "pills"
     },
     "lrtactical:consumable/lrtactical:goldenstar": {
       "value": 4100,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "injectors"
     },
     "lrtactical:consumable/lrtactical:vaseline": {
       "value": 8800,
       "category": "meds",
-      "buy": true
+      "buy": true,
+      "sub": "injectors"
     },
     "lrtactical:consumable/lrtactical:condensed_milk": {
       "value": 2400,
@@ -773,12 +848,14 @@
     "lrtactical:flash_shield": {
       "value": 34000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "shields"
     },
     "lrtactical:detonator": {
       "value": 9000,
       "category": "tactical",
-      "buy": true
+      "buy": true,
+      "sub": "explosives"
     }
   }
 }
