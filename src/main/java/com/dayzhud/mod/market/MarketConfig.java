@@ -49,7 +49,6 @@ public final class MarketConfig {
 
     public static final ForgeConfigSpec.BooleanValue LR_ENABLED;
     public static final ForgeConfigSpec.BooleanValue LR_STOCK;
-    public static final ForgeConfigSpec.IntValue LR_DEFAULT_PRICE;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -163,8 +162,6 @@ public final class MarketConfig {
                         "entries in NBT, so its price keys look like 'lrtactical:throwable/<id>'.")
                 .define("enabled", true);
         LR_STOCK = b.comment("List its entries in the market.").define("stock", true);
-        LR_DEFAULT_PRICE = b.comment("Price for an entry with no row in the price data.")
-                .defineInRange("defaultPrice", 8000, 1, 10000000);
         b.pop();
 
         b.push("derived");

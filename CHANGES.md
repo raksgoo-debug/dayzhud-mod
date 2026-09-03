@@ -1,47 +1,52 @@
-# dayzhud 1.5.0 - the market fills the window
+# dayzhud 1.5.1 - build fix, and a packaging fix so this cannot recur
 
-**Cumulative.** Replaces every earlier zip except the original 1.1.0 update. Sixteen files.
+**This is the COMPLETE market feature, not a patch on top of earlier zips.** 38 files: 28 new,
+9 changed, plus gradle.properties. Unzip over the repo root and you have everything from 1.1.0
+through 1.5.0 in one consistent state. If you have applied earlier zips, this simply overwrites
+them.
 
-## The panel is responsive now
+## What broke the build
 
-It sizes itself to the window - up to 640x400 GUI units, which is the whole screen at GUI
-scale 3 on 1080p - instead of sitting in a fixed 400x256 box. Bigger window means more stock
-rows and more categories visible, not the same five rows with more padding around them.
+`MarketPrices.java` referenced `LrTacticalCompat`, a class that exists in my working tree and
+that **I never put in a zip**. Every pack since 1.2.0 was assembled from a hand-written list of
+filenames, so a class added later was silently left out while the file that calls it shipped.
+My local compile passed because it ran against the working tree, where the class is present -
+the check and the artifact were not the same thing, which is the whole failure.
 
-**Why this needed a rewrite rather than a bigger number.** Slot x/y are final in 1.20.1, so a
-container screen cannot move its slots the way it moves its artwork. The whole layout is now
-drawn in absolute screen coordinates, and `leftPos`/`topPos` are set by hand to drop the
-menu's fixed 162x106 slot block wherever the layout wants it. The rule for anyone touching
-this file later is in the class javadoc: panel geometry absolute, slots via leftPos/topPos,
-never both in one expression.
+Two fixes:
 
-Two consequences worth knowing:
+1. **`LrTacticalCompat` is deleted rather than shipped.** It produced byte-identical keys to
+   `NbtVariants` (`lrtactical:consumable/lrtactical:ai2` from both), so it was pure
+   duplication - and two mechanisms deciding the same thing drift apart the moment one is
+   edited. NbtVariants is the one that stays: it is config-driven and covers the next mod
+   built this way. `market.lrDefaultPrice` is gone with it.
+2. **This zip was built by diffing the merged tree against the pristine repo**, not from a
+   filename list. Every file that differs from your last upload is in here by construction, so
+   a new class cannot be forgotten again. Future zips will be built the same way.
 
-- **The sell tray is one row of nine directly above the inventory**, not a 3x3 off to the
-  side. Its offset from the inventory is frozen at construction, so the only placement that
-  stays correct at every panel size is one defined relative to the inventory itself.
-- **`hasClickedOutside` is overridden.** Vanilla measures "did they click outside the window"
-  from leftPos plus imageWidth, and leftPos now points at the slot block rather than the panel
-  corner - without the override, clicking the stock list while holding an item would have
-  thrown it on the floor.
+## Everything included, in one place
 
-## Sizes that were checked rather than eyeballed
+- Rouble wallet, absorbed from notes on pickup, survives death; `/money`, `/money pay`.
+- Trader on a terminal block (tarkovdayz PC/safes) or a laptop inside a safe zone;
+  `/market zone add`.
+- Full-window responsive market UI with BUY/SELL tabs, category sidebar expanding into
+  sections, scrolling stock, details panel, and confirmation on buy/sell/withdraw.
+- 161 price rows; TACZ guns and per-calibre ammo priced from their own ballistics; unlisted
+  armour priced AND stocked from its own stats (all 238 caps_awim pieces); lrtactical's 20
+  NBT-variant items.
+- `/market debug` for when the shop looks empty.
+- Bottled water item, model and texture.
 
-Fixed column widths looked fine at 640 and collapsed the stock list to **six pixels** at
-320x240, which is the floor Minecraft guarantees. Columns are proportional with floors now,
-and the side columns give ground to the list when it is still too narrow. A short window also
-gets a compressed header instead of spending its only list row on a title.
+Version bumped to 1.5.1.
 
-Walked the arithmetic across six window sizes before shipping - a compiler cannot catch a
-negative column width, and this is the third layout bug in this screen that only existed at
-one size.
+## Config note
 
-Also bigger, now that there is room: 3x item preview in the details panel, an x64 quantity
-button alongside x1/x5/x16, a scaled-up title and balance, and 24px list rows.
+Delete `config/dayzhud-common.toml` - there are keys from every version in this range and Forge
+only writes defaults into a file that does not exist yet.
 
 ## Verification
 
-Parse-checked over the merged tree; layout maths checked numerically at 320x240, 427x240,
-640x360, 960x540, 1280x720 and 1920x1080. Minecraft and Forge are not on the classpath here,
-so this proves syntax and the mod's own cross-class references and nothing about MC/Forge
-calls. CI is the real check.
+Parse-checked over the merged tree with a targeted scan for unresolved FIRST-PARTY symbols,
+which is exactly the class of error CI caught here and my earlier filtering hid among the
+expected missing-Minecraft noise. Minecraft and Forge are still not on the classpath, so
+MC/Forge calls remain unverified. CI is the real check.

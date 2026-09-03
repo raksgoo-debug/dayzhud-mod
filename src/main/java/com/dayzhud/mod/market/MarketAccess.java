@@ -60,14 +60,7 @@ public final class MarketAccess {
 
         BlockState state = event.getLevel().getBlockState(event.getPos());
         ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
-        if (id == null || !blockIds.contains(id)) {
-            // Not a terminal block - but the player may be holding a terminal ITEM while
-            // aiming at one. RightClickBlock fires INSTEAD of RightClickItem whenever the
-            // crosshair is on a block, so without this the laptop only worked pointed at
-            // open air, which in play just reads as the laptop being broken.
-            tryTerminalItem(event, player, event.getItemStack());
-            return;
-        }
+        if (id == null || !blockIds.contains(id)) return;
 
         // Sneaking is how you place a block against the terminal instead of using it.
         if (player.isShiftKeyDown() && !player.getMainHandItem().isEmpty()) return;
@@ -90,13 +83,7 @@ public final class MarketAccess {
         if (itemIds == null) itemIds = parse(MarketConfig.TERMINAL_ITEMS.get());
         if (itemIds.isEmpty()) return;
 
-        tryTerminalItem(event, player, event.getItemStack());
-    }
-
-    /** Shared by both interaction events, so the laptop behaves the same either way. */
-    private static void tryTerminalItem(PlayerInteractEvent event, ServerPlayer player, ItemStack stack) {
-        if (itemIds == null) itemIds = parse(MarketConfig.TERMINAL_ITEMS.get());
-        if (itemIds.isEmpty() || stack.isEmpty()) return;
+        ItemStack stack = event.getItemStack();
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (id == null || !itemIds.contains(id)) return;
 

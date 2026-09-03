@@ -45,7 +45,14 @@ public final class MarketPrices {
 
     /**
      * The price-table key for a stack. TACZ guns and ammo get synthetic keys derived from
-     * their NBT id; everything else is its registry name.
+     * their NBT id, NBT-variant items (LesRaisins Tactical and anything else listed in
+     * market.nbtVariantItems) get "&lt;item id&gt;/&lt;variant id&gt;", and everything else
+     * is its registry name.
+     *
+     * There was briefly a second, reflective path for LesRaisins alongside NbtVariants. It
+     * produced identical keys, so it was pure duplication with a real hazard: two mechanisms
+     * deciding the same thing drift apart the moment one is edited. NbtVariants is the one
+     * that stayed, because it is config-driven and covers the next mod built this way too.
      */
     public static String keyOf(ItemStack stack) {
         if (stack.isEmpty()) return "";
@@ -56,8 +63,6 @@ public final class MarketPrices {
         String variant = NbtVariants.keyOf(stack);
         if (variant != null) return variant;
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
-        String lr = LrTacticalCompat.keyOf(stack, id).orElse(null);
-        if (lr != null) return lr;
         return id == null ? "" : id.toString();
     }
 
@@ -81,13 +86,6 @@ public final class MarketPrices {
             ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:ammo/".length()));
             Integer price = id == null ? null : TaczMarketCompat.priceOfAmmo(id);
             return price == null ? MarketConfig.TACZ_AMMO_PRICE.get() : price;
-        }
-
-        if (key.startsWith(LrTacticalCompat.MOD_ID + ":")) {
-            // A LesRaisins entry with no row of its own. Consumables declare food properties,
-            // so those still derive; a grenade declares nothing useful, hence the flat floor.
-            int derived = DerivedPrices.valueOf(stack);
-            return derived > 0 ? derived : MarketConfig.LR_DEFAULT_PRICE.get();
         }
 
         // Nothing explicit and not a TACZ item: fall back to the item's own stats, so a pack
