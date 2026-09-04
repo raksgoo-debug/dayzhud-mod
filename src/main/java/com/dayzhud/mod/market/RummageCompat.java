@@ -136,15 +136,41 @@ public final class RummageCompat {
      * Captures the slot/target map for a menu the moment it opens, and logs it once per
      * distinct menu shape so the log does not fill up with repeats.
      */
-    public static void capture(net.minecraft.world.inventory.AbstractContainerMenu menu,
-                               Player player) {
-        if (!isModLoaded() || menu == null || player == null) return;
+    public static boolean capture(net.minecraft.world.inventory.AbstractContainerMenu menu,
+                                  Player player) {
+        if (!isModLoaded() || menu == null || player == null) return false;
         List<String> lines = describe(menu, player);
         SNAPSHOTS.put(player.getUUID(), lines);
         String key = menu.getClass().getName() + ":" + menu.slots.size();
         if (LOGGED.add(key)) {
             for (String line : lines) DayzHudMod.LOGGER.info("[rummage] {}", line);
         }
+        return resolvesAnyTarget(menu, player);
+    }
+
+    /**
+     * Whether ANY slot in this menu resolves a Rummage target.
+     *
+     * This is the question that decides whether clearing the client's mask is safe. Rummage
+     * skips its state packet when its recomputed bitset is empty, so:
+     *
+     *   targets exist  -> Rummage sends a correct bitset that overwrites the stale one, and
+     *                     clearing afterwards would destroy the CORRECT mask.
+     *   no targets     -> Rummage sends nothing, the stale bitset survives, and clearing is
+     *                     the only way to get rid of it.
+     *
+     * Clearing unconditionally was wrong in exactly the case that matters.
+     */
+    public static boolean resolvesAnyTarget(
+            net.minecraft.world.inventory.AbstractContainerMenu menu, Player player) {
+        if (!isModLoaded() || !resolve() || getTargetForSlot == null || menu == null) return false;
+        for (net.minecraft.world.inventory.Slot slot : menu.slots) {
+            try {
+                if (getTargetForSlot.invoke(null, slot, menu) != null) return true;
+            } catch (Throwable ignored) {
+            }
+        }
+        return false;
     }
 
     /** The last captured snapshot for this player, for /market rummage to print. */
