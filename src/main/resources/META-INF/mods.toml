@@ -89,3 +89,21 @@ description='''${mod_description}'''
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+# Soft dependency: TaCZ Magazines. Empty magazines are stocked and priced by capacity.
+# Reflective, like every other integration here.
+[[dependencies.${mod_id}]]
+    modId="taczmagazines"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: Rummage. Container merging stands down until a container has been
+# searched, so Rummage's own searching screen is left intact.
+[[dependencies.${mod_id}]]
+    modId="rummage"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

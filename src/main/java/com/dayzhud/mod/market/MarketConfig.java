@@ -33,6 +33,11 @@ public final class MarketConfig {
 
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> AMMO_BOXES;
 
+    public static final ForgeConfigSpec.BooleanValue MAGAZINES_STOCK;
+    public static final ForgeConfigSpec.IntValue MAGAZINE_BASE_PRICE;
+    public static final ForgeConfigSpec.IntValue MAGAZINE_PER_ROUND;
+    public static final ForgeConfigSpec.BooleanValue RESPECT_RUMMAGE;
+
     public static final ForgeConfigSpec.BooleanValue TACZ_ENABLED;
     public static final ForgeConfigSpec.BooleanValue TACZ_SELL_GUNS;
     public static final ForgeConfigSpec.BooleanValue TACZ_STOCK_GUNS;
@@ -119,6 +124,12 @@ public final class MarketConfig {
         SAFE_ZONE_FEEDBACK = b.comment(
                         "Tell a player when they enter or leave a safe zone.")
                 .define("safeZoneMessages", true);
+        RESPECT_RUMMAGE = b.comment(
+                        "With Rummage installed, leave a container's own screen alone until the",
+                        "player has searched it, instead of merging it into the inventory view.",
+                        "The items stay hidden either way - what merging would remove is the",
+                        "searching interaction itself.")
+                .define("respectRummage", true);
         BLOCK_REQUIRES_SAFE_ZONE = b.comment(
                         "Require a terminal BLOCK to also stand inside a registered safe zone.",
                         "Off by default: a terminal you had to place and build around already is",
@@ -146,6 +157,14 @@ public final class MarketConfig {
                 "tarkovdayz:ammobox_762=tacz:762x39,30",
                 "tarkovdayz:ammobox_308=tacz:308,20"
         ), o -> o instanceof String);
+        b.pop();
+
+        b.push("magazines");
+        b.comment("Empty magazines from TaCZ: Magazines. Priced by capacity - a magazine is",
+                "a container, so what it holds is what it is worth.");
+        MAGAZINES_STOCK = b.define("stock", true);
+        MAGAZINE_BASE_PRICE = b.defineInRange("basePrice", 1200, 0, 1000000);
+        MAGAZINE_PER_ROUND = b.defineInRange("pricePerRound", 90, 0, 100000);
         b.pop();
 
         b.push("tacz");

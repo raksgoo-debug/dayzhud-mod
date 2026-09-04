@@ -27,6 +27,7 @@ public final class MarketCatalog {
     public static final String CAT_AMMO = "ammo";
     public static final String CAT_ARMOR = "armor";
     public static final String CAT_ATTACHMENTS = "attachments";
+    public static final String CAT_MAGAZINES = "magazines";
 
     /**
      * Display order for category tabs. Shared with the screen so the sidebar puts what a
@@ -34,7 +35,7 @@ public final class MarketCatalog {
      * alphabetically rather than disappearing.
      */
     public static final List<String> CATEGORY_ORDER = List.of(
-            CAT_FIREARMS, CAT_AMMO, CAT_ATTACHMENTS, CAT_ARMOR, "gear", "tactical", "meds", "provisions",
+            CAT_FIREARMS, CAT_AMMO, CAT_MAGAZINES, CAT_ATTACHMENTS, CAT_ARMOR, "gear", "tactical", "meds", "provisions",
             "supplies", "materials", "weapons", "electronics", "valuables", "misc");
 
     /**
@@ -46,6 +47,7 @@ public final class MarketCatalog {
             "helmets", "body armor", "legs", "boots",
             "pistols", "smgs", "rifles", "marksman", "shotguns", "machine guns", "launchers",
             "optics", "muzzle", "grips", "stocks", "extended",
+            "small", "standard", "extended mags", "drums",
             "backpacks", "rigs", "masks", "eyewear", "headwear", "uniforms", "gloves",
             "grenades", "explosives", "shields",
             "kits", "pills", "injectors", "bandages");
@@ -171,6 +173,21 @@ public final class MarketCatalog {
             }
         }
 
+        int magazines = 0;
+        if (MagazineCompat.isActive() && MarketConfig.MAGAZINES_STOCK.get()) {
+            for (String family : MagazineCompat.families()) {
+                ItemStack stack = MagazineCompat.makeEmpty(family);
+                if (stack.isEmpty()) continue;
+                MarketPrices.Entry override =
+                        MarketPrices.all().get(MagazineCompat.KEY_PREFIX + family);
+                int unit = override != null ? override.value() : MagazineCompat.priceOf(stack);
+                if (unit <= 0) continue;
+                out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_MAGAZINES,
+                        magazineSection(MagazineCompat.capacityOf(stack))));
+                magazines++;
+            }
+        }
+
         armour = addDerivedArmour(out);
 
         out.sort((a, b) -> {
@@ -186,8 +203,9 @@ public final class MarketCatalog {
         // "the shop has X and the UI is not showing it", and that ambiguity has already cost
         // one round of guessing.
         DayzHudMod.LOGGER.info("Market catalogue rebuilt: {} offers ({} listed, {} guns, "
-                        + "{} ammo, {} attachments, {} derived armour) in categories {}",
-                out.size(), listed, guns, ammo, attachments, armour, categoriesOf(out));
+                        + "{} ammo, {} attachments, {} magazines, {} derived armour) in "
+                        + "categories {}",
+                out.size(), listed, guns, ammo, attachments, magazines, armour, categoriesOf(out));
         return Collections.unmodifiableList(out);
     }
 
@@ -249,6 +267,15 @@ public final class MarketCatalog {
         };
     }
 
+    /** Magazine sections by capacity, so a drum is not filed next to a pistol mag. */
+    private static String magazineSection(int capacity) {
+        if (capacity <= 0) return "";
+        if (capacity <= 12) return "small";
+        if (capacity <= 35) return "standard";
+        if (capacity <= 60) return "extended mags";
+        return "drums";
+    }
+
     private static String armourSection(ArmorItem item) {
         return switch (item.getEquipmentSlot()) {
             case HEAD -> "helmets";
@@ -260,6 +287,7 @@ public final class MarketCatalog {
     }
 
     static ItemStack stackFor(String key, int count) {
+        if (key.startsWith(MagazineCompat.KEY_PREFIX)) return MagazineCompat.makeFor(key);
         if (key.startsWith("tacz:gun/")) {
             ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:gun/".length()));
             return id == null ? ItemStack.EMPTY : TaczMarketCompat.makeGun(id);

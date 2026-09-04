@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.market.RummageCompat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -117,6 +118,11 @@ public class ContainerOpenRedirect {
         if (!isSimpleStorage(menu)) return;
 
         Container backing = findBackingContainer(menu, serverPlayer);
+
+        // Rummage hides a container until it has been searched. The masking follows our slots,
+        // but the searching interaction belongs to Rummage's own screen - merging would keep
+        // the items hidden and remove the way to reveal them. Stand down until it is searched.
+        if (RummageCompat.needsSearching(backing, serverPlayer)) return;
         if (backing == null || backing.getContainerSize() == 0) return;
 
         Component title = containerName(backing);

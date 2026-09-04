@@ -60,6 +60,8 @@ public final class MarketPrices {
         if (gun != null) return "tacz:gun/" + gun;
         ResourceLocation ammo = TaczMarketCompat.ammoIdOf(stack).orElse(null);
         if (ammo != null) return "tacz:ammo/" + ammo;
+        String magazine = MagazineCompat.keyOf(stack);
+        if (magazine != null) return magazine;
         String variant = NbtVariants.keyOf(stack);
         if (variant != null) return variant;
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
@@ -86,6 +88,11 @@ public final class MarketPrices {
             ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:ammo/".length()));
             Integer price = id == null ? null : TaczMarketCompat.priceOfAmmo(id);
             return price == null ? MarketConfig.TACZ_AMMO_PRICE.get() : price;
+        }
+
+        if (key.startsWith(MagazineCompat.KEY_PREFIX)) {
+            int price = MagazineCompat.priceOf(stack);
+            if (price > 0) return price;
         }
 
         // Nothing explicit and not a TACZ item: fall back to the item's own stats, so a pack

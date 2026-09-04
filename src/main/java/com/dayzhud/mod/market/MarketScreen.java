@@ -63,6 +63,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     private String sub = "";
     private int scroll;
     private int sidebarScroll;
+    private int detailScroll;
     private int selected = -1;
     private int quantity = 1;
     private List<Integer> filtered = new ArrayList<>();
@@ -178,6 +179,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
         scroll = Math.max(0, Math.min(scroll, Math.max(0, filtered.size() - visibleRows)));
         if (!filtered.contains(selected)) selected = filtered.isEmpty() ? -1 : filtered.get(0);
+        detailScroll = 0;
     }
 
     /**
@@ -459,6 +461,31 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         return contentY + contentH - 20;
     }
 
+    private static final int STAT_ROW_H = 11;
+
+    private int statTop() {
+        return contentY + 74;
+    }
+
+    private int statRegionHeight() {
+        return Math.max(STAT_ROW_H, (qtyRowY() - 16) - statTop());
+    }
+
+    /**
+     * Small text, drawn at 0.75 scale.
+     *
+     * The stat block needs roughly twice the rows the panel has at full size, and shrinking
+     * the text is cheaper than shrinking the panel. Values are right-aligned, so the scale
+     * has to be applied before the width is measured or the alignment drifts.
+     */
+    private void small(GuiGraphics g, String text, int x, int y, int colour, boolean rightAlign) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(0.75f, 0.75f, 1f);
+        g.drawString(font, text, rightAlign ? -font.width(text) : 0, 0, colour, false);
+        g.pose().popPose();
+    }
+
     private void drawBuyDetails(GuiGraphics g, int mouseX, int mouseY) {
         StyledTheme.header(g, font, "ITEM DETAILS", detailX + 6, contentY + 5, detailW - 12);
         MarketOffer offer = selectedOffer();
@@ -469,13 +496,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         }
         ItemStack stack = offer.prototype();
 
+        // 2x rather than 3x: the preview was eating the room the stats need, and at 32px an
+        // item icon is already perfectly readable.
         g.pose().pushPose();
-        g.pose().translate(detailX + detailW / 2f - 24, contentY + 20, 0);
-        g.pose().scale(3f, 3f, 1f);
+        g.pose().translate(detailX + detailW / 2f - 16, contentY + 14, 0);
+        g.pose().scale(2f, 2f, 1f);
         g.renderItem(stack, 0, 0);
         g.pose().popPose();
 
-        int y = contentY + 76;
+        int y = contentY + 50;
         for (String line : wrap(stack.getHoverName().getString(), detailW - 16, 2)) {
             g.drawString(font, line, detailX + 8, y, StyledTheme.TEXT_COLOR, false);
             y += 10;
@@ -483,33 +512,37 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         StyledTheme.caption(g, font, offer.sub().isEmpty()
                 ? offer.category().toUpperCase(Locale.ROOT)
                 : (offer.category() + " / " + offer.sub()).toUpperCase(Locale.ROOT),
-                detailX + 8, y + 3);
-        y += 14;
+                detailX + 8, statTop() - 8);
 
-        // Stat block. Bars only where there is an honest ceiling to measure against - see
-        // ItemStatCard. Clipped to the space above the price row so a gun with many stats
-        // cannot run over the buttons.
-        int statTop = y;
-        int statBottom = qtyRowY() - 26;
         List<ItemStatCard.Stat> stats = ItemStatCard.forStack(stack);
-        g.enableScissor(detailX, statTop, detailX + detailW, Math.max(statTop, statBottom));
-        for (ItemStatCard.Stat stat : stats) {
-            if (y > statBottom) break;
-            StyledTheme.caption(g, font, stat.label(), detailX + 8, y + 2);
-            String value = stat.value();
-            g.drawString(font, value, detailX + detailW - 8 - font.width(value), y,
-                    StyledTheme.TEXT_COLOR, false);
+        int regionTop = statTop();
+        int regionH = statRegionHeight();
+        int fits = Math.max(1, regionH / STAT_ROW_H);
+        detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, stats.size() - fits)));
+
+        g.enableScissor(detailX, regionTop, detailX + detailW, regionTop + regionH);
+        int sy = regionTop;
+        for (int i = detailScroll; i < Math.min(stats.size(), detailScroll + fits); i++) {
+            ItemStatCard.Stat stat = stats.get(i);
+            small(g, stat.label(), detailX + 8, sy + 1, StyledTheme.LABEL_DIM, false);
+            small(g, stat.value(), detailX + detailW - 8, sy + 1, StyledTheme.TEXT_COLOR, true);
             if (stat.bar() >= 0f) {
                 int bx = detailX + 8;
                 int bw2 = detailW - 16;
-                g.fill(bx, y + 9, bx + bw2, y + 10, StyledTheme.SLOT_BG);
-                g.fill(bx, y + 9, bx + (int) (bw2 * stat.bar()), y + 10, StyledTheme.ACCENT);
-                y += 13;
-            } else {
-                y += 11;
+                g.fill(bx, sy + 9, bx + bw2, sy + 10, StyledTheme.SLOT_BG);
+                g.fill(bx, sy + 9, bx + (int) (bw2 * stat.bar()), sy + 10, StyledTheme.ACCENT);
             }
+            sy += STAT_ROW_H;
         }
         g.disableScissor();
+
+        // A cut-off list with no indication it continues is what made the old panel look
+        // broken, so say so.
+        if (stats.size() > fits) {
+            StyledTheme.caption(g, font,
+                    (detailScroll + fits) + "/" + stats.size() + " - SCROLL",
+                    detailX + detailW - 46, regionTop + regionH + 1);
+        }
 
         long total = offer.price() * quantity;
         String price = Money.withSymbol(total);
@@ -710,6 +743,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         int row = rowAt(mouseX, mouseY);
         if (row >= 0) {
             selected = filtered.get(row);
+            detailScroll = 0;
             return true;
         }
 
@@ -746,6 +780,16 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (!sellTab && inBox(mouseX, mouseY, sidebarX, contentY, sidebarW, contentH)) {
             int max = Math.max(0, sidebarRows().size() - sidebarRowsVisible);
             sidebarScroll = Math.max(0, Math.min(max, sidebarScroll - (int) Math.signum(delta)));
+            return true;
+        }
+        if (!sellTab && inBox(mouseX, mouseY, detailX, contentY, detailW, contentH)) {
+            // The stat block is longer than the column for most guns, so the panel scrolls
+            // rather than silently cutting stats off - which is what it did before.
+            int rows = ItemStatCard.forStack(selectedOffer() == null
+                    ? ItemStack.EMPTY : selectedOffer().prototype()).size();
+            int fits = Math.max(1, statRegionHeight() / STAT_ROW_H);
+            detailScroll = Math.max(0, Math.min(Math.max(0, rows - fits),
+                    detailScroll - (int) Math.signum(delta)));
             return true;
         }
         if (!sellTab && inBox(mouseX, mouseY, listX, contentY, listW + 10, contentH)) {
