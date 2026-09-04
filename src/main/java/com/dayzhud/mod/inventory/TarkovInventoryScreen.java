@@ -80,7 +80,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      */
     private boolean openSoundPlayed = false;
 
-    @Override
+    /** Countdown to sampling the client's Rummage mask after the screen opens. */
     private int rummageLogTicks = -1;
 
     @Override
@@ -89,8 +89,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // Sample the client's Rummage mask a second after opening, once every packet from the
         // menu swap has landed. Reading it in init() would be too early to mean anything.
         rummageLogTicks = 20;
-        // Drop any slot mask left over from the menu we replaced - Rummage will not send a
-        // clearing packet when its recomputed set is empty. See RummageCompat.clearClientMask.
         // Centre on the FULL layout width (inventory + container) even when no container is
         // open, so the loadout panel sits in exactly the same spot either way and the UI
         // doesn't jump sideways as you open and close chests.
