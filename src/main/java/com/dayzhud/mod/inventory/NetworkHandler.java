@@ -6,7 +6,6 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import com.dayzhud.mod.market.MarketPackets;
-import com.dayzhud.mod.search.SearchPackets;
 import com.dayzhud.mod.search.SearchNetwork;
 import com.dayzhud.mod.skill.SkillStatePacket;
 import com.dayzhud.mod.skill.SpendSkillPacket;

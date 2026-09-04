@@ -1,41 +1,43 @@
-# dayzhud 2.1.0 - the backpack is searched too
+# dayzhud 2.1.1 - build fix
 
-**Complete.** 52 files. Unzip over the repo root.
-**Delete `src/main/java/com/dayzhud/mod/market/RummageCompat.java`** if you have not already,
-and remove Rummage from the pack.
+**Complete.** 52 files. Unzip over the repo root, and see `DELETE.txt`.
 
-## Answer to the question: it was not, and now it is
+## What broke - three leftovers from swapping the search implementations
 
-Until this build the corpse's worn backpack was one gate - hidden entirely, then the whole
-pack popped open the moment the body was done. That skipped the search on the half of the
-loot most worth finding.
+1. `NetworkHandler` still imported and registered `SearchPackets`, from the duplicate search
+   system I deleted two builds ago.
+2. `SearchConfig` lost `SEARCH_CORPSES` and `SEARCH_CONTAINERS` when I replaced my version
+   with the wired one, but both redirects were already calling them.
+3. `DayzHudMod` registered `SearchConfig.SPEC` **twice** - the same config file registered
+   twice would have thrown at load even after it compiled.
 
-Bag slots are now revealed one at a time like everything else, continuing straight on from
-the body: pockets, then the pack.
+All three are the same root cause: I kept the interrupted turn's implementation and deleted
+mine, and did not sweep for references to the half I removed.
 
-## How, without a second progress store
+## Why the checks missed all three
 
-Bag slots live in the **same BitSet** as the corpse's, at an offset past the container's size -
-bag slot n is bit (containerSize + n). A BitSet has no fixed length, so this costs nothing,
-keeps one record per corpse per player, and makes the ordering fall out of the numbering
-instead of needing a separate gate.
+The first-party symbol scan matched symbol NAMES against a hand-written list of prefixes -
+`Market|Wallet|Tacz|...` - which never included `Search`. A brand-new package was invisible
+to it. Then two deeper problems: a name-based list cannot see a reference to a **deleted**
+class, because the name is by definition no longer in the tree; and it never looked at
+unresolved **constants** at all, which is what `SEARCH_CORPSES` is.
 
-Masking happens on the slot rather than in a wrapper, because the bag is an `IItemHandler`
-and there is nothing for the menu to read through. `CorpseLootSlot.getItem` returns empty for
-an unsearched slot, and `broadcastChanges` reads `getItem()` - so the item is never sent to
-the client at all. `mayPickup` is overridden too, so a hidden slot cannot be taken from.
+It now keys on javac's own `location:` line instead. `location: package com.dayzhud.mod.search`
+or `location: class SearchConfig` means javac searched *our* package or *our* class and came
+up empty - which is conclusive regardless of what Minecraft types are missing. Filtering out
+absent MC imports needed two rules worth stating: a missing class only counts when the location
+is one of our packages, and a missing "variable" only counts when it is SCREAMING_CASE, because
+an unresolved Minecraft class used statically (`Commands.literal`) is reported as a missing
+variable named after the class.
 
-## One thing that needed care
+Confirmed against the shipped 2.1.0 tree - it now reports exactly the three CI errors:
 
-The corpse loot list scrolls, so which visible slot maps to which bag slot changes without
-anything being revealed. The hatch mask is now resent whenever it differs from the last one
-sent - one packet per actual change, not one per tick, and scrolling is covered without a
-special case.
+    class SearchPackets missing from com.dayzhud.mod.search
+    variable SEARCH_CONTAINERS missing from SearchConfig
+    variable SEARCH_CORPSES missing from SearchConfig
+
+Nine checks now, verdict line last.
 
 ## Verification
 
-`RESULT: PASS (7 checks)` against the extracted zip.
-
-The duplicate-block detector caught a real bug during this change: refactoring `sendMask` left
-the old inline copy of the mask computation beside the new `maskFor`. That is the check added
-after four CI failures from exactly this, doing its job on the first change since.
+`RESULT: PASS (9 checks)` against the extracted zip.

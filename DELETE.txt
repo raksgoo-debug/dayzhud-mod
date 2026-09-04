@@ -1,0 +1,8 @@
+Files to delete from the repo before building. A delta zip contains new and changed files
+only, so a removal can never appear in one.
+
+    src/main/java/com/dayzhud/mod/market/RummageCompat.java
+
+Also, outside the repo:
+    config/dayzhud-common.toml     (respectRummage was removed; Forge will not rewrite it)
+    mods/Rummage-*.jar             (no longer used or expected)

@@ -19,6 +19,8 @@ public final class SearchConfig {
     public static final ForgeConfigSpec.BooleanValue ENABLED;
     public static final ForgeConfigSpec.IntValue TICKS_PER_SLOT;
     public static final ForgeConfigSpec.IntValue INITIAL_DELAY_TICKS;
+    public static final ForgeConfigSpec.BooleanValue SEARCH_CORPSES;
+    public static final ForgeConfigSpec.BooleanValue SEARCH_CONTAINERS;
     public static final ForgeConfigSpec.BooleanValue SOUNDS;
     public static final ForgeConfigSpec.DoubleValue SOUND_VOLUME;
 
@@ -33,6 +35,10 @@ public final class SearchConfig {
                 .defineInRange("initialDelayTicks", 10, 0, 200);
         TICKS_PER_SLOT = b.comment("Ticks between one revealed slot and the next.")
                 .defineInRange("ticksPerSlot", 12, 1, 200);
+        SEARCH_CORPSES = b.comment("Search corpses before their contents are visible.")
+                .define("corpses", true);
+        SEARCH_CONTAINERS = b.comment("Search chests and other block containers as well.")
+                .define("containers", true);
         SOUNDS = b.define("sounds", true);
         SOUND_VOLUME = b.defineInRange("soundVolume", 0.35D, 0.0D, 1.0D);
         b.pop();
