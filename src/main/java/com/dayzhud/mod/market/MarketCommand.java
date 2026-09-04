@@ -67,8 +67,6 @@ public final class MarketCommand {
                         }))
                 .then(Commands.literal("debug").requires(s -> s.hasPermission(2))
                         .executes(ctx -> debug(ctx.getSource())))
-                .then(Commands.literal("rummage").requires(s -> s.hasPermission(2))
-                        .executes(ctx -> rummage(ctx.getSource())))
                 .then(Commands.literal("zone").requires(s -> s.hasPermission(2))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("name", StringArgumentType.word())
@@ -97,16 +95,6 @@ public final class MarketCommand {
         }
         for (String line : TaczMarketCompat.debugReport()) {
             source.sendSuccess(() -> Component.literal("  " + line), false);
-        }
-        return 1;
-    }
-
-    /** Dumps Rummage's view of the menu the player currently has open. */
-    private static int rummage(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
-        ServerPlayer player = source.getPlayerOrException();
-        // The LAST captured menu, not the live one: typing this command closed the screen.
-        for (String line : RummageCompat.lastSnapshot(player)) {
-            source.sendSuccess(() -> Component.literal(line), false);
         }
         return 1;
     }

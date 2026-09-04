@@ -36,7 +36,6 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.BooleanValue MAGAZINES_STOCK;
     public static final ForgeConfigSpec.IntValue MAGAZINE_BASE_PRICE;
     public static final ForgeConfigSpec.IntValue MAGAZINE_PER_ROUND;
-    public static final ForgeConfigSpec.BooleanValue RESPECT_RUMMAGE;
 
     public static final ForgeConfigSpec.BooleanValue TACZ_ENABLED;
     public static final ForgeConfigSpec.BooleanValue TACZ_SELL_GUNS;
@@ -124,13 +123,6 @@ public final class MarketConfig {
         SAFE_ZONE_FEEDBACK = b.comment(
                         "Tell a player when they enter or leave a safe zone.")
                 .define("safeZoneMessages", true);
-        RESPECT_RUMMAGE = b.comment(
-                        "With Rummage installed, leave a container's own screen alone until the",
-                        "player has searched it, instead of merging it into the inventory view.",
-                        "OFF by default: searching works inside the merged view, because a plain",
-                        "Slot on a rummageable container resolves a Rummage target whatever menu",
-                        "it sits in. This is only a fallback if some container misbehaves.")
-                .define("respectRummage", false);
         BLOCK_REQUIRES_SAFE_ZONE = b.comment(
                         "Require a terminal BLOCK to also stand inside a registered safe zone.",
                         "Off by default: a terminal you had to place and build around already is",

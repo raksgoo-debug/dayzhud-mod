@@ -1,7 +1,6 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
-import com.dayzhud.mod.market.RummageCompat;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -119,16 +118,18 @@ public class ContainerOpenRedirect {
 
         Container backing = findBackingContainer(menu, serverPlayer);
 
-        // Rummage hides a container until it has been searched. The masking follows our slots,
-        // but the searching interaction belongs to Rummage's own screen - merging would keep
-        // the items hidden and remove the way to reveal them. Stand down until it is searched.
-        if (RummageCompat.needsSearching(backing, serverPlayer)) return;
         if (backing == null || backing.getContainerSize() == 0) return;
 
         Component title = containerName(backing);
 
         REDIRECTING.add(serverPlayer);
         try {
+            // Hide unsearched loot in the CONTAINER, not on the client: the server then
+            // never sends the item at all, so nothing can be read out of the packet stream.
+            Container searchable = com.dayzhud.mod.search.SearchConfig.ENABLED.get()
+                    && com.dayzhud.mod.search.SearchConfig.SEARCH_CONTAINERS.get()
+                    ? new com.dayzhud.mod.search.SearchedContainer(backing, serverPlayer)
+                    : backing;
             NetworkHooks.openScreen(serverPlayer, new MenuProvider() {
                 @Override
                 public Component getDisplayName() {
@@ -137,7 +138,7 @@ public class ContainerOpenRedirect {
 
                 @Override
                 public AbstractContainerMenu createMenu(int windowId, Inventory inv, Player p) {
-                    return new TarkovInventoryMenu(windowId, inv, backing);
+                    return new TarkovInventoryMenu(windowId, inv, searchable);
                 }
             }, buf -> {
                 // Payload order is fixed by TarkovMenuTypes - see its class notes.
@@ -150,13 +151,13 @@ public class ContainerOpenRedirect {
                     + "leaving the vanilla screen in place.", e);
         } finally {
             REDIRECTING.remove(serverPlayer);
-            // Snapshot Rummage's view of the menu we just opened. Taken here because the
-            // command form cannot see it - opening chat closes the container first.
-            RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
-            // Send the mask this menu should have. Rummage never sends one for the replacement
-            // menu, so without this the client keeps the bitset from the menu we swapped out -
-            // which is why the corpse's slots read onto the player's own equipment.
-            com.dayzhud.mod.market.MarketNetwork.syncRummageMask(serverPlayer);
+            // Guarded: this runs in a finally, so if the redirect above threw, the player is
+            // still on the original screen and an unchecked cast here would replace the real
+            // failure with a ClassCastException from the cleanup path.
+            if (serverPlayer.containerMenu instanceof TarkovInventoryMenu merged) {
+                com.dayzhud.mod.search.SearchHandler.beginSearch(serverPlayer);
+                com.dayzhud.mod.search.SearchNetwork.sendMask(serverPlayer, merged);
+            }
         }
     }
 

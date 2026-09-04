@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
-import com.dayzhud.mod.market.RummageCompat;
+import com.dayzhud.mod.search.SearchProgress;
+import com.dayzhud.mod.search.SearchedContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -165,7 +166,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private final DataSlot corpseBagSlots = DataSlot.standalone();
 
 
-    /** The corpse container this menu was opened over, kept for the Rummage gate below. */
+    /** The corpse container this menu was opened over, kept for the backpack gate below. */
     private Container corpseContainer;
     public final ScrollingBackpackView backpackView;
 
@@ -173,6 +174,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private final int backpackStartIndex;
     private final int craftStartIndex;
     private final int containerStartIndex;
+
+    /**
+     * The loot container behind this menu, when it is one that has to be searched.
+     *
+     * Held as the SearchedContainer's delegate rather than the wrapper: search progress is
+     * keyed on the real container so it survives the wrapper being rebuilt each time the
+     * screen is opened.
+     */
+    private Container searchedContainer;
 
     /**
      * Backpack slot count, computed server-side and synced. The client can't work this out
@@ -295,6 +305,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // --- Opened container, laid out to the right of everything else ---
         this.containerStartIndex = slots.size();
+        if (container instanceof com.dayzhud.mod.search.SearchedContainer searched) {
+            this.searchedContainer = searched.delegate();
+        }
         if (container != null) {
             if (isCorpse()) {
                 addCorpseSlots(container);
@@ -376,6 +389,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     }
 
     /** True when the corpse is wearing a bag we can look inside. */
+    /** The container being searched, or null when this menu has nothing to search. */
+    public Container searchedContainer() {
+        return searchedContainer;
+    }
+
+    /** Menu index of the first slot belonging to the searched container. */
+    public int searchedMenuOffset() {
+        return containerStartIndex;
+    }
+
     public boolean corpseHasBackpack() {
         return corpseLoot != null && corpseLoot.bagSlots() > 0;
     }
@@ -393,7 +416,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean isActive() {
-            // The bag is behind the body. Rummage cannot mask these slots itself - they are
+            // The bag is behind the body. The search cannot mask these slots itself - they are
             // SlotItemHandler over this mod's own view, and its getWrappedTarget only unwraps
             // Forge's InvWrapper and SidedInvWrapper - so instead of leaving the backpack
             // permanently exposed, it stays shut until the corpse has been searched. That is
@@ -417,17 +440,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             if (corpseLoot != null) {
                 // The corpse's worn bag stays shut until the body itself has been searched.
                 //
-                // This is also the only way the bag can participate in Rummage at all: its
-                // slots are SlotItemHandler over an IItemHandler, and Rummage resolves a
+                // This is also the only way the bag can participate in the search at all: its
+                // slots are SlotItemHandler over an IItemHandler, and slot masking resolves a
                 // target from a Slot's CONTAINER - unwrapping only Forge's InvWrapper and
                 // SidedInvWrapper. An arbitrary item-handler bag can never be masked, so
                 // gating the whole section behind the body's own search is the honest
                 // equivalent: search the corpse, then its pack opens up.
                 //
                 // Sent through the existing corpseBagSlots DataSlot, so the client hides the
-                // slots without needing to know anything about Rummage.
-                boolean locked = RummageCompat.gates(corpseContainer)
-                        && !RummageCompat.isFullyRummaged(corpseContainer, player);
+                // slots without needing any per-slot masking of their own.
+                // The bag stays shut until the body itself has been searched - pockets, then
+                // the pack. Asked of our own search, so this no longer depends on another mod
+                // being installed to behave sensibly.
+                boolean locked = corpseContainer instanceof SearchedContainer searched
+                        && SearchProgress.nextUnsearched(searched.delegate(), player) >= 0;
                 corpseBagSlots.set(locked ? 0 : corpseLoot.serverBagSlots());
             }
         }

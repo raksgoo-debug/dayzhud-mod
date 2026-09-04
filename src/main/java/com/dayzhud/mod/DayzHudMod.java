@@ -4,6 +4,8 @@ import com.dayzhud.mod.client.ClientEvents;
 import com.dayzhud.mod.inventory.NetworkHandler;
 import com.dayzhud.mod.inventory.TarkovMenuTypes;
 import com.dayzhud.mod.market.MarketConfig;
+import com.dayzhud.mod.search.SearchConfig;
+import com.dayzhud.mod.search.SearchConfig;
 import com.dayzhud.mod.registry.ModCreativeTabs;
 import com.dayzhud.mod.registry.ModItems;
 import com.dayzhud.mod.sound.ModSounds;
@@ -37,6 +39,10 @@ public class DayzHudMod {
         // locally instead of asking the server for every tooltip.
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, MarketConfig.SPEC,
                 "dayzhud-common.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SearchConfig.SPEC,
+                "dayzhud-search.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SearchConfig.SPEC,
+                "dayzhud-search.toml");
         modEventBus.addListener(this::commonSetup);
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature

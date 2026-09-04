@@ -6,6 +6,8 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import com.dayzhud.mod.market.MarketPackets;
+import com.dayzhud.mod.search.SearchPackets;
+import com.dayzhud.mod.search.SearchNetwork;
 import com.dayzhud.mod.skill.SkillStatePacket;
 import com.dayzhud.mod.skill.SpendSkillPacket;
 
@@ -94,10 +96,11 @@ public class NetworkHandler {
                 MarketPackets.Withdraw::decode,
                 MarketPackets.Withdraw::handle);
 
+
         CHANNEL.registerMessage(packetId++,
-                MarketPackets.ClearRummageMask.class,
-                MarketPackets.ClearRummageMask::encode,
-                MarketPackets.ClearRummageMask::decode,
-                MarketPackets.ClearRummageMask::handle);
+                SearchNetwork.Packet.class,
+                SearchNetwork.Packet::encode,
+                SearchNetwork.Packet::decode,
+                SearchNetwork.Packet::handle);
     }
 }

@@ -1,7 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
-import com.dayzhud.mod.market.RummageCompat;
+import com.dayzhud.mod.search.ClientSearchState;
 import com.dayzhud.mod.client.UiSounds;
 import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
@@ -29,6 +29,11 @@ import java.util.Locale;
  * slots installed, inline labels overlap into unreadable mush.
  */
 public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInventoryMenu> {
+
+    /** Cover drawn over a slot that has not been searched yet. */
+    private static final int SEARCH_COVER_BG = 0xE0161616;
+    private static final int SEARCH_COVER_LINE = 0x40707070;
+
 
     private static final int PANEL_BG = 0xF0121212;
     private static final int PANEL_BORDER = 0xFF3A3A3A;
@@ -80,15 +85,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      */
     private boolean openSoundPlayed = false;
 
-    /** Countdown to sampling the client's Rummage mask after the screen opens. */
-    private int rummageLogTicks = -1;
-
     @Override
     protected void init() {
         super.init();
-        // Sample the client's Rummage mask a second after opening, once every packet from the
-        // menu swap has landed. Reading it in init() would be too early to mean anything.
-        rummageLogTicks = 20;
         // Centre on the FULL layout width (inventory + container) even when no container is
         // open, so the loadout panel sits in exactly the same spot either way and the UI
         // doesn't jump sideways as you open and close chests.
@@ -101,20 +100,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
     }
 
-    /**
-     * Samples the client's Rummage mask a second after opening, once every packet from the
-     * menu swap has landed. Reading it in init() would be too early to mean anything.
-     */
-    @Override
-    public void containerTick() {
-        super.containerTick();
-        if (rummageLogTicks > 0 && --rummageLogTicks == 0) {
-            RummageCompat.logClientMask(menu.slots.size());
-        }
-    }
 
     @Override
     public void removed() {
+        ClientSearchState.clear();
         super.removed();
         UiSounds.inventoryClose();
     }
@@ -189,6 +178,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
 
+        drawSearchCover(graphics);
         drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
         drawWeaponMirrors(graphics, mouseX, mouseY);
@@ -208,6 +198,39 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         renderTooltip(graphics, mouseX, mouseY);
         drawCurioHoverTooltip(graphics, mouseX, mouseY);
         drawWeaponHoverTooltip(graphics, mouseX, mouseY);
+    }
+
+    /**
+     * Hatches over every slot the player has not searched yet.
+     *
+     * The items themselves are already absent - SearchedContainer never sends them - so this
+     * is purely a signal that the slot is unknown rather than empty. Without it a body being
+     * searched looks like a body that is simply empty, and the two need to read differently.
+     *
+     * Indices come straight from the server against this same menu, so a slot's cover always
+     * lands on the slot it belongs to. That was the whole failure of the previous approach.
+     */
+    private void drawSearchCover(GuiGraphics graphics) {
+        if (!ClientSearchState.any()) return;
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot slot = menu.slots.get(i);
+            if (!slot.isActive() || !ClientSearchState.isMasked(i)) continue;
+
+            int x = leftPos + slot.x;
+            int y = topPos + slot.y;
+            graphics.fill(x, y, x + 16, y + 16, SEARCH_COVER_BG);
+            // Diagonal hatching, clipped to the slot. Drawn as short horizontal runs stepping
+            // down one pixel at a time, which is cheaper than a texture and keeps the look
+            // consistent with the rest of the flat-filled UI.
+            for (int d = -16; d < 16; d += 4) {
+                for (int step = 0; step < 16; step++) {
+                    int px = x + d + step;
+                    int py = y + step;
+                    if (px < x || px >= x + 16) continue;
+                    graphics.fill(px, py, px + 1, py + 1, SEARCH_COVER_LINE);
+                }
+            }
+        }
     }
 
     private void drawPaperdoll(GuiGraphics graphics) {
