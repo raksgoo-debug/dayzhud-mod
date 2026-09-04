@@ -1,33 +1,40 @@
-# dayzhud 1.10.1 - build fix
+# dayzhud 1.10.2 - the diagnostic now captures the right menu
 
-**Complete.** 46 files. Unzip over the repo root. Same contents as 1.10.0 with the compile
-error fixed - the deterministic mask-clear packet and `/market rummage` are both in here.
+**Complete.** 46 files. Unzip over the repo root.
 
-## What broke
+## The diagnostic was unusable and that was my mistake
 
-`RummageCompat.resolve()` had its last seven lines twice, so `util` and `target` were declared
-twice in one method. My patch matched and applied to a block that already contained the change.
+Your log shows it working exactly as written and telling us nothing:
 
-## Why my check did not catch it, again
+    [rummage] menu InventoryMenu, 46 slots
+    [rummage] NO slots resolve a target
 
-Same shape as the `STOCK_ARMOR` failure. `getTargetForSlot = util.getMethod("getTarget",
-Slot.class, AbstractContainerMenu.class)` names two Minecraft types that are not on the
-classpath here, so javac abandoned attribution of that method body before it ever reached the
-duplicate-declaration check. The file compiled clean locally and failed in CI on a plain
-scoping error.
+`InventoryMenu`, not the corpse. Typing `/market rummage` opens chat, which closes the
+container, so by the time the command ran `player.containerMenu` was already back to the
+player's own inventory. Both runs at 14:00:32 and 14:01:12 were before the corpse even
+opened at 14:01:41.
 
-That is now **three** CI failures in this session from one root cause: a text patch applied
-twice, hidden by missing Minecraft types. The duplicated `drawSidebar` body, the duplicated
-`isFullyRummagedForPlayer` field, and this.
+The snapshot is now taken **at redirect time**, in the same place the merged menu is opened,
+and stashed per player. `/market rummage` prints that snapshot instead of reading the live
+menu. It also logs itself once per distinct menu shape, so `latest.log` will have it whether
+or not you run the command.
 
-So the check no longer relies on the compiler noticing. It scans for the *shape* of the
-mistake instead: any run of six or more identical consecutive statements appearing twice in
-one file. Three lines was too noisy - `super(view, index, x, y);` and friends recur honestly -
-but at six it reports zero across the tree and would have caught all three of these. It runs
-against the extracted zip alongside the other checks.
+**What to do:** open a corpse, then either run `/market rummage` or just send me
+`latest.log` - the `[rummage]` lines will now describe the corpse menu.
+
+## Two other things your log settled
+
+**Magazines: no verdict yet, because you never opened the shop.** There is no "Market
+catalogue rebuilt" line in 12,845 lines, and that line is written every time the catalogue is
+built. The catalogue is built lazily on first market open, so it never ran. What the log does
+show is 56 `Discovered magazine family` entries, so TaCZ Magazines is populating its registry
+fine and the 1.9.1 fallback should stock them. Open the trader once and the rebuild line will
+say how many magazines went in.
+
+**The corpse redirect is firing.** `Opened the merged corpse view for Rakarts (43 slots, 2
+curios, from com.raiiiden.ragdollifiedpc.menu.CorpseMenu)`. So the merge itself is working and
+the question really is only about Rummage's targeting.
 
 ## Verification
 
-Six checks against the extracted zip, all clean: config definite-assignment via stub, removed
-classes, unresolved first-party classes, unresolved first-party methods, other errors, and
-duplicated blocks.
+Six checks against the extracted zip, all clean.

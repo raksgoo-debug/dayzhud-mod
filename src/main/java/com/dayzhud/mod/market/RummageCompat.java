@@ -35,6 +35,17 @@ public final class RummageCompat {
     private static Method isFullyRummagedForPlayer;
     private static Method getTargetForSlot;
     private static Method targetLocalSlotIndex;
+
+    /**
+     * Last snapshot taken when a merged menu opened, per player.
+     *
+     * The command version of this was useless: opening chat to type it closes the container,
+     * so player.containerMenu is already back to InventoryMenu by the time it runs. The
+     * snapshot has to be taken at redirect time and read back afterwards.
+     */
+    private static final java.util.Map<java.util.UUID, List<String>> SNAPSHOTS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Set<String> LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static boolean clientResolved;
     private static Method clearClientMask;
 
@@ -119,6 +130,32 @@ public final class RummageCompat {
                   + "client mask will persist"
                 : "menu indices Rummage will consider: " + masked);
         return out;
+    }
+
+    /**
+     * Captures the slot/target map for a menu the moment it opens, and logs it once per
+     * distinct menu shape so the log does not fill up with repeats.
+     */
+    public static void capture(net.minecraft.world.inventory.AbstractContainerMenu menu,
+                               Player player) {
+        if (!isModLoaded() || menu == null || player == null) return;
+        List<String> lines = describe(menu, player);
+        SNAPSHOTS.put(player.getUUID(), lines);
+        String key = menu.getClass().getName() + ":" + menu.slots.size();
+        if (LOGGED.add(key)) {
+            for (String line : lines) DayzHudMod.LOGGER.info("[rummage] {}", line);
+        }
+    }
+
+    /** The last captured snapshot for this player, for /market rummage to print. */
+    public static List<String> lastSnapshot(Player player) {
+        List<String> lines = SNAPSHOTS.get(player.getUUID());
+        if (lines == null || lines.isEmpty()) {
+            return List.of("No snapshot yet - open a corpse or container with the merged view "
+                    + "first, then run this. (Opening chat closes the screen, which is why "
+                    + "reading the live menu did not work.)");
+        }
+        return lines;
     }
 
     /**

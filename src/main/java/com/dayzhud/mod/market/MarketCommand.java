@@ -104,9 +104,9 @@ public final class MarketCommand {
     /** Dumps Rummage's view of the menu the player currently has open. */
     private static int rummage(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        for (String line : RummageCompat.describe(player.containerMenu, player)) {
+        // The LAST captured menu, not the live one: typing this command closed the screen.
+        for (String line : RummageCompat.lastSnapshot(player)) {
             source.sendSuccess(() -> Component.literal(line), false);
-            DayzHudMod.LOGGER.info("[rummage] {}", line);
         }
         return 1;
     }

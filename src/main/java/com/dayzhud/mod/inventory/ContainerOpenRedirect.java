@@ -153,9 +153,15 @@ public class ContainerOpenRedirect {
             // Drop whatever mask Rummage computed for the menu we just replaced; it does
             // not clear it itself. Sent after the open packet, so it cannot arrive first.
             com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
+            // Snapshot Rummage's view of the menu we just opened. Taken here because the
+            // command form cannot see it - opening chat closes the container first.
+            RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
             // Drop whatever mask Rummage computed for the menu we just replaced; it will not
             // clear it itself. Sent after the open packet, so it cannot arrive first.
             com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
+            // Snapshot Rummage's view of the menu we just opened. Taken here because the
+            // command form cannot see it - opening chat closes the container first.
+            RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
         }
     }
 
