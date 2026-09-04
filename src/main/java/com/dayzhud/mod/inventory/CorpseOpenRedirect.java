@@ -163,6 +163,12 @@ public class CorpseOpenRedirect {
                     + "leaving Ragdollified's screen in place.", e);
         } finally {
             REDIRECTING.remove(serverPlayer);
+            // Drop whatever mask Rummage computed for the menu we just replaced; it does
+            // not clear it itself. Sent after the open packet, so it cannot arrive first.
+            com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
+            // Drop whatever mask Rummage computed for the menu we just replaced; it will not
+            // clear it itself. Sent after the open packet, so it cannot arrive first.
+            com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
         }
     }
 

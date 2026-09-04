@@ -14,6 +14,12 @@ public final class MarketNetwork {
                 new MarketPackets.WalletSync(WalletCapability.balanceOf(player)));
     }
 
+    public static void clearRummageMask(ServerPlayer player) {
+        if (!RummageCompat.isModLoaded()) return;
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new MarketPackets.ClearRummageMask());
+    }
+
     public static void sendPrices(ServerPlayer player) {
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new MarketPackets.PricesSync(MarketPrices.all()));

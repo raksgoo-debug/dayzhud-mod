@@ -93,5 +93,11 @@ public class NetworkHandler {
                 MarketPackets.Withdraw::encode,
                 MarketPackets.Withdraw::decode,
                 MarketPackets.Withdraw::handle);
+
+        CHANNEL.registerMessage(packetId++,
+                MarketPackets.ClearRummageMask.class,
+                MarketPackets.ClearRummageMask::encode,
+                MarketPackets.ClearRummageMask::decode,
+                MarketPackets.ClearRummageMask::handle);
     }
 }

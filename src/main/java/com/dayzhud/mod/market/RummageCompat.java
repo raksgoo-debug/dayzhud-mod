@@ -6,6 +6,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Rummage compatibility: do not steal a container that still has to be searched.
@@ -31,6 +33,8 @@ public final class RummageCompat {
     private static Class<?> rummageable;
     private static Method isNeedRummageForPlayer;
     private static Method isFullyRummagedForPlayer;
+    private static Method getTargetForSlot;
+    private static Method targetLocalSlotIndex;
     private static boolean clientResolved;
     private static Method clearClientMask;
 
@@ -51,7 +55,19 @@ public final class RummageCompat {
             // whether the container is the kind that CAN be rummaged.
             isNeedRummageForPlayer = rummageable.getMethod("isNeedRummage", Player.class);
             isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
+            Class<?> util = Class.forName("com.scarasol.rummage.util.CommonContainerUtil", false, cl);
+            getTargetForSlot = util.getMethod("getTarget",
+                    net.minecraft.world.inventory.Slot.class,
+                    net.minecraft.world.inventory.AbstractContainerMenu.class);
+            Class<?> target = Class.forName("com.scarasol.rummage.data.RummageTarget", false, cl);
+            targetLocalSlotIndex = target.getMethod("localSlotIndex");
             isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
+            Class<?> util = Class.forName("com.scarasol.rummage.util.CommonContainerUtil", false, cl);
+            getTargetForSlot = util.getMethod("getTarget",
+                    net.minecraft.world.inventory.Slot.class,
+                    net.minecraft.world.inventory.AbstractContainerMenu.class);
+            Class<?> target = Class.forName("com.scarasol.rummage.data.RummageTarget", false, cl);
+            targetLocalSlotIndex = target.getMethod("localSlotIndex");
             return true;
         } catch (Throwable t) {
             DayzHudMod.LOGGER.warn("Rummage is installed but its API did not resolve - "
@@ -60,6 +76,56 @@ public final class RummageCompat {
             rummageable = null;
             return false;
         }
+    }
+
+    /**
+     * Per-slot diagnostic for an open menu: which slots Rummage resolves a target for, and
+     * therefore which menu indices it will mask.
+     *
+     * Built after three rounds of inferring this from screenshots and getting it wrong twice.
+     * Comparing this list against what is actually hatched on screen says immediately whether
+     * the problem is target resolution (wrong slots listed here) or client state (right slots
+     * here, wrong ones drawn).
+     */
+    public static List<String> describe(net.minecraft.world.inventory.AbstractContainerMenu menu,
+                                        Player player) {
+        List<String> out = new ArrayList<>();
+        if (!isModLoaded()) {
+            out.add("rummage not installed");
+            return out;
+        }
+        if (!resolve() || getTargetForSlot == null) {
+            out.add("rummage api did not resolve");
+            return out;
+        }
+        out.add("menu " + menu.getClass().getSimpleName() + ", " + menu.slots.size() + " slots");
+        StringBuilder masked = new StringBuilder();
+        for (int i = 0; i < menu.slots.size(); i++) {
+            net.minecraft.world.inventory.Slot slot = menu.slots.get(i);
+            String container = slot.container == null
+                    ? "null" : slot.container.getClass().getSimpleName();
+            Object target;
+            try {
+                target = getTargetForSlot.invoke(null, slot, menu);
+            } catch (Throwable t) {
+                target = null;
+            }
+            if (target == null) continue;
+            int local = -1;
+            try {
+                local = ((Number) targetLocalSlotIndex.invoke(target)).intValue();
+            } catch (Throwable ignored) {
+            }
+            out.add("  menuSlot " + i + " -> " + container + "[" + slot.getContainerSlot()
+                    + "] target local=" + local);
+            if (masked.length() > 0) masked.append(',');
+            masked.append(i);
+        }
+        out.add(masked.length() == 0
+                ? "NO slots resolve a target - Rummage will send nothing and any existing "
+                  + "client mask will persist"
+                : "menu indices Rummage will consider: " + masked);
+        return out;
     }
 
     /**

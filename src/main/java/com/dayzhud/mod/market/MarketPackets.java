@@ -102,6 +102,32 @@ public final class MarketPackets {
         }
     }
 
+    // ------------------------------------------------------------------ S -> C clear mask
+
+    /**
+     * Tells the client to drop Rummage's slot mask.
+     *
+     * Sent explicitly after a menu swap instead of clearing in the screen's init(), because
+     * init() runs when the open-screen packet arrives and Rummage's state packet may or may
+     * not have landed by then - the race can go either way. A packet sent AFTER ours on the
+     * same connection cannot arrive before it, so this is deterministic.
+     *
+     * Rummage will not send a clearing packet of its own: it skips the send entirely when its
+     * recomputed bitset is empty, which is exactly the case after we replace a corpse menu.
+     */
+    public static class ClearRummageMask {
+        public static void encode(ClearRummageMask p, FriendlyByteBuf buf) {}
+
+        public static ClearRummageMask decode(FriendlyByteBuf buf) {
+            return new ClearRummageMask();
+        }
+
+        public static void handle(ClearRummageMask p, Supplier<NetworkEvent.Context> ctx) {
+            ctx.get().enqueueWork(RummageCompat::clearClientMask);
+            ctx.get().setPacketHandled(true);
+        }
+    }
+
     // ------------------------------------------------------------------ C -> S buy
 
     public static class Buy {
