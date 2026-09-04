@@ -150,20 +150,6 @@ public class ContainerOpenRedirect {
                     + "leaving the vanilla screen in place.", e);
         } finally {
             REDIRECTING.remove(serverPlayer);
-            // Drop whatever mask Rummage computed for the menu we just replaced; it does
-            // not clear it itself. Sent after the open packet, so it cannot arrive first.
-            // Snapshot Rummage's view of the menu we just opened. Taken here because the
-            // command form cannot see it - opening chat closes the container first.
-            boolean rummageTargets = RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
-            // Only wipe the client's mask when Rummage will NOT be sending a replacement.
-            // It skips its packet on an empty bitset, so an empty result leaves the stale
-            // mask from the menu we replaced; a non-empty one overwrites it correctly, and
-            // clearing then would delete the right answer.
-            if (!rummageTargets) {
-                com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
-            }
-            // Drop whatever mask Rummage computed for the menu we just replaced; it will not
-            // clear it itself. Sent after the open packet, so it cannot arrive first.
             // Snapshot Rummage's view of the menu we just opened. Taken here because the
             // command form cannot see it - opening chat closes the container first.
             boolean rummageTargets = RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);

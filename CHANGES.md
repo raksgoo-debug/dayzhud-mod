@@ -1,50 +1,31 @@
-# dayzhud 1.11.0 - the clear packet was deleting the correct mask
+# dayzhud 1.11.1 - build fix
 
-**Complete.** 46 files. Unzip over the repo root.
+**Complete.** 46 files. Unzip over the repo root. Same contents as 1.11.0 with the compile
+error fixed: the conditional mask clear is what you want to test.
 
-## The diagnostic answered it
+## What broke
 
-From your log, on the merged corpse menu:
+`rummageTargets` was declared twice in both redirects - my patch applied its block twice
+again. Fourth CI failure this session from that one cause.
 
-    [rummage] menu TarkovInventoryMenu, 158 slots
-    [rummage]   menuSlot 90 -> RummageCorpseContainer[39] target local=39
-    ...
-    [rummage] menu indices Rummage will consider: 90,91,...,130
+## Why the detector I added last time did not catch it
 
-**Target resolution is correct.** Rummage resolves every corpse slot in the merged menu,
-against a `RummageCorpseContainer`, at the right container indices. Nothing is wrong with the
-Tarkov layout, and my earlier "this may be unfixable" was wrong on the facts.
+The block detector needed six identical consecutive lines. After stripping comments and short
+lines like `}`, the duplicated fragment was three qualifying lines. I set the threshold to
+silence false positives without checking it still caught the thing it was built for - which is
+the same mistake as shipping a fix without testing it.
 
-Which means Rummage's recomputed bitset is NOT empty - it has bits 90-130 - so it *does* send
-a state packet that replaces the stale one from the corpse menu we swapped out.
+So there is a second check now, and it looks for the **error** rather than the shape of the
+edit: a local variable redeclared while an earlier one of the same name is still in scope,
+which is exactly what javac reports and what it cannot tell me locally (a method body touching
+a missing Minecraft type stops attribution before that check runs).
 
-And then, one line later, we sent `ClearRummageMask` and wiped it.
-
-The clear I added in 1.10.0 was unconditional. It was written for the case where Rummage sends
-nothing, and in that case it is right; here Rummage sends the correct answer and we deleted
-it immediately afterwards. A fix for one branch, applied to both.
-
-## The fix
-
-The clear is now conditional on the merged menu resolving **no** Rummage targets:
-
-- **Targets exist** (your corpses): Rummage sends a correct bitset that overwrites the stale
-  one. We send nothing and stay out of the way.
-- **No targets** (a container Rummage cannot see through, e.g. the corpse's item-handler
-  backpack section): Rummage skips its packet, the stale mask would survive, so we clear it.
-
-`RummageCompat.capture()` already walks every slot for the snapshot, so this costs one boolean
-off work that was being done anyway.
-
-## What you should see
-
-Corpse slots hatched until searched; your own equipment and gear untouched. The backpack
-section stays gated behind the body's search, as before.
-
-If gear is still masked after this, the remaining suspect is the ordering of Rummage's packet
-against ours during the nested container-open, and the next step is a client-side dump of
-`ClientRummageManager.MASKED_MENU_SLOTS` to compare against the 90-130 the server computed.
+It keeps a real scope stack, so sibling blocks reusing a name are not flagged - a flat
+per-method version reported twelve false positives on legal code. **I ran it against the
+broken 1.11.0 file and confirmed it reports `'rummageTargets' redeclared at line 169 while the
+one from line 157 is in scope`.** A check that has not been shown to fail on a known-bad input
+is not a check.
 
 ## Verification
 
-Six checks against the extracted zip, all clean.
+Seven checks against the extracted zip, all clean.
