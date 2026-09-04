@@ -135,9 +135,13 @@ public final class MagazineCompat {
      */
     public static int priceOf(ItemStack stack) {
         int capacity = capacityOf(stack);
-        if (capacity <= 0) return 0;
+        // Capacity comes out of the stack's own NBT, written by the mod from its family data.
+        // If that data has not loaded, or a family declares none, capacity is 0 - and the
+        // first version treated that as "worthless" and dropped the magazine from the
+        // catalogue without a word. A magazine with an unknown size is still a magazine:
+        // fall back to the base price rather than making it disappear.
         double base = MarketConfig.MAGAZINE_BASE_PRICE.get()
-                + capacity * MarketConfig.MAGAZINE_PER_ROUND.get();
+                + Math.max(0, capacity) * MarketConfig.MAGAZINE_PER_ROUND.get();
         return (int) Math.max(50, Math.round(base / 50.0) * 50);
     }
 }

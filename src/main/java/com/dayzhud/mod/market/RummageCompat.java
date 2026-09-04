@@ -30,9 +30,9 @@ public final class RummageCompat {
     private static boolean resolved;
     private static Class<?> rummageable;
     private static Method isNeedRummageForPlayer;
+    private static Method isFullyRummagedForPlayer;
     private static boolean clientResolved;
     private static Method clearClientMask;
-    private static Method isFullyRummagedForPlayer;
 
     private RummageCompat() {}
 
@@ -50,6 +50,7 @@ public final class RummageCompat {
             // The one-arg overload is the per-player question; the no-arg one only says
             // whether the container is the kind that CAN be rummaged.
             isNeedRummageForPlayer = rummageable.getMethod("isNeedRummage", Player.class);
+            isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
             isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
             return true;
         } catch (Throwable t) {

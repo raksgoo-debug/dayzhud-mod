@@ -175,13 +175,19 @@ public final class MarketCatalog {
 
         int magazines = 0;
         if (MagazineCompat.isActive() && MarketConfig.MAGAZINES_STOCK.get()) {
-            for (String family : MagazineCompat.families()) {
+            List<String> families = MagazineCompat.families();
+            if (families.isEmpty()) {
+                DayzHudMod.LOGGER.warn("TaCZ Magazines is active but reported no magazine "
+                        + "families - its family list is filled on datapack sync, so this "
+                        + "usually means the catalogue was built too early.");
+            }
+            for (String family : families) {
                 ItemStack stack = MagazineCompat.makeEmpty(family);
                 if (stack.isEmpty()) continue;
                 MarketPrices.Entry override =
                         MarketPrices.all().get(MagazineCompat.KEY_PREFIX + family);
                 int unit = override != null ? override.value() : MagazineCompat.priceOf(stack);
-                if (unit <= 0) continue;
+                if (unit <= 0) unit = MarketConfig.MAGAZINE_BASE_PRICE.get();
                 out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_MAGAZINES,
                         magazineSection(MagazineCompat.capacityOf(stack))));
                 magazines++;

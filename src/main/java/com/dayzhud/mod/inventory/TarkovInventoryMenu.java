@@ -164,6 +164,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public ScrollingBackpackView corpseLootView;
     private final DataSlot corpseBagSlots = DataSlot.standalone();
 
+
     /** The corpse container this menu was opened over, kept for the Rummage gate below. */
     private Container corpseContainer;
     public final ScrollingBackpackView backpackView;
@@ -392,6 +393,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean isActive() {
+            // The bag is behind the body. Rummage cannot mask these slots itself - they are
+            // SlotItemHandler over this mod's own view, and its getWrappedTarget only unwraps
+            // Forge's InvWrapper and SidedInvWrapper - so instead of leaving the backpack
+            // permanently exposed, it stays shut until the corpse has been searched. That is
+            // also the order you would do it in: pockets, then the pack.
             return view.isVisibleSlotUsable(visibleIndex);
         }
     }
