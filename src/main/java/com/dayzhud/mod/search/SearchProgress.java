@@ -65,6 +65,46 @@ public final class SearchProgress {
         return -1;
     }
 
+    /**
+     * Extra slots searched AFTER the container itself - the corpse's worn backpack.
+     *
+     * The bag is an IItemHandler, not a Container, so it has no key of its own in this map.
+     * Rather than a second store, its slots live in the SAME BitSet at an offset past the
+     * container's size: a BitSet has no fixed length, so bag slot n is simply bit
+     * (containerSize + n). One progress record per corpse per player, and the ordering the
+     * search wants - pockets, then the pack - falls out of the numbering for free.
+     */
+    public static int bagBit(Container container, int bagSlot) {
+        return container.getContainerSize() + bagSlot;
+    }
+
+    public static boolean isBagRevealed(Container container, Player player, int bagSlot) {
+        return forPlayer(container, player).get(bagBit(container, bagSlot));
+    }
+
+    /**
+     * The next thing to reveal, counting the bag after the body.
+     *
+     * @return an index into the container, or containerSize + bagSlot for a bag slot, or -1.
+     */
+    public static int nextUnsearchedWithBag(Container container, Player player,
+                                            java.util.function.IntPredicate bagOccupied,
+                                            int bagSlots) {
+        int body = nextUnsearched(container, player);
+        if (body >= 0) return body;
+        BitSet revealed = forPlayer(container, player);
+        for (int i = 0; i < bagSlots; i++) {
+            int bit = bagBit(container, i);
+            if (revealed.get(bit)) continue;
+            if (!bagOccupied.test(i)) {
+                revealed.set(bit);
+                continue;
+            }
+            return bit;
+        }
+        return -1;
+    }
+
     /** Menu-slot indices to draw as unsearched, given where this container starts in the menu. */
     public static int[] maskedSlots(Container container, Player player, int menuOffset, int count) {
         BitSet revealed = forPlayer(container, player);

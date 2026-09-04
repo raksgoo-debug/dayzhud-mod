@@ -27,6 +27,9 @@ public final class SearchHandler {
 
     private static final Map<UUID, Integer> TIMERS = new ConcurrentHashMap<>();
 
+    private static final java.util.Map<java.util.UUID, int[]> LAST_MASK =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private SearchHandler() {}
 
     @SubscribeEvent
@@ -36,6 +39,7 @@ public final class SearchHandler {
         for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
             if (!(player.containerMenu instanceof TarkovInventoryMenu menu)) {
                 TIMERS.remove(player.getUUID());
+                LAST_MASK.remove(player.getUUID());
                 continue;
             }
             Container searched = menu.searchedContainer();
@@ -52,14 +56,18 @@ public final class SearchHandler {
             }
             TIMERS.put(player.getUUID(), SearchConfig.TICKS_PER_SLOT.get());
 
-            int slot = SearchProgress.nextUnsearched(searched, player);
+            // Body first, then the corpse's worn bag - bag slots live in the same BitSet at
+            // an offset past the container's size, so "next" walks straight from one into the
+            // other and the ordering needs no special case.
+            int bagSlots = menu.corpseBagSlotCount();
+            int slot = SearchProgress.nextUnsearchedWithBag(searched, player,
+                    menu::corpseBagSlotOccupied, bagSlots);
             if (slot < 0) continue;
 
-            SearchProgress.reveal(searched, player, slot);
+            SearchProgress.forPlayer(searched, player).set(slot);
             // The menu reads through SearchedContainer, so revealing a slot is all it takes -
             // the next broadcast sends the item for the first time.
             menu.broadcastChanges();
-            SearchNetwork.sendMask(player, menu);
 
             if (SearchConfig.SOUNDS.get()) {
                 player.level().playSound(null, player.blockPosition(),
@@ -67,7 +75,24 @@ public final class SearchHandler {
                         SearchConfig.SOUND_VOLUME.get().floatValue(),
                         0.8f + player.level().random.nextFloat() * 0.4f);
             }
+            pushMaskIfChanged(player, menu);
         }
+    }
+
+    /**
+     * Resends the mask only when it differs from the last one this player was sent.
+     *
+     * Needed beyond the reveal path because scrolling the corpse loot list remaps which
+     * visible slot is which bag slot - the set of hidden MENU indices changes without anything
+     * being revealed. Comparing first keeps that to one packet per actual change rather than
+     * one per tick.
+     */
+    private static void pushMaskIfChanged(ServerPlayer player, TarkovInventoryMenu menu) {
+        int[] mask = SearchNetwork.maskFor(player, menu);
+        int[] last = LAST_MASK.get(player.getUUID());
+        if (java.util.Arrays.equals(mask, last)) return;
+        LAST_MASK.put(player.getUUID(), mask);
+        SearchNetwork.sendMask(player, mask);
     }
 
     @SubscribeEvent

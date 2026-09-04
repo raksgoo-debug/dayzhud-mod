@@ -404,7 +404,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     }
 
     /** Loot slot that switches off past the end of the corpse's contents. */
-    private static class CorpseLootSlot extends SlotItemHandler {
+    private class CorpseLootSlot extends SlotItemHandler {
         private final ScrollingBackpackView view;
         private final int visibleIndex;
 
@@ -414,15 +414,78 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             this.visibleIndex = index;
         }
 
+        int visibleIndex() {
+            return visibleIndex;
+        }
+
         @Override
         public boolean isActive() {
-            // The bag is behind the body. The search cannot mask these slots itself - they are
-            // SlotItemHandler over this mod's own view, and its getWrappedTarget only unwraps
-            // Forge's InvWrapper and SidedInvWrapper - so instead of leaving the backpack
-            // permanently exposed, it stays shut until the corpse has been searched. That is
-            // also the order you would do it in: pockets, then the pack.
             return view.isVisibleSlotUsable(visibleIndex);
         }
+
+        /**
+         * The bag is searched slot by slot, like the body.
+         *
+         * Masked HERE rather than in a wrapper the way the corpse's own container is, because
+         * the bag is an IItemHandler and there is nothing to wrap that the menu reads through.
+         * Overriding the slot works just as well: broadcastChanges reads slot.getItem(), so an
+         * unsearched bag slot is never sent to the client at all - the client cannot render
+         * what it was never told about.
+         */
+        @Override
+        public ItemStack getItem() {
+            if (isBagSlotHidden(visibleIndex)) return ItemStack.EMPTY;
+            return super.getItem();
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return !isBagSlotHidden(visibleIndex) && super.mayPickup(player);
+        }
+    }
+
+    /**
+     * True while this bag slot has not been searched yet.
+     *
+     * Bag progress lives in the corpse's own BitSet at an offset past the container size, so
+     * one corpse is one record and the pockets-then-pack ordering comes from the numbering
+     * rather than from a separate gate.
+     */
+    /** How many bag slots the corpse's pack has, for the search to walk through. */
+    public int corpseBagSlotCount() {
+        return corpseLoot == null ? 0 : corpseLoot.serverBagSlots();
+    }
+
+    /** Whether a bag slot holds anything, so the search can skip empty ones. */
+    public boolean corpseBagSlotOccupied(int bagSlot) {
+        if (corpseLoot == null) return false;
+        return !corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot).isEmpty();
+    }
+
+    /**
+     * Menu indices of bag slots still to be searched, so the screen can hatch them.
+     *
+     * Computed from the visible window rather than the bag's real size, because the bag list
+     * scrolls - a slot's menu index only means anything for the rows currently on screen.
+     */
+    public int[] maskedBagMenuSlots() {
+        if (corpseLoot == null || corpseLootView == null) return new int[0];
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        for (int i = 0; i < slots.size(); i++) {
+            if (!(slots.get(i) instanceof CorpseLootSlot bagSlot)) continue;
+            if (bagSlot.isActive() && isBagSlotHidden(bagSlot.visibleIndex())) out.add(i);
+        }
+        int[] result = new int[out.size()];
+        for (int i = 0; i < result.length; i++) result[i] = out.get(i);
+        return result;
+    }
+
+    boolean isBagSlotHidden(int visibleIndex) {
+        if (!(corpseContainer instanceof SearchedContainer searched)) return false;
+        if (corpseLootView == null) return false;
+        int bagSlot = corpseLootView.mapIndex(visibleIndex) - CorpseLootHandler.BASE_COUNT;
+        if (bagSlot < 0) return false;
+        return !SearchProgress.isBagRevealed(searched.delegate(), player, bagSlot);
     }
 
     @Override
@@ -438,23 +501,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             backpackSlotCount.set(count);
 
             if (corpseLoot != null) {
-                // The corpse's worn bag stays shut until the body itself has been searched.
-                //
-                // This is also the only way the bag can participate in the search at all: its
-                // slots are SlotItemHandler over an IItemHandler, and slot masking resolves a
-                // target from a Slot's CONTAINER - unwrapping only Forge's InvWrapper and
-                // SidedInvWrapper. An arbitrary item-handler bag can never be masked, so
-                // gating the whole section behind the body's own search is the honest
-                // equivalent: search the corpse, then its pack opens up.
-                //
-                // Sent through the existing corpseBagSlots DataSlot, so the client hides the
-                // slots without needing any per-slot masking of their own.
-                // The bag stays shut until the body itself has been searched - pockets, then
-                // the pack. Asked of our own search, so this no longer depends on another mod
-                // being installed to behave sensibly.
-                boolean locked = corpseContainer instanceof SearchedContainer searched
-                        && SearchProgress.nextUnsearched(searched.delegate(), player) >= 0;
-                corpseBagSlots.set(locked ? 0 : corpseLoot.serverBagSlots());
+                // The bag section is always sized now; its slots hide themselves individually
+                // until searched (see CorpseLootSlot.getItem). The previous all-or-nothing
+                // gate made a searched body pop its whole pack open at once, which skipped the
+                // half of the search that has the loot worth finding.
+                corpseBagSlots.set(corpseLoot.serverBagSlots());
             }
         }
         super.broadcastChanges();

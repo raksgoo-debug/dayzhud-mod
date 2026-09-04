@@ -15,16 +15,25 @@ public final class SearchNetwork {
 
     private SearchNetwork() {}
 
-    public static void sendMask(ServerPlayer player, TarkovInventoryMenu menu) {
+    /** The mask this menu should currently show, as menu slot indices. */
+    public static int[] maskFor(ServerPlayer player, TarkovInventoryMenu menu) {
         Container searched = menu.searchedContainer();
-        if (searched == null) {
-            NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                    new Packet(new int[0]));
-            return;
-        }
-        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new Packet(SearchProgress.maskedSlots(searched, player,
-                        menu.searchedMenuOffset(), searched.getContainerSize())));
+        if (searched == null) return new int[0];
+        int[] body = SearchProgress.maskedSlots(searched, player,
+                menu.searchedMenuOffset(), searched.getContainerSize());
+        int[] bag = menu.maskedBagMenuSlots();
+        int[] all = new int[body.length + bag.length];
+        System.arraycopy(body, 0, all, 0, body.length);
+        System.arraycopy(bag, 0, all, body.length, bag.length);
+        return all;
+    }
+
+    public static void sendMask(ServerPlayer player, int[] mask) {
+        NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Packet(mask));
+    }
+
+    public static void sendMask(ServerPlayer player, TarkovInventoryMenu menu) {
+        sendMask(player, maskFor(player, menu));
     }
 
     public static class Packet {
