@@ -1,6 +1,7 @@
 package com.dayzhud.mod.inventory;
 
 import com.dayzhud.mod.DayzHudMod;
+import com.dayzhud.mod.market.RummageCompat;
 import com.dayzhud.mod.client.UiSounds;
 import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
@@ -82,6 +83,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     @Override
     protected void init() {
         super.init();
+        // Drop any slot mask left over from the menu we replaced - Rummage will not send a
+        // clearing packet when its recomputed set is empty. See RummageCompat.clearClientMask.
+        RummageCompat.clearClientMask();
         // Centre on the FULL layout width (inventory + container) even when no container is
         // open, so the loadout panel sits in exactly the same spot either way and the UI
         // doesn't jump sideways as you open and close chests.

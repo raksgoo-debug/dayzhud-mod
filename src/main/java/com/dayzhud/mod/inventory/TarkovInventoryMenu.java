@@ -1,5 +1,6 @@
 package com.dayzhud.mod.inventory;
 
+import com.dayzhud.mod.market.RummageCompat;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -162,6 +163,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public CorpseLootHandler corpseLoot;
     public ScrollingBackpackView corpseLootView;
     private final DataSlot corpseBagSlots = DataSlot.standalone();
+
+    /** The corpse container this menu was opened over, kept for the Rummage gate below. */
+    private Container corpseContainer;
     public final ScrollingBackpackView backpackView;
 
     private final int inventoryStartIndex;
@@ -351,6 +355,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // The worn backpack is the one part that can overflow, so it gets its own
         // scrollable section underneath.
+        this.corpseContainer = corpse;
         this.corpseLoot = new CorpseLootHandler(corpse, corpseCurioIds, CORPSE_CURIO_START,
                 player.level().isClientSide);
         this.corpseLoot.setSyncedBagSlots(corpseBagSlots::get);
@@ -404,7 +409,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             backpackSlotCount.set(count);
 
             if (corpseLoot != null) {
-                corpseBagSlots.set(corpseLoot.serverBagSlots());
+                // The corpse's worn bag stays shut until the body itself has been searched.
+                //
+                // This is also the only way the bag can participate in Rummage at all: its
+                // slots are SlotItemHandler over an IItemHandler, and Rummage resolves a
+                // target from a Slot's CONTAINER - unwrapping only Forge's InvWrapper and
+                // SidedInvWrapper. An arbitrary item-handler bag can never be masked, so
+                // gating the whole section behind the body's own search is the honest
+                // equivalent: search the corpse, then its pack opens up.
+                //
+                // Sent through the existing corpseBagSlots DataSlot, so the client hides the
+                // slots without needing to know anything about Rummage.
+                boolean locked = RummageCompat.gates(corpseContainer)
+                        && !RummageCompat.isFullyRummaged(corpseContainer, player);
+                corpseBagSlots.set(locked ? 0 : corpseLoot.serverBagSlots());
             }
         }
         super.broadcastChanges();

@@ -1,58 +1,57 @@
-# dayzhud 1.8.1 - corpses stand down for Rummage too
+# dayzhud 1.9.0 - the corpse mask bug, found and fixed
 
-**Complete.** 45 files. Unzip over the repo root.
+**Complete.** 46 files. Unzip over the repo root.
 
-## What your screenshot shows
+## What was actually wrong
 
-Rummage was masking your EQUIPMENT and GEAR slots while leaving the corpse column untouched -
-the mask landed on menu slots 0-5, which in the merged view are your own armour and curios.
+You were right that this was fixable, and the reason it only broke on corpses is the whole
+answer.
 
-## What I found in Rummage's code, and what I did NOT find
+Rummage recomputes its mask on `PlayerContainerEvent.Open` and sends it as a BitSet of **menu
+slot indices**. But `EventHandler.onContainerOpen` **skips the packet entirely when that set
+comes out empty** - there is an `isEmpty()` guard at offset 216 with no "send a clear" branch.
 
-`CommonContainerUtil.getTarget(Slot, menu)` resolves in three steps:
+This mod replaces the menu inside that same event. So for a corpse the sequence was:
 
-1. `getTarget(slot.container, slot.getContainerSlot())` - correct for a plain Slot on a
-   rummageable container.
-2. If the slot is a `SlotItemHandler`, `getWrappedTarget(handler, index)` - which only
-   understands Forge's `InvWrapper` and `SidedInvWrapper`.
-3. Otherwise `getMcrTarget(menu, index)`, which looks for a `boundBlockEntity` field and
-   returns null for our menus.
+1. The addon's corpse menu opens. Rummage masks it - its slots 0..40 are the corpse.
+2. We swap in the merged menu and re-fire the open event.
+3. Rummage recomputes, gets an empty set, and sends nothing.
+4. The client is still holding the bitset from step 1 and paints it over the new menu, where
+   indices 0..5 are **your armour and curios**.
 
-So the corpse column - `CorpseLootSlot extends SlotItemHandler` over this mod's own
-`CorpseLootHandler`, which is neither wrapper type - falls through all three and resolves to
-no target at all. That explains the corpse column being unmasked.
+Chests never showed it because a merged chest still resolves Rummage targets, so the
+recomputed set is non-empty and correctly overwrites the stale one. That difference is what
+told me where to look.
 
-**It does not explain the equipment slots being masked**, and I have not pinned that down. The
-most likely candidate is that Rummage's client screen mixin paints the mask positionally over
-`menu.slots` from the synced state, in which case the rummageable container's slots have to
-occupy menu indices 0..N - which the Tarkov layout will never do, since equipment comes first.
-If that is what is happening, "make it work in the merged view" is not fixable from this side
-without either reordering the whole menu (which breaks every index in `quickMoveStack`) or an
-upstream change to target by container rather than position.
+`RummageCompat.clearClientMask()` now clears the client's mask when the merged screen opens.
+That is safe: the server sends its fresh state after the open packet, so a real mask
+re-applies a moment later, and an empty one correctly stays empty.
 
-I am not going to guess at it a third time. What would settle it in one in-game run is a
-diagnostic that dumps, for every slot in the open menu, its index, container class, container
-slot and whether Rummage resolves a target. Say the word and I will add it.
+## Merging is the default again
 
-## What this build actually changes
+`access.respectRummage` is **false** by default now. Searching works inside the merged view -
+a plain `Slot` on a rummageable container resolves a Rummage target whatever menu it sits in,
+which the corpse column already uses for its armour, curios, inventory and hotbar. The setting
+stays as a fallback if some container misbehaves.
 
-`CorpseOpenRedirect` now stands down for an unsearched corpse, the way `ContainerOpenRedirect`
-already did for containers. So:
+## Corrections to what I told you last round
 
-- Right-click a fresh corpse: Rummage's own screen, searched correctly, slot by slot.
-- Right-click it again once searched: the merged Tarkov view, everything visible.
+- "The mask is positional over menu.slots, so the Tarkov layout can never work" - **wrong**.
+  Server and client both index by menu slot; they agree. I asserted that from a screenshot
+  instead of reading `SlotMixin`, which does exactly what I later found it does.
+- "It might be a client/server slot-count mismatch in our menu" - also wrong, and your one
+  sentence about chests working ruled it out immediately. A shared offset bug would have hit
+  both.
 
-That also gives you the inventory-then-backpack order you asked for, by accident of how
-Rummage already works - the corpse's own container is what gets searched, and its backpack is
-a separate container reached afterwards. Doing that ordering *inside* the merged view is
-blocked on the same unresolved question above: the client cannot answer "is this fully
-rummaged" for a corpse, because the container it holds is a synced copy, not the rummageable
-original.
+## Known remaining gap
 
-`access.respectRummage` (default on) covers both redirects. Turn it off and you get the merged
-view immediately - and the mis-targeted mask from your screenshot back with it.
+The corpse's **backpack** section still will not mask or search: those slots are
+`CorpseLootSlot extends SlotItemHandler` over this mod's `ScrollingBackpackView`, and
+Rummage's `getWrappedTarget` only unwraps Forge's `InvWrapper` and `SidedInvWrapper`. The
+corpse's own armour, curios, inventory and hotbar are plain Slots and are unaffected. Fixing
+the bag means giving that section a wrapper Rummage can see through - say the word.
 
 ## Verification
 
-Four checks against the extracted zip, all clean. The Rummage integration is reflective, so a
-wrong method name there fails at runtime with a logged warning rather than at compile time.
+Four checks against the extracted zip, all clean. The Rummage calls are reflective, so a
+rename upstream shows as a logged warning at runtime rather than a compile error.

@@ -118,9 +118,13 @@ public class CorpseOpenRedirect {
         List<String> curioIds = readCurioIds(menu);
         if (corpse == null) return;
 
-        // Rummage: a corpse that still has to be searched keeps its own screen. See
-        // RummageCompat for why merging cannot carry the searching mechanic across.
-        if (RummageCompat.needsSearching(corpse, serverPlayer)) return;
+        // NOTE: no Rummage stand-down here, unlike ContainerOpenRedirect.
+        //
+        // A corpse's gear, curios, inventory and hotbar are plain Slots on the corpse's own
+        // Container - the same shape as a chest, which is confirmed working in the merged
+        // view. Standing down would cost the merged view for nothing. Only the corpse's worn
+        // BACKPACK cannot be masked (item-handler slots, see TarkovInventoryMenu), and that
+        // is handled by keeping it shut until the body is fully searched.
 
         int expected = expectedSlots(menu, curioIds.size());
         if (corpse.getContainerSize() != expected) {

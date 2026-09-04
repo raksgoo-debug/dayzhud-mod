@@ -30,6 +30,9 @@ public final class RummageCompat {
     private static boolean resolved;
     private static Class<?> rummageable;
     private static Method isNeedRummageForPlayer;
+    private static boolean clientResolved;
+    private static Method clearClientMask;
+    private static Method isFullyRummagedForPlayer;
 
     private RummageCompat() {}
 
@@ -47,6 +50,7 @@ public final class RummageCompat {
             // The one-arg overload is the per-player question; the no-arg one only says
             // whether the container is the kind that CAN be rummaged.
             isNeedRummageForPlayer = rummageable.getMethod("isNeedRummage", Player.class);
+            isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
             return true;
         } catch (Throwable t) {
             DayzHudMod.LOGGER.warn("Rummage is installed but its API did not resolve - "
@@ -58,12 +62,73 @@ public final class RummageCompat {
     }
 
     /**
+     * Wipes the client's slot mask.
+     *
+     * THE BUG THIS FIXES. Rummage recomputes its mask on PlayerContainerEvent.Open and sends
+     * it as a BitSet of MENU slot indices - but it skips the packet entirely when the set
+     * comes out empty. This mod replaces the menu inside that same event, so the sequence is:
+     * the original corpse menu is opened and masked (its slots 0..40 being the corpse), we
+     * swap in the merged menu, Rummage recomputes, gets nothing, and sends nothing - leaving
+     * the client holding the OLD bitset and painting it over the new menu, where indices
+     * 0..5 are the player's own armour and curios. Which is exactly what the screenshot
+     * showed: equipment hatched, corpse untouched.
+     *
+     * Chests never showed it because a merged chest still resolves targets, so the recomputed
+     * set is non-empty and overwrites the stale one.
+     *
+     * Clearing on screen open is safe: the server sends its fresh state after the open packet,
+     * so a legitimate mask re-applies a moment later. An empty one correctly stays empty.
+     */
+    public static void clearClientMask() {
+        if (!isModLoaded()) return;
+        if (!clientResolved) {
+            clientResolved = true;
+            try {
+                clearClientMask = Class.forName(
+                        "com.scarasol.rummage.manager.ClientRummageManager", false,
+                        RummageCompat.class.getClassLoader()).getMethod("clear");
+            } catch (Throwable t) {
+                DayzHudMod.LOGGER.warn("Rummage client manager did not resolve; a stale slot "
+                        + "mask may persist across a merged screen: {}", t.toString());
+            }
+        }
+        if (clearClientMask == null) return;
+        try {
+            clearClientMask.invoke(null);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
      * True when this container has not yet been searched by this player, and the redirect
      * should therefore leave Rummage's own screen in place.
      *
      * Fails open: any doubt and we report false, because a false negative costs the merged
      * view for one container while a false positive would hide a container from the player.
      */
+    /**
+     * True when this container is one Rummage gates AND the player has finished searching it.
+     * False when Rummage is absent or the container is not rummageable, so callers that use
+     * this to unlock something must treat "not gated" as "unlocked" themselves.
+     */
+    public static boolean isFullyRummaged(Container container, Player player) {
+        if (container == null || player == null) return false;
+        if (!isModLoaded() || !resolve()) return false;
+        if (!rummageable.isInstance(container)) return false;
+        try {
+            Object result = isFullyRummagedForPlayer.invoke(container, player);
+            return result instanceof Boolean b && b;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** True when Rummage gates this container at all. */
+    public static boolean gates(Container container) {
+        if (container == null || !isModLoaded() || !resolve()) return false;
+        return rummageable.isInstance(container);
+    }
+
     public static boolean needsSearching(Container container, Player player) {
         if (container == null || player == null) return false;
         if (!MarketConfig.RESPECT_RUMMAGE.get() || !isModLoaded() || !resolve()) return false;

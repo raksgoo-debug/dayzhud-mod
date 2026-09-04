@@ -127,9 +127,10 @@ public final class MarketConfig {
         RESPECT_RUMMAGE = b.comment(
                         "With Rummage installed, leave a container's own screen alone until the",
                         "player has searched it, instead of merging it into the inventory view.",
-                        "The items stay hidden either way - what merging would remove is the",
-                        "searching interaction itself.")
-                .define("respectRummage", true);
+                        "OFF by default: searching works inside the merged view, because a plain",
+                        "Slot on a rummageable container resolves a Rummage target whatever menu",
+                        "it sits in. This is only a fallback if some container misbehaves.")
+                .define("respectRummage", false);
         BLOCK_REQUIRES_SAFE_ZONE = b.comment(
                         "Require a terminal BLOCK to also stand inside a registered safe zone.",
                         "Off by default: a terminal you had to place and build around already is",
