@@ -1,35 +1,46 @@
-# dayzhud 1.11.3 - build fix
+# dayzhud 1.12.0 - the corpse mask, fixed properly
 
-**Complete.** 46 files. Unzip over the repo root. Same contents as 1.11.2: the
-`[rummage-client]` logging is what to test.
+**Complete.** 46 files. Unzip over the repo root.
 
-## What broke
+## The log settled it
 
-My patch inserted the new `rummageLogTicks` field between the existing `@Override` and
-`init()`, so the annotation landed on a field.
+    [rummage]        menu TarkovInventoryMenu, 160 slots   (server)
+    [rummage]        menu indices Rummage will consider: 90,91,...,132
+    [rummage-client] menu has 160 slots, masked set = {0, 1, 2, 3, 5, 6, 34, 35}
 
-## The part worth recording
+**160 slots on both sides.** So the client and server build the identical menu and the indices
+agree - my earlier "client/server slot-count mismatch" theory was wrong, and this rules it out
+rather than arguing about it.
 
-**My checker caught this and I did not read its output.** It printed
+The client is simply holding the bitset from the corpse menu we replaced. Those eight bits are
+the corpse's own occupied slots in *its* menu's numbering, painted onto ours, where 0-6 are
+your armour and gear.
 
-    src/main/java/.../TarkovInventoryScreen.java:83: error: annotation interface not
-    applicable to this kind of declaration
+And 1.11.0's conditional clear made it permanent. I reasoned: targets exist, therefore Rummage
+will send a replacement, therefore do not clear. The first step is true and the second is not -
+it recomputes on container open but never sends one for the replacement menu. So the condition
+protected a packet that never arrives.
 
-and I ran it as `check.sh | tail -6`, which showed only the last two sections. The failure was
-four lines above the cut.
+## The fix
 
-Five of the six CI failures this session were things the local checks could not see. This one
-they could, and I threw it away at the terminal.
+We send the mask ourselves. `RummageCompat.computeMaskIndices` walks the merged menu the same
+way Rummage does - resolve each slot's target, look up that container's per-player
+`getRummageProgressByUUID` bitset, and include the slot if its local index is not yet marked
+searched - and the result is applied to the client's `MASKED_MENU_SLOTS` directly.
 
-So the script no longer relies on me reading all of it: every check now reports through one
-accumulator and the **last line is a verdict** - `RESULT: PASS (6 checks)` or `RESULT: FAIL
-(n check(s))` with the offending output above it. Tailing it is now safe by construction.
+Only the initial state needed this. Rummage's later updates, once you actually start searching
+inside our screen, are computed against `player.containerMenu`, which is our menu by then, and
+were always correct. That is why the backpack appeared at the right moment while the initial
+mask was nonsense.
 
-Confirmed against the broken 1.11.2 tree: `RESULT: FAIL (1 check(s))`. Against this one:
-`RESULT: PASS (6 checks)`.
+## What you should see
 
-## Still waiting on
+Corpse slots hatched until searched. Your own equipment and gear untouched. Backpack still
+gated behind finishing the body.
 
-Open a corpse with this build, wait a second, send `latest.log`. The `[rummage-client]` line
-says whether the client's menu has the same 158 slots the server saw, and which bits it is
-actually masking.
+The `[rummage]` and `[rummage-client]` log lines stay in - they cost nothing and if this is
+still wrong, the two numbers side by side will say why.
+
+## Verification
+
+`RESULT: PASS (6 checks)` against the extracted zip.

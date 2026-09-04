@@ -116,14 +116,25 @@ public final class MarketPackets {
      * recomputed bitset is empty, which is exactly the case after we replace a corpse menu.
      */
     public static class ClearRummageMask {
-        public static void encode(ClearRummageMask p, FriendlyByteBuf buf) {}
+        public final int[] indices;
+
+        public ClearRummageMask(int[] indices) {
+            this.indices = indices;
+        }
+
+        public static void encode(ClearRummageMask p, FriendlyByteBuf buf) {
+            buf.writeVarInt(p.indices.length);
+            for (int i : p.indices) buf.writeVarInt(i);
+        }
 
         public static ClearRummageMask decode(FriendlyByteBuf buf) {
-            return new ClearRummageMask();
+            int[] out = new int[buf.readVarInt()];
+            for (int i = 0; i < out.length; i++) out[i] = buf.readVarInt();
+            return new ClearRummageMask(out);
         }
 
         public static void handle(ClearRummageMask p, Supplier<NetworkEvent.Context> ctx) {
-            ctx.get().enqueueWork(RummageCompat::clearClientMask);
+            ctx.get().enqueueWork(() -> RummageCompat.applyClientMask(p.indices));
             ctx.get().setPacketHandled(true);
         }
     }

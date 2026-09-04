@@ -49,6 +49,8 @@ public final class RummageCompat {
     private static boolean clientResolved;
     private static Method clearClientMask;
     private static java.lang.reflect.Field maskedMenuSlots;
+    private static Method targetEntity;
+    private static Method getRummageProgressByUUID;
 
     private RummageCompat() {}
 
@@ -73,6 +75,8 @@ public final class RummageCompat {
                     net.minecraft.world.inventory.AbstractContainerMenu.class);
             Class<?> target = Class.forName("com.scarasol.rummage.data.RummageTarget", false, cl);
             targetLocalSlotIndex = target.getMethod("localSlotIndex");
+            targetEntity = target.getMethod("entity");
+            getRummageProgressByUUID = rummageable.getMethod("getRummageProgressByUUID", Player.class);
             return true;
         } catch (Throwable t) {
             DayzHudMod.LOGGER.warn("Rummage is installed but its API did not resolve - "
@@ -183,6 +187,59 @@ public final class RummageCompat {
                     + "reading the live menu did not work.)");
         }
         return lines;
+    }
+
+    /**
+     * The menu slot indices that should be masked for this player, computed the same way
+     * Rummage computes them: a slot with a target whose local index is not yet marked
+     * rummaged in that container's per-player progress.
+     *
+     * We compute this ourselves because Rummage does not resend it after we replace the menu.
+     * Its own updates, once the player starts searching inside our screen, ARE correct - it is
+     * only the initial state that is stale, because that was produced for the menu we swapped
+     * out and its empty-bitset guard means nothing overwrites it.
+     */
+    public static int[] computeMaskIndices(
+            net.minecraft.world.inventory.AbstractContainerMenu menu, Player player) {
+        if (menu == null || player == null || !isModLoaded() || !resolve()
+                || getTargetForSlot == null || getRummageProgressByUUID == null) {
+            return new int[0];
+        }
+        java.util.List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < menu.slots.size(); i++) {
+            try {
+                Object target = getTargetForSlot.invoke(null, menu.slots.get(i), menu);
+                if (target == null) continue;
+                Object owner = targetEntity.invoke(target);
+                int local = ((Number) targetLocalSlotIndex.invoke(target)).intValue();
+                Object progress = getRummageProgressByUUID.invoke(owner, player);
+                if (progress instanceof java.util.BitSet bits && bits.get(local)) continue;
+                out.add(i);
+            } catch (Throwable ignored) {
+            }
+        }
+        int[] result = new int[out.size()];
+        for (int i = 0; i < result.length; i++) result[i] = out.get(i);
+        return result;
+    }
+
+    /** Replaces the client's mask with exactly these menu indices. */
+    public static void applyClientMask(int[] indices) {
+        if (!isModLoaded()) return;
+        clearClientMask();
+        try {
+            if (maskedMenuSlots == null) {
+                maskedMenuSlots = Class.forName(
+                        "com.scarasol.rummage.manager.ClientRummageManager", false,
+                        RummageCompat.class.getClassLoader()).getField("MASKED_MENU_SLOTS");
+            }
+            Object bits = maskedMenuSlots.get(null);
+            if (bits instanceof java.util.BitSet set) {
+                for (int i : indices) set.set(i);
+            }
+        } catch (Throwable t) {
+            DayzHudMod.LOGGER.warn("[rummage] could not apply corrected mask: {}", t.toString());
+        }
     }
 
     /**

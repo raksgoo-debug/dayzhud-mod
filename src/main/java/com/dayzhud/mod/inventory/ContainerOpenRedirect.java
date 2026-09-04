@@ -152,14 +152,11 @@ public class ContainerOpenRedirect {
             REDIRECTING.remove(serverPlayer);
             // Snapshot Rummage's view of the menu we just opened. Taken here because the
             // command form cannot see it - opening chat closes the container first.
-            boolean rummageTargets = RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
-            // Only wipe the client's mask when Rummage will NOT be sending a replacement.
-            // It skips its packet on an empty bitset, so an empty result leaves the stale
-            // mask from the menu we replaced; a non-empty one overwrites it correctly, and
-            // clearing then would delete the right answer.
-            if (!rummageTargets) {
-                com.dayzhud.mod.market.MarketNetwork.clearRummageMask(serverPlayer);
-            }
+            RummageCompat.capture(serverPlayer.containerMenu, serverPlayer);
+            // Send the mask this menu should have. Rummage never sends one for the replacement
+            // menu, so without this the client keeps the bitset from the menu we swapped out -
+            // which is why the corpse's slots read onto the player's own equipment.
+            com.dayzhud.mod.market.MarketNetwork.syncRummageMask(serverPlayer);
         }
     }
 
