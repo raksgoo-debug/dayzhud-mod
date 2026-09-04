@@ -48,6 +48,7 @@ public final class RummageCompat {
     private static final java.util.Set<String> LOGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static boolean clientResolved;
     private static Method clearClientMask;
+    private static java.lang.reflect.Field maskedMenuSlots;
 
     private RummageCompat() {}
 
@@ -182,6 +183,32 @@ public final class RummageCompat {
                     + "reading the live menu did not work.)");
         }
         return lines;
+    }
+
+    /**
+     * Logs what the CLIENT actually has masked, next to how many slots its menu has.
+     *
+     * The server side is now known good: it resolves every corpse slot and computes bits in
+     * the 90+ range. The screenshot shows six slots masked at the very start of the menu, and
+     * the corpse had exactly six occupied slots - so the client is holding a bitset that is
+     * not the one the server computed for this menu. This prints both numbers so they can be
+     * compared instead of inferred.
+     */
+    public static void logClientMask(int clientSlotCount) {
+        if (!isModLoaded()) return;
+        if (!clientResolved) clearClientMask();   // resolves the manager class as a side effect
+        try {
+            if (maskedMenuSlots == null) {
+                maskedMenuSlots = Class.forName(
+                        "com.scarasol.rummage.manager.ClientRummageManager", false,
+                        RummageCompat.class.getClassLoader()).getField("MASKED_MENU_SLOTS");
+            }
+            Object bits = maskedMenuSlots.get(null);
+            DayzHudMod.LOGGER.info("[rummage-client] menu has {} slots, masked set = {}",
+                    clientSlotCount, bits);
+        } catch (Throwable t) {
+            DayzHudMod.LOGGER.warn("[rummage-client] could not read the mask: {}", t.toString());
+        }
     }
 
     /**

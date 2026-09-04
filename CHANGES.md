@@ -1,30 +1,42 @@
-# dayzhud 1.11.1 - build fix
+# dayzhud 1.11.2 - client-side mask logging
 
-**Complete.** 46 files. Unzip over the repo root. Same contents as 1.11.0 with the compile
-error fixed: the conditional mask clear is what you want to test.
+**Complete.** 46 files. Unzip over the repo root.
 
-## What broke
+## What your screenshots narrowed down
 
-`rummageTargets` was declared twice in both redirects - my patch applied its block twice
-again. Fourth CI failure this session from that one cause.
+Six slots masked, on your side, at the very start of the menu. The corpse had exactly six
+occupied slots - four gear, two hotbar. Rummage only sets a bit for a slot that still needs
+searching, so **six bits is the right number** and they are landing at the wrong indices.
 
-## Why the detector I added last time did not catch it
+The server log already proved the server computes them correctly: every corpse slot resolves a
+`RummageCorpseContainer` target, at menu indices 90-130. The client is masking 0-5. So the
+client is holding a bitset that is not the one the server produced for this menu, and there
+are only two ways that happens - the bits arrived from a different menu, or the client's menu
+has a different slot list from the server's.
 
-The block detector needed six identical consecutive lines. After stripping comments and short
-lines like `}`, the duplicated fragment was three qualifying lines. I set the threshold to
-silence false positives without checking it still caught the thing it was built for - which is
-the same mistake as shipping a fix without testing it.
+Both are visible in one line, so this build prints it:
 
-So there is a second check now, and it looks for the **error** rather than the shape of the
-edit: a local variable redeclared while an earlier one of the same name is still in scope,
-which is exactly what javac reports and what it cannot tell me locally (a method body touching
-a missing Minecraft type stops attribution before that check runs).
+    [rummage-client] menu has N slots, masked set = {...}
 
-It keeps a real scope stack, so sibling blocks reusing a name are not flagged - a flat
-per-method version reported twelve false positives on legal code. **I ran it against the
-broken 1.11.0 file and confirmed it reports `'rummageTargets' redeclared at line 169 while the
-one from line 157 is in scope`.** A check that has not been shown to fail on a known-bad input
-is not a check.
+Sampled one second after the corpse screen opens, not in `init()` - the packets from the menu
+swap have not all landed at that point, which is the same timing mistake I made with the
+clear.
+
+Compare against the server's `menu TarkovInventoryMenu, 158 slots`:
+
+- **Same slot count, bits at 0-5** - the bits came from the corpse menu we replaced, and the
+  conditional clear is not firing when it should.
+- **Different slot count** - the client is building a different menu from the server, and the
+  indices can never line up until that is fixed.
+
+## Also good news in your screenshots
+
+The searching sounds play and the backpack appears after searching. That is the corpse gate
+working exactly as intended - pockets first, then the pack.
+
+## What I need
+
+Open a corpse, wait a second, then send `latest.log`. One `[rummage-client]` line settles it.
 
 ## Verification
 

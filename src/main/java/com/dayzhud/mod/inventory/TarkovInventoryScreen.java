@@ -81,11 +81,16 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private boolean openSoundPlayed = false;
 
     @Override
+    private int rummageLogTicks = -1;
+
+    @Override
     protected void init() {
         super.init();
+        // Sample the client's Rummage mask a second after opening, once every packet from the
+        // menu swap has landed. Reading it in init() would be too early to mean anything.
+        rummageLogTicks = 20;
         // Drop any slot mask left over from the menu we replaced - Rummage will not send a
         // clearing packet when its recomputed set is empty. See RummageCompat.clearClientMask.
-        RummageCompat.clearClientMask();
         // Centre on the FULL layout width (inventory + container) even when no container is
         // open, so the loadout panel sits in exactly the same spot either way and the UI
         // doesn't jump sideways as you open and close chests.
@@ -95,6 +100,18 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (!openSoundPlayed) {
             openSoundPlayed = true;
             UiSounds.inventoryOpen();
+        }
+    }
+
+    /**
+     * Samples the client's Rummage mask a second after opening, once every packet from the
+     * menu swap has landed. Reading it in init() would be too early to mean anything.
+     */
+    @Override
+    public void containerTick() {
+        super.containerTick();
+        if (rummageLogTicks > 0 && --rummageLogTicks == 0) {
+            RummageCompat.logClientMask(menu.slots.size());
         }
     }
 
