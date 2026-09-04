@@ -27,6 +27,15 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> INVENTORY_MOVE = register("inventory_move");
     public static final RegistryObject<SoundEvent> HEAVY_BREATHING = register("heavy_breathing");
 
+    /**
+     * Played once when a body is opened unsearched.
+     *
+     * One sound per body rather than per slot: a clip that fires on every reveal turns into a
+     * metronome, and the interesting moment is starting on a fresh corpse, not the ninth slot
+     * of it.
+     */
+    public static final RegistryObject<SoundEvent> CORPSE_SEARCH = register("corpse_search");
+
     private ModSounds() {}
 
     private static RegistryObject<SoundEvent> register(String name) {

@@ -395,6 +395,36 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     }
 
     /** Menu index of the first slot belonging to the searched container. */
+    /**
+     * The order the search works through a corpse: equipment, then inventory, then hotbar,
+     * then the bag.
+     *
+     * The container's own numbering is hotbar first (0-8), then main (9-35), then armour
+     * (36-39) - so walking it in index order searched the belt before the body armour, which
+     * is backwards from how anyone loots. This returns container indices in the order a player
+     * would actually go through them; a non-corpse container has no such expectation and is
+     * left in its natural order.
+     */
+    public int[] searchOrder() {
+        Container searched = searchedContainer;
+        if (searched == null) return new int[0];
+        if (!corpseLayout) {
+            int[] plain = new int[searched.getContainerSize()];
+            for (int i = 0; i < plain.length; i++) plain[i] = i;
+            return plain;
+        }
+        java.util.List<Integer> order = new java.util.ArrayList<>();
+        for (int i = 3; i >= 0; i--) order.add(CORPSE_ARMOR_FEET + i);   // head down to feet
+        order.add(CORPSE_OFFHAND);
+        for (int i = CORPSE_CURIO_START; i < searched.getContainerSize(); i++) order.add(i);
+        for (int i = CORPSE_MAIN_START; i < CORPSE_MAIN_START + 27; i++) order.add(i);
+        for (int i = CORPSE_HOTBAR_START; i < CORPSE_HOTBAR_START + 9; i++) order.add(i);
+
+        int[] out = new int[order.size()];
+        for (int i = 0; i < out.length; i++) out[i] = order.get(i);
+        return out;
+    }
+
     public int searchedMenuOffset() {
         return containerStartIndex;
     }

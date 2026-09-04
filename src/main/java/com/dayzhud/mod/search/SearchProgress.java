@@ -53,14 +53,22 @@ public final class SearchProgress {
      * so an almost-empty container finishes quickly instead of appearing to hang on nothing.
      */
     public static int nextUnsearched(Container container, Player player) {
+        int[] order = new int[container.getContainerSize()];
+        for (int i = 0; i < order.length; i++) order[i] = i;
+        return nextUnsearched(container, player, order);
+    }
+
+    /** As above, but visiting slots in a given order rather than by index. */
+    public static int nextUnsearched(Container container, Player player, int[] order) {
         BitSet revealed = forPlayer(container, player);
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            if (revealed.get(i)) continue;
-            if (container.getItem(i).isEmpty()) {
-                revealed.set(i);
+        for (int slot : order) {
+            if (slot < 0 || slot >= container.getContainerSize()) continue;
+            if (revealed.get(slot)) continue;
+            if (container.getItem(slot).isEmpty()) {
+                revealed.set(slot);
                 continue;
             }
-            return i;
+            return slot;
         }
         return -1;
     }
@@ -89,8 +97,8 @@ public final class SearchProgress {
      */
     public static int nextUnsearchedWithBag(Container container, Player player,
                                             java.util.function.IntPredicate bagOccupied,
-                                            int bagSlots) {
-        int body = nextUnsearched(container, player);
+                                            int bagSlots, int[] order) {
+        int body = nextUnsearched(container, player, order);
         if (body >= 0) return body;
         BitSet revealed = forPlayer(container, player);
         for (int i = 0; i < bagSlots; i++) {
@@ -111,7 +119,10 @@ public final class SearchProgress {
         int[] tmp = new int[count];
         int n = 0;
         for (int i = 0; i < count && i < container.getContainerSize(); i++) {
-            if (!revealed.get(i)) tmp[n++] = menuOffset + i;
+            // An EMPTY slot is never hatched. There is nothing in it to find, and a cover that
+            // never lifts because the walk has not reached it yet reads as a stuck slot - which
+            // is exactly what the empty rows at the end of a corpse were doing.
+            if (!revealed.get(i) && !container.getItem(i).isEmpty()) tmp[n++] = menuOffset + i;
         }
         int[] out = new int[n];
         System.arraycopy(tmp, 0, out, 0, n);

@@ -28,5 +28,12 @@
     "sounds": [
       "dayzhud:heavy_breathing"
     ]
+  },
+  "corpse_search": {
+    "category": "player",
+    "subtitle": "subtitles.dayzhud.corpse_search",
+    "sounds": [
+      "dayzhud:corpse_search"
+    ]
   }
 }

@@ -2,6 +2,7 @@ package com.dayzhud.mod.search;
 
 import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.inventory.TarkovInventoryMenu;
+import com.dayzhud.mod.sound.ModSounds;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -61,7 +62,7 @@ public final class SearchHandler {
             // other and the ordering needs no special case.
             int bagSlots = menu.corpseBagSlotCount();
             int slot = SearchProgress.nextUnsearchedWithBag(searched, player,
-                    menu::corpseBagSlotOccupied, bagSlots);
+                    menu::corpseBagSlotOccupied, bagSlots, menu.searchOrder());
             if (slot < 0) continue;
 
             SearchProgress.forPlayer(searched, player).set(slot);
@@ -69,12 +70,6 @@ public final class SearchHandler {
             // the next broadcast sends the item for the first time.
             menu.broadcastChanges();
 
-            if (SearchConfig.SOUNDS.get()) {
-                player.level().playSound(null, player.blockPosition(),
-                        SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS,
-                        SearchConfig.SOUND_VOLUME.get().floatValue(),
-                        0.8f + player.level().random.nextFloat() * 0.4f);
-            }
             pushMaskIfChanged(player, menu);
         }
     }
@@ -101,8 +96,27 @@ public final class SearchHandler {
     }
 
     /** Resets the timer so a freshly opened container waits the initial delay again. */
+    /**
+     * Plays the search sound once, when a body is opened with anything still to find.
+     *
+     * Per body rather than per slot. A clip on every reveal became a metronome - twelve ticks
+     * apart, identical every time - and the moment worth marking is starting on a fresh corpse.
+     */
+    private static void playOpenSound(ServerPlayer player, Container searched) {
+        if (!SearchConfig.SOUNDS.get()) return;
+        if (SearchProgress.nextUnsearched(searched, player) < 0) return;
+        player.level().playSound(null, player.blockPosition(),
+                ModSounds.CORPSE_SEARCH.get(), SoundSource.PLAYERS,
+                SearchConfig.SOUND_VOLUME.get().floatValue(), 1.0f);
+    }
+
     public static void beginSearch(ServerPlayer player) {
         TIMERS.put(player.getUUID(),
                 SearchConfig.INITIAL_DELAY_TICKS.get() + SearchConfig.TICKS_PER_SLOT.get());
+        LAST_MASK.remove(player.getUUID());
+        if (player.containerMenu instanceof TarkovInventoryMenu menu) {
+            Container searched = menu.searchedContainer();
+            if (searched != null) playOpenSound(player, searched);
+        }
     }
 }

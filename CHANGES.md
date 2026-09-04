@@ -1,42 +1,39 @@
-# dayzhud 2.1.1 - build fix
+# dayzhud 2.2.0 - loot order, empty slots, one sound, panel overlaps
 
-**Complete.** 52 files. Unzip over the repo root, and see `DELETE.txt`.
+**Complete.** 53 files. Unzip over the repo root; see `DELETE.txt`.
 
-## What broke - three leftovers from swapping the search implementations
+## Search
 
-1. `NetworkHandler` still imported and registered `SearchPackets`, from the duplicate search
-   system I deleted two builds ago.
-2. `SearchConfig` lost `SEARCH_CORPSES` and `SEARCH_CONTAINERS` when I replaced my version
-   with the wired one, but both redirects were already calling them.
-3. `DayzHudMod` registered `SearchConfig.SPEC` **twice** - the same config file registered
-   twice would have thrown at load even after it compiled.
+**Order is now equipment, inventory, hotbar, backpack.** The corpse container numbers its
+slots hotbar-first (0-8), then main (9-35), then armour (36-39) - so walking it by index
+searched the belt before the body armour. `searchOrder()` returns the order a person would
+actually go through a body; a plain chest has no such expectation and keeps its natural order.
 
-All three are the same root cause: I kept the interrupted turn's implementation and deleted
-mine, and did not sweep for references to the half I removed.
+**Empty slots are never hatched.** They were being masked until the walk happened to reach
+them, which on the empty rows at the end of a corpse looked like a cover that never lifted.
+There is nothing in an empty slot to find, so it is never covered.
 
-## Why the checks missed all three
+**One sound per body, not per slot.** Your clip plays once when you open a corpse that still
+has something to find, and nothing after that. Converted to mono Ogg Vorbis at 44.1 kHz,
+loudness-normalised to -16 LUFS - Minecraft decodes only Ogg, and a stereo file plays
+non-positionally, so a stereo search sound would have followed the listener around instead of
+coming from the body.
 
-The first-party symbol scan matched symbol NAMES against a hand-written list of prefixes -
-`Market|Wallet|Tacz|...` - which never included `Search`. A brand-new package was invisible
-to it. Then two deeper problems: a name-based list cannot see a reference to a **deleted**
-class, because the name is by definition no longer in the tree; and it never looked at
-unresolved **constants** at all, which is what `SEARCH_CORPSES` is.
+The per-slot beep is gone. Twelve ticks apart and identical every time, it was a metronome.
 
-It now keys on javac's own `location:` line instead. `location: package com.dayzhud.mod.search`
-or `location: class SearchConfig` means javac searched *our* package or *our* class and came
-up empty - which is conclusive regardless of what Minecraft types are missing. Filtering out
-absent MC imports needed two rules worth stating: a missing class only counts when the location
-is one of our packages, and a missing "variable" only counts when it is SCREAMING_CASE, because
-an unresolved Minecraft class used statically (`Commands.literal`) is reported as a missing
-variable named after the class.
+## Market details panel
 
-Confirmed against the shipped 2.1.0 tree - it now reports exactly the three CI errors:
+**The name no longer runs through the category line.** The caption and the stat block now
+start below however many lines the name took, instead of at a fixed offset - a two-line
+helmet name was landing straight on top of it.
 
-    class SearchPackets missing from com.dayzhud.mod.search
-    variable SEARCH_CONTAINERS missing from SearchConfig
-    variable SEARCH_CORPSES missing from SearchConfig
+**The price row has its own band**, cleared behind, so a long price and the last visible stat
+cannot share pixels.
 
-Nine checks now, verdict line last.
+**And when there is genuinely no room, the stats are dropped rather than squeezed.** Walking
+the arithmetic across window sizes showed the previous clamp-to-a-minimum drew the stat block
+straight over the price at 320x240 and on a two-line name at 640x360. Showing none is honest;
+showing them on top of the price is not. Checked at five window sizes and both name lengths.
 
 ## Verification
 

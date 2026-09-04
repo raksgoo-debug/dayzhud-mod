@@ -505,21 +505,30 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         g.pose().popPose();
 
         int y = contentY + 50;
-        for (String line : wrap(stack.getHoverName().getString(), detailW - 16, 2)) {
+        List<String> nameLines = wrap(stack.getHoverName().getString(), detailW - 16, 2);
+        for (String line : nameLines) {
             g.drawString(font, line, detailX + 8, y, StyledTheme.TEXT_COLOR, false);
             y += 10;
         }
+        // The category caption and the stats start BELOW however many lines the name took.
+        // Anchoring them to a fixed offset put a two-line name straight through the caption,
+        // which is what a long helmet name was doing.
         StyledTheme.caption(g, font, offer.sub().isEmpty()
                 ? offer.category().toUpperCase(Locale.ROOT)
                 : (offer.category() + " / " + offer.sub()).toUpperCase(Locale.ROOT),
-                detailX + 8, statTop() - 8);
+                detailX + 8, y + 2);
 
         List<ItemStatCard.Stat> stats = ItemStatCard.forStack(stack);
-        int regionTop = statTop();
-        int regionH = statRegionHeight();
-        int fits = Math.max(1, regionH / STAT_ROW_H);
+        int regionTop = Math.max(statTop(), y + 12);
+        // Real available height, not a clamped one. On a short window there is genuinely no
+        // room between the name and the price row, and clamping to a minimum just drew the
+        // stats on top of the price - better to show none than to show a mess.
+        int regionH = (qtyRowY() - 18) - regionTop;
+        int fits = regionH / STAT_ROW_H;
+        if (fits < 1) stats = List.of();
         detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, stats.size() - fits)));
 
+        if (!stats.isEmpty()) {
         g.enableScissor(detailX, regionTop, detailX + detailW, regionTop + regionH);
         int sy = regionTop;
         for (int i = detailScroll; i < Math.min(stats.size(), detailScroll + fits); i++) {
@@ -535,10 +544,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
             sy += STAT_ROW_H;
         }
         g.disableScissor();
+        }
 
         // A cut-off list with no indication it continues is what made the old panel look
         // broken, so say so.
-        if (stats.size() > fits) {
+        if (fits >= 1 && stats.size() > fits) {
             StyledTheme.caption(g, font,
                     (detailScroll + fits) + "/" + stats.size() + " - SCROLL",
                     detailX + detailW - 46, regionTop + regionH + 1);
@@ -546,9 +556,13 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
         long total = offer.price() * quantity;
         String price = Money.withSymbol(total);
+        // Cleared behind first: the stat block is scissored to regionH, but a long price and
+        // the last visible stat were still landing on the same pixels at small panel sizes.
+        int priceY = qtyRowY() - 14;
+        g.fill(detailX + 1, priceY - 2, detailX + detailW - 1, priceY + 11, StyledTheme.SECTION_BG);
         StyledTheme.caption(g, font, quantity > 1
-                ? "UNIT " + Money.withSymbol(offer.price()) : "PRICE", detailX + 8, qtyRowY() - 12);
-        g.drawString(font, price, detailX + detailW - 8 - font.width(price), qtyRowY() - 16,
+                ? "UNIT " + Money.withSymbol(offer.price()) : "PRICE", detailX + 8, priceY + 4);
+        g.drawString(font, price, detailX + detailW - 8 - font.width(price), priceY,
                 ClientWallet.get() >= total ? StyledTheme.ACCENT : 0xFFB04A3A, false);
 
         int bw = (detailW - 16 - 3 * 3) / 4;
