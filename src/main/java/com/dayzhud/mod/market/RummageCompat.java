@@ -61,13 +61,6 @@ public final class RummageCompat {
                     net.minecraft.world.inventory.AbstractContainerMenu.class);
             Class<?> target = Class.forName("com.scarasol.rummage.data.RummageTarget", false, cl);
             targetLocalSlotIndex = target.getMethod("localSlotIndex");
-            isFullyRummagedForPlayer = rummageable.getMethod("isFullyRummaged", Player.class);
-            Class<?> util = Class.forName("com.scarasol.rummage.util.CommonContainerUtil", false, cl);
-            getTargetForSlot = util.getMethod("getTarget",
-                    net.minecraft.world.inventory.Slot.class,
-                    net.minecraft.world.inventory.AbstractContainerMenu.class);
-            Class<?> target = Class.forName("com.scarasol.rummage.data.RummageTarget", false, cl);
-            targetLocalSlotIndex = target.getMethod("localSlotIndex");
             return true;
         } catch (Throwable t) {
             DayzHudMod.LOGGER.warn("Rummage is installed but its API did not resolve - "

@@ -1,39 +1,33 @@
-# dayzhud 1.10.0 - deterministic mask clear, and a diagnostic instead of another guess
+# dayzhud 1.10.1 - build fix
 
-**Complete.** 46 files. Unzip over the repo root.
+**Complete.** 46 files. Unzip over the repo root. Same contents as 1.10.0 with the compile
+error fixed - the deterministic mask-clear packet and `/market rummage` are both in here.
 
-## What changed
+## What broke
 
-**1. The mask clear is now a packet, not a screen hook.** 1.9.0 cleared Rummage's client mask
-in `TarkovInventoryScreen.init()`, which runs the moment the open-screen packet arrives - and
-Rummage's own state packet may land either side of that. A race I did not notice. The clear is
-now an explicit S2C packet sent immediately after the redirect opens the merged menu. A packet
-sent later on the same connection cannot arrive earlier, so the ordering is fixed rather than
-hopeful.
+`RummageCompat.resolve()` had its last seven lines twice, so `util` and `target` were declared
+twice in one method. My patch matched and applied to a block that already contained the change.
 
-**2. `/market rummage` (op).** With the corpse screen open, run it. For every slot in the menu
-it prints the container class, the container-relative index, and whether Rummage resolves a
-target - ending with the exact list of menu indices Rummage will mask.
+## Why my check did not catch it, again
 
-That one line settles which of two very different bugs this is:
+Same shape as the `STOCK_ARMOR` failure. `getTargetForSlot = util.getMethod("getTarget",
+Slot.class, AbstractContainerMenu.class)` names two Minecraft types that are not on the
+classpath here, so javac abandoned attribution of that method body before it ever reached the
+duplicate-declaration check. The file compiled clean locally and failed in CI on a plain
+scoping error.
 
-- **If it lists the corpse's slot indices** (high numbers) and your equipment is still what
-  gets hatched, the resolution is right and the client is drawing a stale or mis-indexed set -
-  a client-state problem.
-- **If it lists 0-5, or nothing at all**, then either the wrong slots resolve targets or none
-  do, and the corpse column can never be masked as things stand - a resolution problem.
+That is now **three** CI failures in this session from one root cause: a text patch applied
+twice, hidden by missing Minecraft types. The duplicated `drawSidebar` body, the duplicated
+`isFullyRummagedForPlayer` field, and this.
 
-I have now been wrong twice about which of those it is, both times from reading a screenshot
-instead of the running state. The output also goes to `latest.log` under `[rummage]`, so you
-can paste it rather than retype it.
-
-## Being straight about this one
-
-I have not fixed your bug in this build. The packet ordering was a real defect and worth
-fixing on its own, but I do not know that it was *the* defect, and shipping a third
-speculative fix would waste another one of your test cycles. The diagnostic costs you one
-command and tells me exactly where to look.
+So the check no longer relies on the compiler noticing. It scans for the *shape* of the
+mistake instead: any run of six or more identical consecutive statements appearing twice in
+one file. Three lines was too noisy - `super(view, index, x, y);` and friends recur honestly -
+but at six it reports zero across the tree and would have caught all three of these. It runs
+against the extracted zip alongside the other checks.
 
 ## Verification
 
-Five checks against the extracted zip, all clean, including the new unresolved-method scan.
+Six checks against the extracted zip, all clean: config definite-assignment via stub, removed
+classes, unresolved first-party classes, unresolved first-party methods, other errors, and
+duplicated blocks.
