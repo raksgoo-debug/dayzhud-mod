@@ -118,6 +118,10 @@ public class CorpseOpenRedirect {
         List<String> curioIds = readCurioIds(menu);
         if (corpse == null) return;
 
+        // Rummage: a corpse that still has to be searched keeps its own screen. See
+        // RummageCompat for why merging cannot carry the searching mechanic across.
+        if (RummageCompat.needsSearching(corpse, serverPlayer)) return;
+
         int expected = expectedSlots(menu, curioIds.size());
         if (corpse.getContainerSize() != expected) {
             DayzHudMod.LOGGER.warn("[dayzhud] Corpse container is {} slots but the known layout "

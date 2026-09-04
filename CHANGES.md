@@ -1,51 +1,58 @@
-# dayzhud 1.8.0 - readable stat cards, magazines, Rummage compat
+# dayzhud 1.8.1 - corpses stand down for Rummage too
 
-**Complete, not incremental.** 45 files. Unzip over the repo root.
+**Complete.** 45 files. Unzip over the repo root.
 
-## The details panel was broken, not just cramped
+## What your screenshot shows
 
-Your screenshot showed two stats and a clipped third. Two separate faults:
+Rummage was masking your EQUIPMENT and GEAR slots while leaving the corpse column untouched -
+the mask landed on menu slots 0-5, which in the merged view are your own armour and curios.
 
-1. **Values were drawn at full font size** while labels were captions, so each row ate 11-13px
-   of a column that only had about 60px to give. Values are 0.75 scale now, matching the
-   labels, at a fixed 11px row.
-2. **There was no way to see past the cut.** A gun has eleven stats and the column fits six or
-   seven. The panel scrolls with the wheel now, and shows `7/11 - SCROLL` under the block so
-   it is obvious there is more. Silently truncating is what made it look broken.
+## What I found in Rummage's code, and what I did NOT find
 
-The preview also dropped from 3x to 2x. It was eating the room the stats needed, and at 32px
-an item icon is already perfectly readable.
+`CommonContainerUtil.getTarget(Slot, menu)` resolves in three steps:
 
-## Magazines from TaCZ: Magazines
+1. `getTarget(slot.container, slot.getContainerSlot())` - correct for a plain Slot on a
+   rummageable container.
+2. If the slot is a `SlotItemHandler`, `getWrappedTarget(handler, index)` - which only
+   understands Forge's `InvWrapper` and `SidedInvWrapper`.
+3. Otherwise `getMcrTarget(menu, index)`, which looks for a `boundBlockEntity` field and
+   returns null for our menus.
 
-Empty magazines are stocked under a **MAGAZINES** category, in SMALL / STANDARD / EXTENDED
-MAGS / DRUMS sections by capacity.
+So the corpse column - `CorpseLootSlot extends SlotItemHandler` over this mod's own
+`CorpseLootHandler`, which is neither wrapper type - falls through all three and resolves to
+no target at all. That explains the corpse column being unmasked.
 
-Priced from capacity (`magazines.basePrice` 1200 + `pricePerRound` 90), because a magazine is
-a container - a 100-round drum should not cost what a 7-round pistol mag does.
+**It does not explain the equipment slots being masked**, and I have not pinned that down. The
+most likely candidate is that Rummage's client screen mixin paints the mask positionally over
+`menu.slots` from the synced state, in which case the rummageable container's slots have to
+occupy menu indices 0..N - which the Tarkov layout will never do, since equipment comes first.
+If that is what is happening, "make it work in the merged view" is not fixable from this side
+without either reordering the whole menu (which breaks every index in `quickMoveStack`) or an
+upstream change to target by container rather than position.
 
-Like TACZ guns and lrtactical consumables, every magazine is one registered item with a family
-string, so it gets its own price key (`taczmagazines:magazine/<family>`). It is handled in its
-own compat rather than through `nbtVariantItems` because the family sits behind
-`MagazineItem.getMagazineFamilyId` rather than in an NBT tag a config line could name, and
-because the family list comes from the mod's own registry.
+I am not going to guess at it a third time. What would settle it in one in-game run is a
+diagnostic that dumps, for every slot in the open menu, its index, container class, container
+slot and whether Rummage resolves a target. Say the word and I will add it.
 
-## Rummage compat
+## What this build actually changes
 
-While a container still needs searching for that player, the container merging stands down and
-Rummage's own screen is left alone. Once searched, opening it again gives the merged view.
+`CorpseOpenRedirect` now stands down for an unsearched corpse, the way `ContainerOpenRedirect`
+already did for containers. So:
 
-Worth being precise about why: Rummage hides contents by masking `Slot.getItem`, and that
-masking follows our slots fine - the items would stay hidden either way. What merging removes
-is the *searching interaction*, which lives on Rummage's screen. Reimplementing that badly
-would be worse than not merging, so the redirect defers instead. `access.respectRummage`,
-default on. The check fails open: any doubt and it merges, because a false negative costs one
-container's merged view while a false positive would hide a container entirely.
+- Right-click a fresh corpse: Rummage's own screen, searched correctly, slot by slot.
+- Right-click it again once searched: the merged Tarkov view, everything visible.
+
+That also gives you the inventory-then-backpack order you asked for, by accident of how
+Rummage already works - the corpse's own container is what gets searched, and its backpack is
+a separate container reached afterwards. Doing that ordering *inside* the merged view is
+blocked on the same unresolved question above: the client cannot answer "is this fully
+rummaged" for a corpse, because the container it holds is a synced copy, not the rummageable
+original.
+
+`access.respectRummage` (default on) covers both redirects. Turn it off and you get the merged
+view immediately - and the mis-targeted mask from your screenshot back with it.
 
 ## Verification
 
-Four checks against the extracted zip: config definite-assignment via the ForgeConfigSpec
-stub, no references to removed classes, no unresolved first-party symbols, no other errors.
-The magazine, Rummage and TACZ integrations are all reflective, so a wrong method name there
-fails at runtime with a logged warning rather than at compile time - CI cannot catch those
-either. New MC surface: `EditBox.setPosition`, `ArmorItem.getEquipmentSlot`.
+Four checks against the extracted zip, all clean. The Rummage integration is reflective, so a
+wrong method name there fails at runtime with a logged warning rather than at compile time.
