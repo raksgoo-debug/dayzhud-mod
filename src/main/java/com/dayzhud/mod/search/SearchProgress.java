@@ -61,10 +61,14 @@ public final class SearchProgress {
     /** As above, but visiting slots in a given order rather than by index. */
     public static int nextUnsearched(Container container, Player player, int[] order) {
         BitSet revealed = forPlayer(container, player);
+        boolean maskEmpty = SearchConfig.MASK_EMPTY.get();
         for (int slot : order) {
             if (slot < 0 || slot >= container.getContainerSize()) continue;
             if (revealed.get(slot)) continue;
-            if (container.getItem(slot).isEmpty()) {
+            // With empty slots covered, an empty one still costs a step - that is the point.
+            // Skipping them for free would make the sweep visibly pause only where the loot
+            // is, which gives the position away just as plainly as not covering them.
+            if (!maskEmpty && container.getItem(slot).isEmpty()) {
                 revealed.set(slot);
                 continue;
             }
@@ -101,10 +105,11 @@ public final class SearchProgress {
         int body = nextUnsearched(container, player, order);
         if (body >= 0) return body;
         BitSet revealed = forPlayer(container, player);
+        boolean maskEmpty = SearchConfig.MASK_EMPTY.get();
         for (int i = 0; i < bagSlots; i++) {
             int bit = bagBit(container, i);
             if (revealed.get(bit)) continue;
-            if (!bagOccupied.test(i)) {
+            if (!maskEmpty && !bagOccupied.test(i)) {
                 revealed.set(bit);
                 continue;
             }

@@ -521,7 +521,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             if (slot.container != searchedView) continue;
             int containerSlot = slot.getContainerSlot();
             if (revealed.test(containerSlot)) continue;
-            if (searchedContainer.getItem(containerSlot).isEmpty()) continue;
+            // Occupancy read from the DELEGATE, never the wrapper - the wrapper reports a
+            // hidden slot as empty, so asking it here would unmask everything it just masked.
+            if (!com.dayzhud.mod.search.SearchConfig.MASK_EMPTY.get()
+                    && searchedContainer.getItem(containerSlot).isEmpty()) {
+                continue;
+            }
             out.add(i);
         }
         int[] result = new int[out.size()];
@@ -550,8 +555,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // more cells than the bag actually has, and the search walk only ever visits the real
         // ones - so a cover on a cell outside it had nothing that would ever lift it. That is
         // the pair of permanently masked slots at the bottom of the scrolled list.
+        // Past the end of the real bag is still never hidden: the walk only visits real slots,
+        // so a cover out there would have nothing that could ever lift it.
         if (bagSlot >= corpseLoot.serverBagSlots()) return false;
-        if (corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot).isEmpty()) return false;
+        if (!com.dayzhud.mod.search.SearchConfig.MASK_EMPTY.get()
+                && corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot).isEmpty()) {
+            return false;
+        }
         return !SearchProgress.isBagRevealed(searched.delegate(), player, bagSlot);
     }
 
