@@ -1,40 +1,32 @@
-# dayzhud 2.2.1 - the mask was on the wrong slots
+# dayzhud 2.2.2 - the covers never drew, and two cells that could never uncover
 
 **Complete.** 53 files. Unzip over the repo root; see `DELETE.txt`.
 
-## The hotbar/backpack bug - your description was the whole diagnosis
+## Why nothing was hatched on a fresh body
 
-"The masked slots were in the hotbar but the actual items were in the backpack" is exactly
-what was happening, and it names the cause.
+`maskedBodyMenuSlots` matched slots with `slot.container != searchedContainer`, and
+`searchedContainer` was set to the **delegate** - the raw corpse container - while the menu's
+slots are built on the **`SearchedContainer` wrapper**. Different objects, so nothing ever
+matched, and every mask came out empty. Items hidden, nothing drawn over them: exactly your
+first screenshot.
 
-The mask was built as `menuIndex = menuOffset + containerIndex`. That assumes the corpse's
-slots appear in the menu in the container's own order. They do not: the corpse column is laid
-out **armour head-down, then curios, then inventory, then hotbar**, while the container numbers
-itself **hotbar 0-8, main 9-35, armour 36-39**. So a cover computed for container slot 3 (a
-hotbar item) was painted onto whatever the menu happened to have third - and the item it was
-meant to be hiding stayed invisible somewhere else until its own slot got revealed.
+Yesterday's fix replaced an offset assumption with a slot walk, which was right, and then
+compared against the wrong one of the two container references. The menu keeps both now, with
+a comment saying which is for what: the **wrapper** for slot identity, the **delegate** for
+progress and for asking whether a slot actually holds anything.
 
-Covers on empty hotbar slots and an item appearing in the bag when one of them "opened" are
-both that same off-by-a-whole-layout error.
+That last part matters and is easy to get backwards - occupancy has to be read from the
+delegate, because the wrapper reports a hidden slot as empty, and "empty slots are never
+masked" would then unmask everything the moment it was masked.
 
-It now walks the menu's actual slots and masks the ones whose container is the corpse and whose
-item is present. No offset, no assumption about ordering. **I deleted `maskedSlots` and
-`searchedMenuOffset` outright** rather than leaving them for the next caller to trip over -
-they only ever encoded the wrong assumption.
+## The two stuck cells at the bottom of the bag
 
-## Details panel
-
-- **The scroll hint was the thing on the price**, not the stats - it was drawn at the bottom of
-  the stat region, which ran right up to the price band. The region is a line shorter now and
-  the hint sits in it.
-- **The preview moved down 6px.** At 2x an icon is 32 tall and was touching the ITEM DETAILS
-  rule above it.
-- **Item names are drawn at 0.75**, matching the stats. Names in this pack run to "Ballistic
-  Armor Co. 'Bastion' Helmet (MultiCam)", which at full size is three lines in a 152px column.
-
-Re-walked the whole column at five window sizes and both name lengths: preview clear of the
-header, name clear of the stats, stats and hint clear of the price, everywhere.
+The scrolling bag view can show more cells than the bag actually has. `isBagSlotHidden` was
+covering those too, and the search walk only ever visits real slots - so nothing existed that
+could ever lift them. They now report unhidden when the index is past the real bag size, and
+also when the slot is empty, matching the rule the body already follows.
 
 ## Verification
 
-`RESULT: PASS (9 checks)` against the extracted zip.
+`RESULT: PASS (9 checks)` against the extracted zip. Nothing in your log points at anything
+else; the only "search" lines in it belong to other mods.

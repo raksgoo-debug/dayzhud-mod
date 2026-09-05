@@ -183,6 +183,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * screen is opened.
      */
     private Container searchedContainer;
+    private Container searchedView;
 
     /**
      * Backpack slot count, computed server-side and synced. The client can't work this out
@@ -306,7 +307,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // --- Opened container, laid out to the right of everything else ---
         this.containerStartIndex = slots.size();
         if (container instanceof com.dayzhud.mod.search.SearchedContainer searched) {
+            // TWO references, deliberately. The slots are built on the WRAPPER, so that is what
+            // slot.container compares equal to; progress is keyed on the DELEGATE, because the
+            // wrapper is rebuilt per menu while the corpse's container is not. Storing only the
+            // delegate meant maskedBodyMenuSlots matched no slots at all and the mask came out
+            // empty - items hidden, nothing drawn over them.
             this.searchedContainer = searched.delegate();
+            this.searchedView = searched;
         }
         if (container != null) {
             if (isCorpse()) {
@@ -511,7 +518,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         java.util.List<Integer> out = new java.util.ArrayList<>();
         for (int i = 0; i < slots.size(); i++) {
             Slot slot = slots.get(i);
-            if (slot.container != searchedContainer) continue;
+            if (slot.container != searchedView) continue;
             int containerSlot = slot.getContainerSlot();
             if (revealed.test(containerSlot)) continue;
             if (searchedContainer.getItem(containerSlot).isEmpty()) continue;
@@ -536,9 +543,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     boolean isBagSlotHidden(int visibleIndex) {
         if (!(corpseContainer instanceof SearchedContainer searched)) return false;
-        if (corpseLootView == null) return false;
+        if (corpseLoot == null || corpseLootView == null) return false;
         int bagSlot = corpseLootView.mapIndex(visibleIndex) - CorpseLootHandler.BASE_COUNT;
         if (bagSlot < 0) return false;
+        // Past the end of the real bag, or empty: never hidden. The visible window can show
+        // more cells than the bag actually has, and the search walk only ever visits the real
+        // ones - so a cover on a cell outside it had nothing that would ever lift it. That is
+        // the pair of permanently masked slots at the bottom of the scrolled list.
+        if (bagSlot >= corpseLoot.serverBagSlots()) return false;
+        if (corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot).isEmpty()) return false;
         return !SearchProgress.isBagRevealed(searched.delegate(), player, bagSlot);
     }
 
