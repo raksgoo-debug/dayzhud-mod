@@ -19,8 +19,8 @@ public final class SearchNetwork {
     public static int[] maskFor(ServerPlayer player, TarkovInventoryMenu menu) {
         Container searched = menu.searchedContainer();
         if (searched == null) return new int[0];
-        int[] body = SearchProgress.maskedSlots(searched, player,
-                menu.searchedMenuOffset(), searched.getContainerSize());
+        java.util.BitSet revealed = SearchProgress.forPlayer(searched, player);
+        int[] body = menu.maskedBodyMenuSlots(revealed::get);
         int[] bag = menu.maskedBagMenuSlots();
         int[] all = new int[body.length + bag.length];
         System.arraycopy(body, 0, all, 0, body.length);

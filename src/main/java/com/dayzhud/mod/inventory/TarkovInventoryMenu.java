@@ -425,9 +425,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return out;
     }
 
-    public int searchedMenuOffset() {
-        return containerStartIndex;
-    }
 
     public boolean corpseHasBackpack() {
         return corpseLoot != null && corpseLoot.bagSlots() > 0;
@@ -498,6 +495,33 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * Computed from the visible window rather than the bag's real size, because the bag list
      * scrolls - a slot's menu index only means anything for the rows currently on screen.
      */
+    /**
+     * Menu indices of the CORPSE's own slots still to be searched.
+     *
+     * Derived by walking the menu's slots, not by adding an offset to the container index.
+     * The corpse column is laid out head-down for armour, then curios, then inventory, then
+     * hotbar - nothing like the container's own numbering, where the hotbar is 0-8 and the
+     * armour is 36-39. Assuming menuIndex = offset + containerIndex therefore hatched the
+     * hotbar row while the items it was hiding were the backpack's, which is exactly the
+     * symptom: covers on empty hotbar slots, and an item appearing in the bag when one of
+     * them "opened".
+     */
+    public int[] maskedBodyMenuSlots(java.util.function.IntPredicate revealed) {
+        if (searchedContainer == null) return new int[0];
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        for (int i = 0; i < slots.size(); i++) {
+            Slot slot = slots.get(i);
+            if (slot.container != searchedContainer) continue;
+            int containerSlot = slot.getContainerSlot();
+            if (revealed.test(containerSlot)) continue;
+            if (searchedContainer.getItem(containerSlot).isEmpty()) continue;
+            out.add(i);
+        }
+        int[] result = new int[out.size()];
+        for (int i = 0; i < result.length; i++) result[i] = out.get(i);
+        return result;
+    }
+
     public int[] maskedBagMenuSlots() {
         if (corpseLoot == null || corpseLootView == null) return new int[0];
         java.util.List<Integer> out = new java.util.ArrayList<>();

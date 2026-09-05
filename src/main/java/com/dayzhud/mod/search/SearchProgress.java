@@ -113,19 +113,4 @@ public final class SearchProgress {
         return -1;
     }
 
-    /** Menu-slot indices to draw as unsearched, given where this container starts in the menu. */
-    public static int[] maskedSlots(Container container, Player player, int menuOffset, int count) {
-        BitSet revealed = forPlayer(container, player);
-        int[] tmp = new int[count];
-        int n = 0;
-        for (int i = 0; i < count && i < container.getContainerSize(); i++) {
-            // An EMPTY slot is never hatched. There is nothing in it to find, and a cover that
-            // never lifts because the walk has not reached it yet reads as a stuck slot - which
-            // is exactly what the empty rows at the end of a corpse were doing.
-            if (!revealed.get(i) && !container.getItem(i).isEmpty()) tmp[n++] = menuOffset + i;
-        }
-        int[] out = new int[n];
-        System.arraycopy(tmp, 0, out, 0, n);
-        return out;
-    }
 }

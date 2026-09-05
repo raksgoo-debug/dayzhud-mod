@@ -1,39 +1,39 @@
-# dayzhud 2.2.0 - loot order, empty slots, one sound, panel overlaps
+# dayzhud 2.2.1 - the mask was on the wrong slots
 
 **Complete.** 53 files. Unzip over the repo root; see `DELETE.txt`.
 
-## Search
+## The hotbar/backpack bug - your description was the whole diagnosis
 
-**Order is now equipment, inventory, hotbar, backpack.** The corpse container numbers its
-slots hotbar-first (0-8), then main (9-35), then armour (36-39) - so walking it by index
-searched the belt before the body armour. `searchOrder()` returns the order a person would
-actually go through a body; a plain chest has no such expectation and keeps its natural order.
+"The masked slots were in the hotbar but the actual items were in the backpack" is exactly
+what was happening, and it names the cause.
 
-**Empty slots are never hatched.** They were being masked until the walk happened to reach
-them, which on the empty rows at the end of a corpse looked like a cover that never lifted.
-There is nothing in an empty slot to find, so it is never covered.
+The mask was built as `menuIndex = menuOffset + containerIndex`. That assumes the corpse's
+slots appear in the menu in the container's own order. They do not: the corpse column is laid
+out **armour head-down, then curios, then inventory, then hotbar**, while the container numbers
+itself **hotbar 0-8, main 9-35, armour 36-39**. So a cover computed for container slot 3 (a
+hotbar item) was painted onto whatever the menu happened to have third - and the item it was
+meant to be hiding stayed invisible somewhere else until its own slot got revealed.
 
-**One sound per body, not per slot.** Your clip plays once when you open a corpse that still
-has something to find, and nothing after that. Converted to mono Ogg Vorbis at 44.1 kHz,
-loudness-normalised to -16 LUFS - Minecraft decodes only Ogg, and a stereo file plays
-non-positionally, so a stereo search sound would have followed the listener around instead of
-coming from the body.
+Covers on empty hotbar slots and an item appearing in the bag when one of them "opened" are
+both that same off-by-a-whole-layout error.
 
-The per-slot beep is gone. Twelve ticks apart and identical every time, it was a metronome.
+It now walks the menu's actual slots and masks the ones whose container is the corpse and whose
+item is present. No offset, no assumption about ordering. **I deleted `maskedSlots` and
+`searchedMenuOffset` outright** rather than leaving them for the next caller to trip over -
+they only ever encoded the wrong assumption.
 
-## Market details panel
+## Details panel
 
-**The name no longer runs through the category line.** The caption and the stat block now
-start below however many lines the name took, instead of at a fixed offset - a two-line
-helmet name was landing straight on top of it.
+- **The scroll hint was the thing on the price**, not the stats - it was drawn at the bottom of
+  the stat region, which ran right up to the price band. The region is a line shorter now and
+  the hint sits in it.
+- **The preview moved down 6px.** At 2x an icon is 32 tall and was touching the ITEM DETAILS
+  rule above it.
+- **Item names are drawn at 0.75**, matching the stats. Names in this pack run to "Ballistic
+  Armor Co. 'Bastion' Helmet (MultiCam)", which at full size is three lines in a 152px column.
 
-**The price row has its own band**, cleared behind, so a long price and the last visible stat
-cannot share pixels.
-
-**And when there is genuinely no room, the stats are dropped rather than squeezed.** Walking
-the arithmetic across window sizes showed the previous clamp-to-a-minimum drew the stat block
-straight over the price at 320x240 and on a two-line name at 640x360. Showing none is honest;
-showing them on top of the price is not. Checked at five window sizes and both name lengths.
+Re-walked the whole column at five window sizes and both name lengths: preview clear of the
+header, name clear of the stats, stats and hint clear of the price, everywhere.
 
 ## Verification
 

@@ -499,16 +499,22 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         // 2x rather than 3x: the preview was eating the room the stats need, and at 32px an
         // item icon is already perfectly readable.
         g.pose().pushPose();
-        g.pose().translate(detailX + detailW / 2f - 16, contentY + 14, 0);
+        // Down from contentY+14: at 2x the icon is 32 tall and was running into the
+        // ITEM DETAILS rule above it.
+        g.pose().translate(detailX + detailW / 2f - 16, contentY + 20, 0);
         g.pose().scale(2f, 2f, 1f);
         g.renderItem(stack, 0, 0);
         g.pose().popPose();
 
-        int y = contentY + 50;
-        List<String> nameLines = wrap(stack.getHoverName().getString(), detailW - 16, 2);
+        int y = contentY + 56;
+        // Drawn at 0.75 like the stats. Gear names in this pack run to "Ballistic Armor Co.
+        // 'Bastion' Helmet (MultiCam)"; at full size that is three lines in a 152px column and
+        // pushes everything below it into the price row.
+        List<String> nameLines = wrap(stack.getHoverName().getString(),
+                (int) ((detailW - 16) / 0.75f), 2);
         for (String line : nameLines) {
-            g.drawString(font, line, detailX + 8, y, StyledTheme.TEXT_COLOR, false);
-            y += 10;
+            small(g, line, detailX + 8, y, StyledTheme.TEXT_COLOR, false);
+            y += 8;
         }
         // The category caption and the stats start BELOW however many lines the name took.
         // Anchoring them to a fixed offset put a two-line name straight through the caption,
@@ -523,7 +529,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         // Real available height, not a clamped one. On a short window there is genuinely no
         // room between the name and the price row, and clamping to a minimum just drew the
         // stats on top of the price - better to show none than to show a mess.
-        int regionH = (qtyRowY() - 18) - regionTop;
+        // Minus a line for the "n/m - SCROLL" hint, which was being drawn at the bottom of
+        // the region and landing straight on the price.
+        int regionH = (qtyRowY() - 28) - regionTop;
         int fits = regionH / STAT_ROW_H;
         if (fits < 1) stats = List.of();
         detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, stats.size() - fits)));
@@ -551,7 +559,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (fits >= 1 && stats.size() > fits) {
             StyledTheme.caption(g, font,
                     (detailScroll + fits) + "/" + stats.size() + " - SCROLL",
-                    detailX + detailW - 46, regionTop + regionH + 1);
+                    detailX + detailW - 46, regionTop + regionH + 2);
         }
 
         long total = offer.price() * quantity;
