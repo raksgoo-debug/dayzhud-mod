@@ -29,8 +29,6 @@ public class DayzHudMod {
 
         TarkovMenuTypes.MENU_TYPES.register(modEventBus);
         ModSounds.SOUNDS.register(modEventBus);
-        ModItems.ITEMS.register(modEventBus);
-        ModCreativeTabs.TABS.register(modEventBus);
 
         // Market economy settings. COMMON rather than SERVER so single-player and a
         // dedicated server read the same file, and so the client can price sell quotes
