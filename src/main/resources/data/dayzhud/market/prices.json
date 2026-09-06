@@ -146,11 +146,6 @@
       "category": "provisions",
       "buy": true
     },
-    "dayzhud:water_bottle": {
-      "value": 1500,
-      "category": "provisions",
-      "buy": true
-    },
     "tarkovdayz:circuitboard": {
       "value": 12000,
       "category": "electronics"
