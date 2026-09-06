@@ -6,8 +6,6 @@ import com.dayzhud.mod.inventory.TarkovMenuTypes;
 import com.dayzhud.mod.market.MarketConfig;
 import com.dayzhud.mod.search.SearchConfig;
 import com.dayzhud.mod.search.SearchConfig;
-import com.dayzhud.mod.registry.ModCreativeTabs;
-import com.dayzhud.mod.registry.ModItems;
 import com.dayzhud.mod.sound.ModSounds;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
