@@ -50,7 +50,6 @@ public final class MagazineCompat {
 
     private static synchronized boolean resolve() {
         if (resolved) return magazineItem != null;
-        resolved = true;
         try {
             ClassLoader cl = MagazineCompat.class.getClassLoader();
             Class<?> registrar = Class.forName(
@@ -67,11 +66,23 @@ public final class MagazineCompat {
             getMaxCapacity = magItem.getMethod("getMaxCapacity", ItemStack.class);
             createByFamily = magItem.getMethod("createMagazineByFamily",
                     Item.class, String.class, int.class);
-            return magazineItem != null;
-        } catch (Throwable t) {
-            DayzHudMod.LOGGER.warn("TaCZ Magazines is installed but its API did not resolve - "
-                    + "magazines will not be stocked: {}", t.toString());
+            resolved = magazineItem != null;
+            return resolved;
+        } catch (ClassNotFoundException | NoSuchMethodException | NoSuchFieldException absent) {
+            // Genuinely not there: latch, warn once, and stop asking.
+            resolved = true;
             magazineItem = null;
+            DayzHudMod.LOGGER.warn("TaCZ Magazines is installed but its API did not resolve - "
+                    + "magazines will not be stocked: {}", absent.toString());
+            return false;
+        } catch (Throwable t) {
+            // Anything else is probably a timing problem, not an absent API: MAGAZINE is a
+            // RegistryObject, and get() throws until registration has run. The first version
+            // latched on ANY failure, so one early call - a sell-price lookup during load, say
+            // - permanently disabled magazines for the whole session with a single warning
+            // nobody would connect to an empty shop tab. Leave it unresolved and try again.
+            magazineItem = null;
+            DayzHudMod.LOGGER.debug("TaCZ Magazines not ready yet, will retry: {}", t.toString());
             return false;
         }
     }

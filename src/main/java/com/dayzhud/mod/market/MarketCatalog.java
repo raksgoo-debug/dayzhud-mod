@@ -174,23 +174,31 @@ public final class MarketCatalog {
         }
 
         int magazines = 0;
-        if (MagazineCompat.isActive() && MarketConfig.MAGAZINES_STOCK.get()) {
-            List<String> families = MagazineCompat.families();
-            if (families.isEmpty()) {
-                DayzHudMod.LOGGER.warn("TaCZ Magazines is active but reported no magazine "
-                        + "families - its family list is filled on datapack sync, so this "
-                        + "usually means the catalogue was built too early.");
-            }
-            for (String family : families) {
-                ItemStack stack = MagazineCompat.makeEmpty(family);
-                if (stack.isEmpty()) continue;
-                MarketPrices.Entry override =
-                        MarketPrices.all().get(MagazineCompat.KEY_PREFIX + family);
-                int unit = override != null ? override.value() : MagazineCompat.priceOf(stack);
-                if (unit <= 0) unit = MarketConfig.MAGAZINE_BASE_PRICE.get();
-                out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_MAGAZINES,
-                        magazineSection(MagazineCompat.capacityOf(stack))));
-                magazines++;
+        if (MarketConfig.MAGAZINES_STOCK.get()) {
+            if (!MagazineCompat.isActive()) {
+                // Says WHY there are none. "No MAGAZINES tab" on its own is indistinguishable
+                // from the mod being absent, the API having moved, or the catalogue having
+                // been built before registration - and those need different fixes.
+                DayzHudMod.LOGGER.info("Magazines not stocked: taczmagazines loaded={}, "
+                        + "api resolved={}", MagazineCompat.isModLoaded(), false);
+            } else {
+                List<String> families = MagazineCompat.families();
+                if (families.isEmpty()) {
+                    DayzHudMod.LOGGER.warn("TaCZ Magazines resolved but reported no magazine "
+                            + "families - its list is filled on datapack sync, so the catalogue "
+                            + "was probably built too early.");
+                }
+                for (String family : families) {
+                    ItemStack stack = MagazineCompat.makeEmpty(family);
+                    if (stack.isEmpty()) continue;
+                    MarketPrices.Entry override =
+                            MarketPrices.all().get(MagazineCompat.KEY_PREFIX + family);
+                    int unit = override != null ? override.value() : MagazineCompat.priceOf(stack);
+                    if (unit <= 0) unit = MarketConfig.MAGAZINE_BASE_PRICE.get();
+                    out.add(new MarketOffer(stack, MarketPrices.buyPrice(unit, 1), CAT_MAGAZINES,
+                            magazineSection(MagazineCompat.capacityOf(stack))));
+                    magazines++;
+                }
             }
         }
 

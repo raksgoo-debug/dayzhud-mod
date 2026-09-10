@@ -1,39 +1,51 @@
-# dayzhud 2.3.0 - every slot is covered, not just the ones with loot
+# dayzhud 2.4.0 - Field Kit items, and why the magazines went quiet
 
-**Complete.** 53 files. Unzip over the repo root; see `DELETE.txt`.
-**Delete `config/dayzhud-search.toml`** so the new key and the retuned default land.
+**5 changed files, nothing new.** Unzip over the repo root. Built by diffing against the tree
+you just uploaded, so it is exactly your 2.3.0 plus these changes - nothing to delete.
 
-## The change
+## Field Kit
 
-Covering only the occupied slots drew a map of the loot. The hatching told you which slots
-were worth waiting for before you had searched anything, which leaves the search with nothing
-left to find out - it becomes a delay, not a mechanic.
+All **31** items priced and stocked. Cross-checked both ways against the jar's own lang file:
+nothing in the mod is unpriced, and nothing priced is missing from the mod.
 
-Every slot in a searchable container is now covered until it is searched, empty ones included.
-`search.maskEmptySlots`, on by default.
+- **PROVISIONS / food** - rations, the four tinned meals, condensed milk, noodles, crackers,
+  jerky, chocolate, nut bar, pickles, sugar.
+- **PROVISIONS / drink** - bottled water, juice, energy drink, coffee, vodka.
+- **MEDS** - iodine under PILLS; adrenaline, propital, eTG-c and SJ6 under INJECTORS.
+- **MISC** - lighter, cigarette.
 
-## Two details that matter
+The **opened** tin variants and the lit lighter are priced but **not stocked**: they are states
+of an item rather than stock, so a trader will buy one off you for scrap value but will never
+sell you a can that is already open.
 
-**An empty slot costs a step.** The obvious shortcut is to skip empties for free so the sweep
-finishes quicker - but then it visibly pauses only where the loot is, which gives the position
-away exactly as plainly as not covering them did. Uniform timing is the whole point.
+Unlike LesRaisins, every Field Kit item is separately registered, so these are plain item ids -
+no NBT-variant handling needed.
 
-**Out-of-range bag cells are still never covered.** The scrolling bag view can show more cells
-than the bag has, and the search only visits real slots - a cover out there would have nothing
-that could ever lift it. That exclusion is about reachability, not emptiness, so it stays.
+Its `water_bottle` also covers the item you deleted, which I assume is why you deleted it.
 
-## Retuned timing
+## Magazines
 
-`ticksPerSlot` drops from 12 to 5, because there are now forty-odd slots on a corpse rather
-than the handful that held something:
+Deleting the bottled water did not break them - that commit only removed `item/` and
+`registry/`, and nothing in the magazine path referenced either. The stocking code is intact.
 
-    corpse (43 slots)          11.2s
-    corpse + 27-slot backpack  18.0s
-    single chest                7.2s
-    double chest               14.0s
+What I did find is a way for them to switch off permanently and stay off:
+`MagazineCompat.resolve()` latched on **any** failure. `MagazineRegistrar.MAGAZINE` is a
+`RegistryObject`, and `get()` throws until registration has run - so one early call, say a
+sell-price lookup during load, would cache "unavailable" for the entire session behind a
+single warning nobody would connect to an empty shop tab.
 
-At the old 12 a corpse with a full pack took 42 seconds. Raise `ticksPerSlot` if you want
-searching to be a bigger commitment; the numbers above scale linearly.
+It now only latches when the API is genuinely absent - `ClassNotFoundException`,
+`NoSuchMethodException`, `NoSuchFieldException`. Anything else leaves it unresolved to retry.
+I verified every name it reflects on against the jar; all four match.
+
+**If they are still missing, the log now says why.** On every catalogue build you get one of:
+
+    Magazines not stocked: taczmagazines loaded=false, api resolved=false
+    TaCZ Magazines resolved but reported no magazine families ...
+    Market catalogue rebuilt: ... N magazines ...
+
+That distinguishes "mod absent", "API moved", "built too early" and "working", which the
+missing tab alone never could.
 
 ## Verification
 

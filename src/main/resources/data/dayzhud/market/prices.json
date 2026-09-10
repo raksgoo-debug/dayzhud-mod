@@ -16,7 +16,10 @@
     "which is not a registered item at all.",
     "Optional \"sub\" on an entry files it into a section inside its category",
     "(e.g. \"category\": \"gear\", \"sub\": \"backpacks\"). Armour sections and gun",
-    "sections are derived from equipment slot and TACZ gun type automatically."
+    "sections are derived from equipment slot and TACZ gun type automatically.",
+    "Field Kit consumables use plain item ids - unlike lrtactical, every one",
+    "is separately registered. 'Open' tin variants and the lit lighter are",
+    "states rather than stock: sellable, never stocked."
   ],
   "entries": {
     "tarkovdayz:bandgecivil": {
@@ -851,6 +854,178 @@
       "category": "tactical",
       "buy": true,
       "sub": "explosives"
+    },
+    "fieldkit:army_ration": {
+      "value": 7200,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_meat": {
+      "value": 3400,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_fish": {
+      "value": 2900,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_peas": {
+      "value": 2100,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_caviar": {
+      "value": 4600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:condensed_milk": {
+      "value": 2600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:instant_noodles": {
+      "value": 2200,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:crackers": {
+      "value": 1300,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:jerky": {
+      "value": 3100,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:chocolate_bar": {
+      "value": 1800,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:protein_bar": {
+      "value": 2400,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:pickle_jar": {
+      "value": 2700,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:sugar_box": {
+      "value": 1600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:water_bottle": {
+      "value": 1500,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:juice_carton": {
+      "value": 2000,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:energy_drink": {
+      "value": 3800,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:coffee_jar": {
+      "value": 5200,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:vodka": {
+      "value": 4400,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:iodine_tablets": {
+      "value": 6400,
+      "category": "meds",
+      "sub": "pills",
+      "buy": true
+    },
+    "fieldkit:syringe_adrenaline": {
+      "value": 19000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_propital": {
+      "value": 24000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_etg": {
+      "value": 41000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_sj6": {
+      "value": 33000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:lighter": {
+      "value": 2200,
+      "category": "misc",
+      "buy": true
+    },
+    "fieldkit:cigarette": {
+      "value": 900,
+      "category": "misc",
+      "buy": true
+    },
+    "fieldkit:canned_meat_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_fish_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_peas_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_caviar_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:condensed_milk_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:lighter_lit": {
+      "value": 2200,
+      "category": "misc"
     }
   }
 }
