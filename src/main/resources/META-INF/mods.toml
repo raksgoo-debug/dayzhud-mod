@@ -102,9 +102,15 @@ description='''${mod_description}'''
 
 # Soft dependency: Field Kit. Its consumables are stocked and priced; every one is a plainly
 # registered item, so no NBT-variant handling is needed for them.
+#
+# ordering=NONE, and it MUST stay NONE. Field Kit already declares dayzhud with
+# ordering="AFTER"; declaring fieldkit AFTER us as well makes each wait for the other and
+# Forge refuses to sort the mod list at all - "Mod Sorting failed. Detected Cycles", before
+# any mod loads. Nothing here needs an order: the price data is read from a datapack and the
+# items are looked up by id when the catalogue is built, long after every mod has registered.
 [[dependencies.${mod_id}]]
     modId="fieldkit"
     mandatory=false
     versionRange="[1.0,)"
-    ordering="AFTER"
+    ordering="NONE"
     side="BOTH"

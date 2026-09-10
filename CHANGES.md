@@ -1,52 +1,44 @@
-# dayzhud 2.4.0 - Field Kit items, and why the magazines went quiet
+# dayzhud 2.4.1 - fixes the load crash from 2.4.0
 
-**5 changed files, nothing new.** Unzip over the repo root. Built by diffing against the tree
-you just uploaded, so it is exactly your 2.3.0 plus these changes - nothing to delete.
+**5 changed files.** Unzip over the repo root. Apply on top of your 2.3.0 tree - this replaces
+2.4.0 entirely.
 
-## Field Kit
+## The crash
 
-All **31** items priced and stocked. Cross-checked both ways against the jar's own lang file:
-nothing in the mod is unpriced, and nothing priced is missing from the mod.
+    [12:28:22] [main/ERROR]: Mod Sorting failed.
+    Detected Cycles: [[ModFileInfo@6b063695, ModFileInfo@464abed]]
 
-- **PROVISIONS / food** - rations, the four tinned meals, condensed milk, noodles, crackers,
-  jerky, chocolate, nut bar, pickles, sugar.
-- **PROVISIONS / drink** - bottled water, juice, energy drink, coffee, vodka.
-- **MEDS** - iodine under PILLS; adrenaline, propital, eTG-c and SJ6 under INJECTORS.
-- **MISC** - lighter, cigarette.
+Field Kit already declares `dayzhud` with `ordering="AFTER"`. In 2.4.0 I added `fieldkit` with
+`ordering="AFTER"` on our side, so each was waiting for the other and Forge refused to sort the
+mod list. Nothing loads, and the error names neither mod - just two ModFileInfo object hashes.
 
-The **opened** tin variants and the lit lighter are priced but **not stocked**: they are states
-of an item rather than stock, so a trader will buy one off you for scrap value but will never
-sell you a can that is already open.
+Ours is `ordering="NONE"` now, with a comment saying why it must stay that way. Nothing here
+needed an order: the price data is a datapack resource and Field Kit's items are looked up by
+id when the catalogue is built, long after every mod has registered. **`AFTER` was cargo-cult -
+I copied it from the neighbouring entries without asking whether this integration needed it.**
 
-Unlike LesRaisins, every Field Kit item is separately registered, so these are plain item ids -
-no NBT-variant handling needed.
+I checked the other eight: `curios`, `ragdollifiedpc`, `firstaid`, `thirst`, `tarkovdayz`,
+`tacz` and `taczmagazines` are all `AFTER`, and none of them declares anything about dayzhud,
+so none of them cycles.
 
-Its `water_bottle` also covers the item you deleted, which I assume is why you deleted it.
+## A check for it
 
-## Magazines
+An ordering cycle is neither a compile error nor a runtime exception - it is a refusal to
+start, with no stack trace and no mod names. So it now gets checked: our `AFTER` list is read
+out of our mods.toml and cross-referenced against the mods.toml inside every jar you have sent
+me, flagging any that declares an ordering against dayzhud in return.
 
-Deleting the bottled water did not break them - that commit only removed `item/` and
-`registry/`, and nothing in the magazine path referenced either. The stocking code is intact.
+Confirmed against the shipped 2.4.0 file:
 
-What I did find is a way for them to switch off permanently and stay off:
-`MagazineCompat.resolve()` latched on **any** failure. `MagazineRegistrar.MAGAZINE` is a
-`RegistryObject`, and `get()` throws until registration has run - so one early call, say a
-sell-price lookup during load, would cache "unavailable" for the entire session behind a
-single warning nobody would connect to an empty shop tab.
+    CYCLE: we declare fieldkit AFTER us, and it declares dayzhud AFTER us
+           -> Forge cannot sort the mod list
 
-It now only latches when the API is genuinely absent - `ClassNotFoundException`,
-`NoSuchMethodException`, `NoSuchFieldException`. Anything else leaves it unresolved to retry.
-I verified every name it reflects on against the jar; all four match.
+Ten checks now.
 
-**If they are still missing, the log now says why.** On every catalogue build you get one of:
+## Everything else from 2.4.0 is unchanged
 
-    Magazines not stocked: taczmagazines loaded=false, api resolved=false
-    TaCZ Magazines resolved but reported no magazine families ...
-    Market catalogue rebuilt: ... N magazines ...
-
-That distinguishes "mod absent", "API moved", "built too early" and "working", which the
-missing tab alone never could.
+All 31 Field Kit items priced and stocked, and the magazine resolution fix with its logging.
 
 ## Verification
 
-`RESULT: PASS (9 checks)` against the extracted zip.
+`RESULT: PASS (10 checks)` against the extracted zip.
