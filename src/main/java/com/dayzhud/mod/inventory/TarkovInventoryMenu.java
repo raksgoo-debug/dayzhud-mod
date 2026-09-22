@@ -134,6 +134,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int INV_Y = 26;
     private static final int HOTBAR_Y = 100;
 
+    /**
+     * The loadout row - hotbar slots 0-3, typed and drawn here instead of in the plain
+     * hotbar row below. Same underlying inventory indices as before (so 1-4 still draws the
+     * weapon in world), just a restricted Slot subclass and a different position.
+     */
+    public static final int WEAPON_X = 16;
+    public static final int WEAPON_SPACING = 30;
+    public static final int WEAPON_Y = 296;
+
     private static final int BACKPACK_X = 186;
     private static final int BACKPACK_Y = 138;
     private static final int BACKPACK_COLS = 9;
@@ -169,6 +178,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** The corpse container this menu was opened over, kept for the backpack gate below. */
     private Container corpseContainer;
     public final ScrollingBackpackView backpackView;
+
+    /**
+     * PRIMARY/SECONDARY/HOLSTER/SHEATH, in that order - populated once, during construction.
+     *
+     * The screen needs to read these by their loadout position (0-3), not by menu index:
+     * they're added partway through slots (after equipment/gear/offhand), so "the first four
+     * entries in menu.slots" would silently point at the wrong slots. This is the one place
+     * that mapping is made explicit, instead of every caller re-deriving it.
+     */
+    public final Slot[] weaponSlots = new Slot[WeaponSlots.ORDER.length];
 
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
@@ -283,8 +302,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 addSlot(new Slot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18));
             }
         }
+        // Hotbar 0-3 are the loadout slots (typed, drawn in the WEAPONS row below rather
+        // than here) - added in the SAME loop, at the SAME underlying indices, so the
+        // menu-index arithmetic in quickMoveStack (which assumes one contiguous 9-wide
+        // hotbar block right after the 27 main slots) doesn't need to know anything changed.
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, INV_X + col * 18, HOTBAR_Y));
+            if (col < WeaponSlots.ORDER.length) {
+                WeaponSlot ws = new WeaponSlot(playerInventory, WeaponSlots.ORDER[col], col,
+                        WEAPON_X + col * WEAPON_SPACING, WEAPON_Y);
+                weaponSlots[col] = ws;
+                addSlot(ws);
+            } else {
+                int hotbarCol = col - WeaponSlots.ORDER.length;
+                addSlot(new Slot(playerInventory, col, INV_X + hotbarCol * 18, HOTBAR_Y));
+            }
         }
 
         // --- Backpack contents: always allocated, self-disabling when no bag is worn ---
@@ -799,6 +830,26 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPickup(Player player) {
             return true;
+        }
+    }
+
+    /**
+     * PRIMARY/SECONDARY/HOLSTER/SHEATH. Still backed by the player's own hotbar index (see
+     * the loop that constructs these), so a weapon placed here is still the item the player
+     * has selected in world when that hotbar slot is active - this only adds the type check
+     * and moves where the slot is drawn.
+     */
+    private static class WeaponSlot extends Slot {
+        private final WeaponSlots type;
+
+        WeaponSlot(Inventory inventory, WeaponSlots type, int index, int x, int y) {
+            super(inventory, index, x, y);
+            this.type = type;
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return type.accepts(stack);
         }
     }
 }

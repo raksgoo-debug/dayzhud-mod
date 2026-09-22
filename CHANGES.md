@@ -1,43 +1,56 @@
-# dayzhud 2.4.2 - search only covers slots that hold something
+# dayzhud 2.5.0 - typed weapon loadout slots
 
-**5 changed files.** Unzip over the repo root, on top of 2.4.1.
+**9 changed/new files.** Unzip over the repo root, on top of 2.4.2.
 
 ## What changed
 
-Searching used to cover every slot of a container and reveal them one at a time, empty or not -
-a corpse is 40-odd slots, so the sweep spent most of its time uncovering nothing.
+PRIMARY / SECONDARY / HOLSTER / SHEATH used to be a read-only display: four squares that
+just mirrored hotbar slots 1-4, with no restriction on what sat in them and no way to
+interact with them directly.
 
-Now only slots with an item in them are covered, and only those take a step to reveal. Empty
-slots look empty from the moment the screen opens, and the sweep goes straight from one item to
-the next. This includes the corpse's backpack.
+They're now real, clickable, typed slots:
 
-The code for this was already there as `maskEmptySlots`; it was just off the default. The
-default is now `false`.
+- **PRIMARY / SECONDARY** - any TACZ gun except a pistol (rifle, SMG, shotgun, sniper, MG,
+  launcher).
+- **HOLSTER** - pistols only.
+- **SHEATH** - melee only, via the `dayzhud:sheath_weapons` item tag (ships with vanilla
+  swords + trident; add your own knives/machetes to that tag from a datapack).
 
-## Read this before testing
+Still backed by hotbar slots 0-3, same as before - a weapon placed in PRIMARY is still what
+you're holding when you press "1" in world. That didn't change; what changed is the slot is
+now typed, and it's drawn in the WEAPONS row instead of the plain hotbar row. The hotbar row
+underneath now shows 5 slots (4-8) instead of 9, left-aligned in the space that opens up.
 
-Forge only writes defaults into a config file that does not exist yet. If
-`config/dayzhud-search.toml` already exists it still says `maskEmptySlots = true` and nothing
-will appear to change. Set it to `false`, or delete the file.
+An empty slot shows a dim silhouette of what it accepts (a rifle shape, a pistol shape, or a
+blade) instead of a blank box, and hovering an empty slot explains the restriction. A full
+slot behaves like any other item slot now - vanilla's own tooltip, drag, and shift-click all
+work on it, and dropping the wrong category on it just bounces back, the same as trying to put
+a sword in a helmet slot.
 
-## Also
+## New config: `config/dayzhud-weaponslots.toml`
 
-- The search sound now also counts the bag. With empty slots uncovered, a corpse with bare
-  pockets and a full pack has nothing to find in the body, so the old body-only check would have
-  made it open in silence.
-- Reworded the `ticksPerSlot` and `maskEmptySlots` config comments, which described the old
-  default. `ticksPerSlot` is unchanged at 5, but it is now the pace per ITEM, so a sweep is far
-  shorter than before - raise it if it feels rushed.
+- `primaryGunTypes` / `secondaryGunTypes` / `holsterGunTypes` - lists of TACZ type strings
+  (`rifle`, `smg`, `shotgun`, `sniper`, `mg`, `rpg`, `pistol`). Retune without recompiling if
+  you want SMGs holster-only, say, or want launchers excluded.
+- `sheathTag` - which item tag the SHEATH slot checks. Default `dayzhud:sheath_weapons`.
+- `enforce` - master off switch; false makes all four slots plain unrestricted slots again
+  (still repositioned into the WEAPONS row).
 
-## Trade-off
+## Not done here
 
-Covering only occupied slots means the hatching itself shows where the loot is. That is what was
-asked for; `maskEmptySlots = true` puts the old behaviour back.
+This is slot restriction and redraw only. It doesn't touch the second thing you asked for -
+occupying more than one grid cell - see the design notes below for why that's a separate,
+much bigger piece of work and how I'd scope a first version of it.
 
 ## Verified
 
-The real `SearchProgress` was compiled against stubs and run in both modes: a container with three
-items and one bag item takes 14 steps with `maskEmptySlots = true` and 4 with it off, in order
-[1, 4, 8, bag 2]; an all-empty container takes none; a bare body with a full pack goes straight to
-the pack. That covers the sweep logic only. Nothing that touches Minecraft or Forge has been
-compiled - CI is the check for that, and the in-game look of the cover is untested.
+Every new/changed file passes the same `javac -Xmaxerrs 5000` filtered check the rest of this
+project uses (real errors only; missing-Minecraft/Forge symbols are expected noise with no
+MDK in this workspace - see `ragdollgore-local-verification-limits.md`'s notes on what that
+does and doesn't prove). No error in the full-tree pass names anything from this change.
+
+The slot-restriction logic itself (`WeaponSlots.accepts`) can't be unit-tested without the
+real TACZ jar on the classpath, so it hasn't been exercised beyond the compile check. First
+in-game test should specifically try: a rifle in HOLSTER (should bounce), a pistol in PRIMARY
+(should bounce), a vanilla sword in SHEATH (should work), and pressing "1" with a rifle in
+PRIMARY (should still fire it).

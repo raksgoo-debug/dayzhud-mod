@@ -281,6 +281,33 @@ public final class TaczMarketCompat {
         return out;
     }
 
+    /**
+     * A gun stack's TACZ type ("pistol", "smg", "rifle", "sniper", "shotgun", "mg", "rpg"),
+     * lower-cased. Empty when the stack is not a TACZ gun, or its id isn't in the loaded
+     * index (a gun pack that isn't installed).
+     *
+     * Used by the weapon-slot restrictions in TarkovInventoryMenu - kept here rather than
+     * in the inventory package because it's the same "id -> index entry" lookup priceOfGun
+     * already does, on the same cached reflection handles.
+     */
+    public static Optional<String> gunTypeOf(ItemStack stack) {
+        if (!isActive()) return Optional.empty();
+        ResourceLocation id = gunIdOf(stack).orElse(null);
+        if (id == null) return Optional.empty();
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> all =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonGunIndex.invoke(null);
+            for (Map.Entry<ResourceLocation, Object> e : all) {
+                if (e.getKey().equals(id)) {
+                    return Optional.of(String.valueOf(gunIndexGetType.invoke(e.getValue())).toLowerCase());
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return Optional.empty();
+    }
+
     /** Price for a gun id, looked up fresh from its index. Null when unknown. */
     public static Integer priceOfGun(ResourceLocation id) {
         if (!isActive()) return null;

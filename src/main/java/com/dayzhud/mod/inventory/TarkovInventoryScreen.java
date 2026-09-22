@@ -45,8 +45,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int TEXT_COLOR = 0xFFCCCCCC;
     private static final int LABEL_DIM = 0xFF6A6A6A;
 
-    private static final int[] WEAPON_MIRROR_HOTBAR_INDEX = {0, 1, 2, 3};
-    private static final String[] WEAPON_MIRROR_LABEL = {"PRIMARY", "SECONDARY", "HOLSTER", "SHEATH"};
+    /** Ghost icon drawn in an empty loadout slot, so an unrestricted-looking box doesn't
+     *  read as "any item goes here" - see drawWeaponSlotDecor. */
+    private static final int WEAPON_GHOST_COLOR = 0x40AFAFAF;
 
     private static final ResourceLocation CORPSE_FIGURE = rl("corpse_figure");
     private static final ResourceLocation ICON_HEART = rl("icon_heart_solid");
@@ -162,10 +163,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
             drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
-
-        for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            drawSlotBackdrop(graphics, x + 16 + i * 30, y + 296);
-        }
     }
 
     private void drawSlotBackdrop(GuiGraphics graphics, int x, int y) {
@@ -181,7 +178,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawSearchCover(graphics);
         drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
-        drawWeaponMirrors(graphics, mouseX, mouseY);
+        drawWeaponSlotDecor(graphics, mouseX, mouseY);
         drawCraftingArrow(graphics);
         drawCraftTableButton(graphics, mouseX, mouseY);
         drawSkillsButton(graphics, mouseX, mouseY);
@@ -320,26 +317,31 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         return cleaned.substring(0, 1).toUpperCase(Locale.ROOT) + cleaned.substring(1);
     }
 
-    private void drawWeaponMirrors(GuiGraphics graphics, int mouseX, int mouseY) {
-        LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
-        if (player == null) return;
+    /**
+     * Labels and, for an empty slot, a ghost silhouette of what it accepts - so an empty
+     * loadout row reads as four different kinds of socket rather than four identical blanks.
+     *
+     * The items themselves are no longer drawn here: these are real Slots now (see
+     * TarkovInventoryMenu.WeaponSlot), so vanilla's own slot pass already rendered them by
+     * the time this runs. Drawing them again here would double them up.
+     */
+    private void drawWeaponSlotDecor(GuiGraphics graphics, int mouseX, int mouseY) {
+        for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
+            int mx = leftPos + TarkovInventoryMenu.WEAPON_X + i * TarkovInventoryMenu.WEAPON_SPACING;
+            int my = topPos + TarkovInventoryMenu.WEAPON_Y;
 
-        int mirrorY = topPos + 296;
-        for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            int mx = leftPos + 16 + i * 30;
-            ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
-            if (!stack.isEmpty()) {
-                graphics.renderItem(stack, mx, mirrorY);
-                graphics.renderItemDecorations(font, stack, mx, mirrorY);
+            if (menu.weaponSlots[i].getItem().isEmpty()) {
+                drawWeaponGhost(graphics, WeaponSlots.ORDER[i], mx, my);
             }
+
             graphics.pose().pushPose();
-            graphics.pose().translate(mx - 2, mirrorY + 18, 0);
+            graphics.pose().translate(mx - 2, my + 18, 0);
             graphics.pose().scale(0.5f, 0.5f, 1f);
-            graphics.drawString(font, WEAPON_MIRROR_LABEL[i], 0, 0, LABEL_DIM, false);
+            graphics.drawString(font, WeaponSlots.ORDER[i].label, 0, 0, LABEL_DIM, false);
             graphics.pose().popPose();
         }
 
-        // The offhand is a real slot (drawn by vanilla), so it just needs its label here.
+        // The offhand is a real slot too (drawn by vanilla), so it just needs its label here.
         graphics.pose().pushPose();
         graphics.pose().translate(leftPos + menu.offhandX - 2, topPos + menu.offhandY + 18, 0);
         graphics.pose().scale(0.5f, 0.5f, 1f);
@@ -347,23 +349,53 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
     }
 
-    private void drawWeaponHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
-        if (player == null) return;
-
-        int mirrorY = topPos + 296;
-        for (int i = 0; i < WEAPON_MIRROR_HOTBAR_INDEX.length; i++) {
-            int mx = leftPos + 16 + i * 30;
-            if (mouseX >= mx && mouseX < mx + 16 && mouseY >= mirrorY && mouseY < mirrorY + 16) {
-                ItemStack stack = player.getInventory().items.get(WEAPON_MIRROR_HOTBAR_INDEX[i]);
-                if (stack.isEmpty()) {
-                    graphics.renderTooltip(font, Component.literal(WEAPON_MIRROR_LABEL[i]
-                            + " - mirrors hotbar " + (WEAPON_MIRROR_HOTBAR_INDEX[i] + 1)), mouseX, mouseY);
-                } else {
-                    graphics.renderTooltip(font, stack, mouseX, mouseY);
-                }
-                return;
+    /**
+     * A crude silhouette of the slot's weapon category, drawn with flat fills rather than a
+     * texture - same reasoning as the search cover's hatching: cheap, and it keeps the look
+     * consistent with the rest of this screen instead of introducing one textured icon.
+     */
+    private void drawWeaponGhost(GuiGraphics graphics, WeaponSlots type, int x, int y) {
+        switch (type) {
+            case PRIMARY, SECONDARY -> {
+                // Barrel + a stock block at the left end.
+                graphics.fill(x + 1, y + 7, x + 15, y + 9, WEAPON_GHOST_COLOR);
+                graphics.fill(x + 1, y + 5, x + 4, y + 12, WEAPON_GHOST_COLOR);
+                graphics.fill(x + 9, y + 9, x + 11, y + 13, WEAPON_GHOST_COLOR);
             }
+            case HOLSTER -> {
+                // Slide + grip.
+                graphics.fill(x + 3, y + 6, x + 13, y + 8, WEAPON_GHOST_COLOR);
+                graphics.fill(x + 3, y + 8, x + 6, y + 14, WEAPON_GHOST_COLOR);
+            }
+            case SHEATH -> {
+                // Diagonal blade, stepped one pixel at a time (as drawSearchCover does),
+                // plus a small handle block at the lower-right end.
+                for (int d = 0; d < 10; d++) {
+                    graphics.fill(x + 2 + d, y + 3 + d, x + 4 + d, y + 5 + d, WEAPON_GHOST_COLOR);
+                }
+                graphics.fill(x + 10, y + 11, x + 14, y + 14, WEAPON_GHOST_COLOR);
+            }
+        }
+    }
+
+    /** Explains what an empty loadout slot accepts. Non-empty slots get vanilla's own
+     *  item tooltip automatically, so this only has to handle the empty case. */
+    private void drawWeaponHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
+            int mx = leftPos + TarkovInventoryMenu.WEAPON_X + i * TarkovInventoryMenu.WEAPON_SPACING;
+            int my = topPos + TarkovInventoryMenu.WEAPON_Y;
+            if (mouseX < mx || mouseX >= mx + 16 || mouseY < my || mouseY >= my + 16) continue;
+            if (!menu.weaponSlots[i].getItem().isEmpty()) return; // vanilla handles this one
+
+            WeaponSlots type = WeaponSlots.ORDER[i];
+            String accepted = switch (type) {
+                case PRIMARY, SECONDARY -> "Rifles, SMGs, shotguns, snipers, MGs, launchers";
+                case HOLSTER -> "Pistols";
+                case SHEATH -> "Melee weapons";
+            };
+            graphics.renderTooltip(font, Component.literal(type.label + " \u00a77- " + accepted),
+                    mouseX, mouseY);
+            return;
         }
     }
 

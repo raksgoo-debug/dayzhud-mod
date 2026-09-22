@@ -37,6 +37,8 @@ public class DayzHudMod {
                 "dayzhud-common.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SearchConfig.SPEC,
                 "dayzhud-search.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.inventory.WeaponSlotConfig.SPEC, "dayzhud-weaponslots.toml");
         modEventBus.addListener(this::commonSetup);
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature
