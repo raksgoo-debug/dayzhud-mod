@@ -102,9 +102,12 @@ public final class SearchHandler {
      * Per body rather than per slot. A clip on every reveal became a metronome - twelve ticks
      * apart, identical every time - and the moment worth marking is starting on a fresh corpse.
      */
-    private static void playOpenSound(ServerPlayer player, Container searched) {
+    private static void playOpenSound(ServerPlayer player, TarkovInventoryMenu menu, Container searched) {
         if (!SearchConfig.SOUNDS.get()) return;
-        if (SearchProgress.nextUnsearched(searched, player) < 0) return;
+        // Bag included: with empty slots uncovered, a corpse with bare pockets but a full
+        // pack has nothing left to find in the body and would otherwise open in silence.
+        if (SearchProgress.nextUnsearchedWithBag(searched, player,
+                menu::corpseBagSlotOccupied, menu.corpseBagSlotCount(), menu.searchOrder()) < 0) return;
         player.level().playSound(null, player.blockPosition(),
                 ModSounds.CORPSE_SEARCH.get(), SoundSource.PLAYERS,
                 SearchConfig.SOUND_VOLUME.get().floatValue(), 1.0f);
@@ -116,7 +119,7 @@ public final class SearchHandler {
         LAST_MASK.remove(player.getUUID());
         if (player.containerMenu instanceof TarkovInventoryMenu menu) {
             Container searched = menu.searchedContainer();
-            if (searched != null) playOpenSound(player, searched);
+            if (searched != null) playOpenSound(player, menu, searched);
         }
     }
 }

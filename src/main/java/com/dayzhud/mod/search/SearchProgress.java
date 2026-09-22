@@ -65,9 +65,10 @@ public final class SearchProgress {
         for (int slot : order) {
             if (slot < 0 || slot >= container.getContainerSize()) continue;
             if (revealed.get(slot)) continue;
-            // With empty slots covered, an empty one still costs a step - that is the point.
-            // Skipping them for free would make the sweep visibly pause only where the loot
-            // is, which gives the position away just as plainly as not covering them.
+            // With maskEmptySlots on, an empty slot still costs a step: skipping it for free
+            // would make the sweep pause only where the loot is, giving the position away as
+            // plainly as not covering it. With it off (the default) empties are revealed on
+            // the spot, so the sweep goes straight from one item to the next.
             if (!maskEmpty && container.getItem(slot).isEmpty()) {
                 revealed.set(slot);
                 continue;

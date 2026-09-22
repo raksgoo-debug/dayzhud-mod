@@ -1,44 +1,43 @@
-# dayzhud 2.4.1 - fixes the load crash from 2.4.0
+# dayzhud 2.4.2 - search only covers slots that hold something
 
-**5 changed files.** Unzip over the repo root. Apply on top of your 2.3.0 tree - this replaces
-2.4.0 entirely.
+**5 changed files.** Unzip over the repo root, on top of 2.4.1.
 
-## The crash
+## What changed
 
-    [12:28:22] [main/ERROR]: Mod Sorting failed.
-    Detected Cycles: [[ModFileInfo@6b063695, ModFileInfo@464abed]]
+Searching used to cover every slot of a container and reveal them one at a time, empty or not -
+a corpse is 40-odd slots, so the sweep spent most of its time uncovering nothing.
 
-Field Kit already declares `dayzhud` with `ordering="AFTER"`. In 2.4.0 I added `fieldkit` with
-`ordering="AFTER"` on our side, so each was waiting for the other and Forge refused to sort the
-mod list. Nothing loads, and the error names neither mod - just two ModFileInfo object hashes.
+Now only slots with an item in them are covered, and only those take a step to reveal. Empty
+slots look empty from the moment the screen opens, and the sweep goes straight from one item to
+the next. This includes the corpse's backpack.
 
-Ours is `ordering="NONE"` now, with a comment saying why it must stay that way. Nothing here
-needed an order: the price data is a datapack resource and Field Kit's items are looked up by
-id when the catalogue is built, long after every mod has registered. **`AFTER` was cargo-cult -
-I copied it from the neighbouring entries without asking whether this integration needed it.**
+The code for this was already there as `maskEmptySlots`; it was just off the default. The
+default is now `false`.
 
-I checked the other eight: `curios`, `ragdollifiedpc`, `firstaid`, `thirst`, `tarkovdayz`,
-`tacz` and `taczmagazines` are all `AFTER`, and none of them declares anything about dayzhud,
-so none of them cycles.
+## Read this before testing
 
-## A check for it
+Forge only writes defaults into a config file that does not exist yet. If
+`config/dayzhud-search.toml` already exists it still says `maskEmptySlots = true` and nothing
+will appear to change. Set it to `false`, or delete the file.
 
-An ordering cycle is neither a compile error nor a runtime exception - it is a refusal to
-start, with no stack trace and no mod names. So it now gets checked: our `AFTER` list is read
-out of our mods.toml and cross-referenced against the mods.toml inside every jar you have sent
-me, flagging any that declares an ordering against dayzhud in return.
+## Also
 
-Confirmed against the shipped 2.4.0 file:
+- The search sound now also counts the bag. With empty slots uncovered, a corpse with bare
+  pockets and a full pack has nothing to find in the body, so the old body-only check would have
+  made it open in silence.
+- Reworded the `ticksPerSlot` and `maskEmptySlots` config comments, which described the old
+  default. `ticksPerSlot` is unchanged at 5, but it is now the pace per ITEM, so a sweep is far
+  shorter than before - raise it if it feels rushed.
 
-    CYCLE: we declare fieldkit AFTER us, and it declares dayzhud AFTER us
-           -> Forge cannot sort the mod list
+## Trade-off
 
-Ten checks now.
+Covering only occupied slots means the hatching itself shows where the loot is. That is what was
+asked for; `maskEmptySlots = true` puts the old behaviour back.
 
-## Everything else from 2.4.0 is unchanged
+## Verified
 
-All 31 Field Kit items priced and stocked, and the magazine resolution fix with its logging.
-
-## Verification
-
-`RESULT: PASS (10 checks)` against the extracted zip.
+The real `SearchProgress` was compiled against stubs and run in both modes: a container with three
+items and one bag item takes 14 steps with `maskEmptySlots = true` and 4 with it off, in order
+[1, 4, 8, bag 2]; an all-empty container takes none; a bare body with a full pack goes straight to
+the pack. That covers the sweep logic only. Nothing that touches Minecraft or Forge has been
+compiled - CI is the check for that, and the in-game look of the cover is untested.

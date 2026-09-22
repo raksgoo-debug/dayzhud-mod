@@ -35,16 +35,20 @@ public final class SearchConfig {
                         "item appears the instant the screen opens, which reads as a glitch.")
                 .defineInRange("initialDelayTicks", 10, 0, 200);
         TICKS_PER_SLOT = b.comment(
-                        "Ticks between one revealed slot and the next. Low by default because",
-                        "with empty slots covered too there are forty-odd of them on a corpse.")
+                        "Ticks between one revealed ITEM and the next. With maskEmptySlots off",
+                        "empty slots cost nothing, so this is the pace of the loot itself.")
                 .defineInRange("ticksPerSlot", 5, 1, 200);
         MASK_EMPTY = b.comment(
                         "Cover EVERY slot until it is searched, empty ones included.",
-                        "On, because covering only the occupied slots draws a map of the loot:",
-                        "the hatching itself tells you which slots are worth waiting for, and",
-                        "there is nothing left to find out. The cost is that a full container",
-                        "takes longer to sweep, which is what ticksPerSlot is for.")
-                .define("maskEmptySlots", true);
+                        "Off (default): only slots holding an item are covered, and only those",
+                        "take a step to reveal - empty slots look empty straight away and the",
+                        "sweep goes from item to item.",
+                        "On: every slot is covered and revealed one at a time, empty or not, so",
+                        "the hatching says nothing about where the loot is. A full container",
+                        "takes much longer to sweep that way.",
+                        "NOTE: Forge only writes defaults into a config file that does not exist",
+                        "yet. If this file already says true, change it here or delete the file.")
+                .define("maskEmptySlots", false);
         SEARCH_CORPSES = b.comment("Search corpses before their contents are visible.")
                 .define("corpses", true);
         SEARCH_CONTAINERS = b.comment("Search chests and other block containers as well.")
