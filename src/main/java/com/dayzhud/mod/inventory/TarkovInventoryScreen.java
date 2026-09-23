@@ -495,7 +495,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      * of tipping it in place.
      */
     private void renderTiltedItem(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h) {
-        float angle = (float) com.dayzhud.mod.inventory.grid.GridConfig.FLAT_ITEM_ANGLE_X.get();
+        float angle = com.dayzhud.mod.inventory.grid.GridConfig.FLAT_ITEM_ANGLE_X.get().floatValue();
 
         graphics.pose().pushPose();
         graphics.pose().translate(x + w / 2f, y + h / 2f, 0);

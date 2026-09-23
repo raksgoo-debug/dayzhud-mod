@@ -1,6 +1,23 @@
-# dayzhud 2.8.0 - grid everywhere, and guns tilted flat
+# dayzhud 2.8.1 - grid everywhere, and guns tilted flat - CI fix
 
-**8 changed/new files.** Unzip over the repo root, on top of 2.7.0.
+**3 changed files.** Unzip over the repo root, on top of 2.8.0 (or 2.7.0 if you never
+unzipped 2.8.0, since that one didn't compile - this fix is the same file plus one line).
+
+## CI fix
+
+`ForgeConfigSpec.DoubleValue.get()` returns a boxed `Double`, and `(float) aDouble` doesn't
+compile - Java allows a cast to narrow `Double` to `double`, but not straight to `float`, only
+`Integer`-like boxed types get that shortcut. Changed to `.floatValue()`, which does the same
+job without hitting that rule. One line, in `TarkovInventoryScreen.java`, where the tilt angle
+is read for the "lay flat" rendering added in 2.8.0.
+
+Three CI failures in a row now on API details that can't be checked locally (a private method
+that looked protected, a rotation class I couldn't confirm the shape of, and now a boxing
+rule) - not a pattern I'm happy with. Went through the full deduplicated error-message list
+again after this one too, same as 2.8.0's own check, and it now matches that check's output
+exactly minus the one real error - nothing else regressed.
+
+
 
 ## Multi-cell items now work in the worn backpack, and everywhere on a corpse
 
