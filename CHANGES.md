@@ -1,6 +1,10 @@
-# dayzhud 2.6.0 - multi-cell items (drag, rotate, true placement)
+# dayzhud 2.6.1 - multi-cell items (drag, rotate, true placement) - CI fix
 
-**15 changed/new files.** Unzip over the repo root, on top of 2.5.0.
+**15 changed/new files** (same set as before - two of them are what actually changed for
+this fix; the rest are unchanged from 2.6.0, included again so this zip fully replaces it).
+Unzip over the repo root, on top of 2.5.0 - or straight on top of 2.6.0 if you already
+unzipped that one; either way you end up in the same place. 2.6.0 didn't compile; see
+"CI fix" below.
 
 ## What this is
 
@@ -91,9 +95,36 @@ Grid mechanics also stand down on a container that's currently wrapped for searc
   dragging - only the destination outline shows the footprint. The carried icon stays normal
   vanilla size.
 
+## CI fix (2026-09-23)
+
+The first drop of this failed CI: `AbstractContainerScreen.renderSlot` turned out to be
+**private**, not protected, so overriding it doesn't compile - a mistake local checking here
+can't catch, since there's no real Forge jar in this workspace to check an override against,
+only whichever symbols happen to resolve.
+
+Fixed without that override at all. `Slot.isActive()` - public, virtual, and already relied
+on elsewhere in this same screen to hide a backpack slot that doesn't exist - is the actual
+sanctioned hook for "vanilla draws nothing here." `GridSlot` (new; replaces the plain `Slot`
+both grid regions used to construct) reports `isActive() == false` for exactly a reservation
+marker or a real multi-cell item, which suppresses vanilla's normal icon/decoration/highlight
+draw with no override needed; the big icon is now drawn by `TarkovInventoryScreen.drawGridIcons`,
+called from the same custom render pass the loadout-slot decorations already use.
+
+One thing this surfaced that's worth recording: `isActive()` was already load-bearing
+elsewhere in this file (the backpack-slot background loop skips drawing a box for an inactive
+slot, and the search-cover loop uses it too), and both of those needed a second look once a
+SECOND meaning got attached to the same flag. The background-box loop now special-cases
+`GridSlot` so a big item still gets its per-cell boxes. The search-cover interaction needed
+an actual fix, not just a note: `GridSlot` takes a `gridEligible` flag, false for a
+container's slots when that container is wrapped for search, so a rifle sitting in an
+unsearched chest slot still reports active and still gets masked normally - grid mechanics
+were already meant to stand down on a searched container (see "Why backpack/corpse loot
+aren't in this pass" above), but the first pass only enforced that in the placement logic,
+not in this new rendering hook.
+
 ## Verified
 
-Every new/changed file passes this project's usual filtered `javac -Xmaxerrs` check - real
+This build fixes the compile error above. Every new/changed file passes this project's usual filtered `javac -Xmaxerrs` check - real
 errors only, missing-Minecraft/Forge symbols are expected noise with no MDK in this workspace
 (see `ragdollgore-local-verification-limits.md`). Went through the error list by hand this
 time rather than just grepping for the file names, specifically to rule out a genuine typo in

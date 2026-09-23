@@ -299,7 +299,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         this.inventoryStartIndex = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18));
+                addSlot(new GridSlot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18, true));
             }
         }
         // Hotbar 0-3 are the loadout slots (typed, drawn in the WEAPONS row below rather
@@ -350,10 +350,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             if (isCorpse()) {
                 addCorpseSlots(container);
             } else {
+                boolean gridEligible = !(container instanceof SearchedContainer);
                 for (int i = 0; i < container.getContainerSize(); i++) {
-                    addSlot(new Slot(container, i,
+                    addSlot(new GridSlot(container, i,
                             CONTAINER_X + (i % CONTAINER_COLS) * 18,
-                            CONTAINER_Y + (i / CONTAINER_COLS) * 18));
+                            CONTAINER_Y + (i / CONTAINER_COLS) * 18, gridEligible));
                 }
             }
         }
@@ -1021,6 +1022,47 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             return type.accepts(stack);
+        }
+    }
+
+    /**
+     * Every slot in either grid region. The only thing it changes from a plain Slot is
+     * {@link #isActive()} - which turns out to be the actual fix for something the first
+     * version of this got wrong.
+     *
+     * {@code AbstractContainerScreen.renderSlot} - the method that draws a slot's item - is
+     * private, not protected, so it can't be overridden from here at all (a mistake CI
+     * caught that no amount of local parse-checking without the real jar could have). But
+     * isActive() is public, virtual, and specifically meant for exactly this: it's the same
+     * hook that already makes an unusable backpack slot render as empty. When it's false,
+     * vanilla's own render pass draws nothing for that slot - no icon, no count, no
+     * durability bar, no hover highlight - which is exactly what a shadow cell needs (it
+     * should show nothing at all) and what a multi-cell anchor needs (nothing from the
+     * NORMAL 16x16 pass, since drawGridPlacementPreview's sibling draws its own bigger icon
+     * afterward in TarkovInventoryScreen's existing custom render pass instead).
+     *
+     * False only for a reservation marker or a real multi-cell item, and only when this
+     * particular slot is actually part of an active grid region right now - {@code
+     * gridEligible} is false for a container's slots when that container is wrapped for
+     * search (grid mechanics stand down there, per ItemGrid's scope notes; a rifle sitting
+     * in a searched chest must still render and get masked completely normally, or the
+     * search-cover loop in the screen - which also reads isActive() - would wrongly treat it
+     * as already searched). A normal 1x1 item is untouched either way.
+     */
+    static class GridSlot extends Slot {
+        private final boolean gridEligible;
+
+        GridSlot(Container container, int index, int x, int y, boolean gridEligible) {
+            super(container, index, x, y);
+            this.gridEligible = gridEligible;
+        }
+
+        @Override
+        public boolean isActive() {
+            if (!gridEligible || !com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return true;
+            ItemStack stack = getItem();
+            return !(com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(stack)
+                    || com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(stack));
         }
     }
 }

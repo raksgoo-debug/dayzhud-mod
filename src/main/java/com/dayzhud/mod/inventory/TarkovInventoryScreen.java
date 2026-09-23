@@ -164,7 +164,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x + 8, y + 280, x + 352, y + 281, PANEL_BORDER);  // horizontal divider
 
         for (var slot : menu.slots) {
-            if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
+            // GridSlot overloads isActive() to mean something different (see its class doc):
+            // "vanilla shouldn't auto-draw this cell's ITEM," not "this cell doesn't exist."
+            // A grid cell's background box is drawn either way; only a genuinely-absent
+            // backpack slot beyond the bag's real capacity skips its box.
+            if (!slot.isActive() && !(slot instanceof TarkovInventoryMenu.GridSlot)) continue;
             drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
     }
@@ -195,6 +199,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawBackpackScrollbar(graphics);
         drawCorpseScrollbar(graphics);
         drawStatBar(graphics);
+        drawGridIcons(graphics);
         drawGridPlacementPreview(graphics, mouseX, mouseY);
 
         renderTooltip(graphics, mouseX, mouseY);
@@ -407,21 +412,19 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     // ---- Multi-cell grid rendering/interaction ----
 
     /**
-     * Suppresses vanilla's normal 16x16 item draw for a grid anchor (drawn big instead, by
-     * {@link #drawBigGridIcon}) and for a shadow cell (nothing to draw - its marker item's
-     * texture is blank anyway, but skipping the call is cheaper and clearer about why).
-     * Everything else - every slot outside the two grid regions, plus a plain 1x1 item
-     * inside one - renders exactly as vanilla always has.
+     * Draws every multi-cell item's icon big, spanning its footprint. Vanilla's own render
+     * pass already drew nothing for these - not via an override of its (private, as it turns
+     * out) per-slot render method, but because {@link TarkovInventoryMenu.GridSlot#isActive}
+     * reports false for exactly these slots. See that class's doc for why. A shadow cell is
+     * also inactive, and needs nothing drawn here at all - it's covered by its anchor's icon.
      */
-    @Override
-    protected void renderSlot(GuiGraphics graphics, Slot slot) {
-        ItemStack stack = slot.getItem();
-        if (ItemGrid.isReservation(stack)) return;
-        if (!stack.isEmpty() && ItemGrid.isMultiCell(stack) && menu.isGridSlot(slot.index)) {
+    private void drawGridIcons(GuiGraphics graphics) {
+        for (Slot slot : menu.slots) {
+            ItemStack stack = slot.getItem();
+            if (stack.isEmpty() || ItemGrid.isReservation(stack)) continue;
+            if (!ItemGrid.isMultiCell(stack) || !menu.isGridSlot(slot.index)) continue;
             drawBigGridIcon(graphics, slot, ItemGrid.footprintOf(stack));
-            return;
         }
-        super.renderSlot(graphics, slot);
     }
 
     /**
