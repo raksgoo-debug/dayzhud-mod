@@ -472,6 +472,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             if (stack.isEmpty() || ItemGrid.isReservation(stack)) continue;
             if (!ItemGrid.isMultiCell(stack) || !menu.isGridSlot(slot.index)) continue;
             Footprint fp = ItemGrid.footprintOf(stack);
+            // A stack that lost its footprint contention (see GridStorage's class doc and
+            // ItemGrid.hasReservedFootprint) - most commonly two same-type items that ended
+            // up adjacent from before a footprint size change, rather than through this
+            // screen's own placement check - renders as a plain 1x1 instead. Drawing it big
+            // anyway would visually overlap whatever actually holds those cells.
+            if (!menu.gridFootprintReserved(slot.index, fp)) continue;
             if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
                 com.dayzhud.mod.DayzHudMod.LOGGER.info(
                         "grid draw: menu slot {} at screen ({},{}) footprint={} item={}",

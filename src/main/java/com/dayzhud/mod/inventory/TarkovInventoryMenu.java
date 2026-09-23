@@ -752,6 +752,20 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 region.storage(), region.start(), region.cols(), region.rows(), col, row, footprint);
     }
 
+    /** Whether the multi-cell item sitting at {@code menuSlotId} actually holds its
+     *  reserved footprint right now - see {@link com.dayzhud.mod.inventory.grid.ItemGrid#hasReservedFootprint}.
+     *  Used by the screen to decide whether it's safe to draw something big there without
+     *  visually overlapping whatever a neighbouring item actually won those cells. */
+    public boolean gridFootprintReserved(int menuSlotId, com.dayzhud.mod.inventory.grid.Footprint footprint) {
+        GridRegion region = regionFor(menuSlotId);
+        if (region == null) return false;
+        int local = menuSlotId - region.menuStart();
+        int col = local % region.cols();
+        int row = local / region.cols();
+        return com.dayzhud.mod.inventory.grid.ItemGrid.hasReservedFootprint(
+                region.storage(), region.start(), region.cols(), region.rows(), col, row, footprint);
+    }
+
     /**
      * The click path for every grid region. Only PICKUP-type clicks (plain left/right
      * click) get special handling here; everything else that targets a grid region either

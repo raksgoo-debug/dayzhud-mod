@@ -77,6 +77,37 @@ public final class ItemGrid {
     }
 
     /**
+     * Whether the multi-cell item anchored at ({@code col}, {@code row}) currently holds
+     * every one of its shadow cells in its own name - i.e., whether the last {@link
+     * #reconcile} actually granted it its footprint, as opposed to a losing contender that
+     * still declares a multi-cell footprint but never got to claim the cells for it (its
+     * neighbour won the contest, or simply already existed there from before either of them
+     * went through this system - which is exactly what happens to two guns of the same type
+     * sitting one cell apart from before a footprint config change made them wider than the
+     * gap between them).
+     *
+     * Render code calls this before drawing something big: drawing big for a stack that
+     * lost its footprint fight would visually overlap whatever those cells actually belong
+     * to. A losing stack still renders - just at its own single cell, exactly like an
+     * ordinary 1x1 item - which is the graceful degradation {@link #reconcile}'s own doc
+     * already promised on the data side; this is that same promise kept on the render side.
+     */
+    public static boolean hasReservedFootprint(GridStorage storage, int start, int cols, int rows,
+                                                int col, int row, Footprint footprint) {
+        if (!footprint.isMultiCell()) return true; // nothing to contest for a 1x1 item
+        if (col + footprint.width() > cols || row + footprint.height() > rows) return false;
+        int anchorIdx = start + row * cols + col;
+        for (int dr = 0; dr < footprint.height(); dr++) {
+            for (int dc = 0; dc < footprint.width(); dc++) {
+                if (dc == 0 && dr == 0) continue;
+                ItemStack there = storage.get(start + (row + dr) * cols + (col + dc));
+                if (!isReservation(there) || anchorOf(there) != anchorIdx) return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Whether {@code footprint}'s rectangle, top-left at ({@code col}, {@code row}), is
      * entirely empty in this region - including the origin cell itself. A cell already
      * claimed as a shadow of some OTHER item counts as occupied here, the same as a real

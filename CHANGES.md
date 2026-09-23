@@ -1,54 +1,54 @@
-# dayzhud 2.8.2 - flat-tilt off by default, plus diagnostics
+# dayzhud 2.9.0 - the actual bug, found from the log
 
-**5 changed files.** Unzip over the repo root, on top of 2.8.1.
+**5 changed files.** Unzip over the repo root, on top of 2.8.2.
 
-## About the report: big icons only showing at normal size, and appearing to move around
+## What the log actually showed
 
-I can't be fully certain of the cause from screenshots alone, so this drop does two things
-rather than one guessed fix: reverts the part I'm actually suspicious of, and adds logging so
-the next test gives facts instead of another guess. That's deliberate, not a shrug - three
-guessed fixes in a row already went wrong this week (a private method, a rotation class, a
-boxing rule), and this project's own notes elsewhere say it plainly: instrument the chain
-before theorising about it.
+Thank you for the log - it found the real bug in one pass, which is exactly the point of
+adding it instead of guessing again.
 
-**What I'm suspicious of, and reverted:** the "lay flat" tilt shipped in 2.8.0 defaulted to
-55 degrees. That rotation is applied, then the icon is scaled *non-uniformly* to stretch into
-a wide, short rectangle (a 4-wide, 2-tall footprint isn't square). Tilting something in 3D and
-then squashing it unevenly in 2D is exactly the kind of combination that can render as a thin,
-barely-visible sliver rather than a flattened gun - which would look precisely like "the
-visual only occupied 1 slot": not because the big render didn't happen, but because it
-happened and came out nearly invisible, leaving only vanilla's own untouched small icon
-underneath actually visible.
+`grid draw` fired for **three** different menu slots (13, 14, 24) at the same time, all
+`modern_kinetic_gun` (that's TACZ's one shared item for every gun - the specific weapon is in
+its NBT, not the item type, so three different rifles all log identically), all footprint
+4x2. Slots 13 and 14 are literally the next cell over from each other - two 4-wide items
+sitting one cell apart cannot both have their claimed space, and the log's own pickup/place
+history confirms neither 14 nor 24 was ever placed there through this screen's own mechanism
+(no matching "grid place" line for either) - they were just already sitting there, most
+likely from before `smg`/`rifle` became 4x2 in the config, when 1-cell spacing was completely
+fine.
 
-`flatItemAngleX` now defaults to **0** (off). With it off, the render is exactly the plain
-non-uniform stretch from 2.7.0 - reasoned-but-unverified in its own way, but not the newest,
-least-tested change. If the problem persists with it at 0, that theory was wrong and it's
-something else; if it goes away, turn the angle back up gradually (it reloads live, no
-restart) to find where it starts breaking down.
+**The actual bug:** once the footprint size changed, `reconcile()` correctly worked out that
+only one gun in a contested cluster gets to keep its reserved shadow cells - but the render
+code never checked which one that was. It drew *every* multi-cell stack big regardless of
+whether it actually won that contest, so a "losing" gun still tried to render at 4x2 and
+visually collided with its neighbour. That's what "the visual only occupied 1 slot" actually
+was: not a failure to render big, but a big render that lost a fight for the same pixels and
+looked like nothing happened.
 
-**What I can't explain from the screenshots, and am not guessing at:** the icon appearing to
-"move" - to the top of the inventory after placing something in the backpack, or near the
-helmet slot after equipping a weapon. My best guess is that this is actually vanilla's own
-"item follows your cursor while carried" rendering (documented as unstyled/normal-size back in
-2.6.0), showing up wherever the mouse happened to be at the moment of the screenshot, rather
-than anything tied to where the item is actually stored - none of this mod's code draws
-anything at the cursor's position, only at a slot's own fixed position, so a big icon "moving"
-on its own isn't something the placement/reservation code could do. But that's a guess too,
-and the logging below will show definitively whether an item ever actually gets written to a
-slot it shouldn't be in.
+## The fix
 
-## New: `grid.debugLogging` in `dayzhud-grid.toml`
+`ItemGrid.hasReservedFootprint()` - new - checks whether a stack's declared footprint
+rectangle is actually, currently, all reserved in its own name (not just declared). The
+render loop now calls this before drawing anything big: a stack that doesn't hold its
+footprint renders as a plain, ordinary 1x1 instead, same as any item without a footprint
+would - the graceful degradation `reconcile()`'s own doc always promised on the data side,
+now actually kept on the render side too.
 
-Off by default. Turn it on, do the repro (place a rifle, equip one, move one to the backpack),
-then turn it back off - it logs a line for every multi-cell pickup, every placement, and every
-big-icon draw (menu slot index, screen position, footprint), and that last one repeats every
-frame something is on screen, so a few seconds is plenty. The log lines are worth reading even
-if the flat-tilt revert turns out to be the whole fix, just to confirm the reservation math is
-landing where it should.
+This should also explain the earlier "appears at the top inv" / "appears near the helmet"
+report from the previous drop, at least partly: with multiple overlapping big renders
+fighting for the same pixels, moving one of them away would make whichever one had been
+losing (or winning) suddenly look like it "moved," when really it had been sitting there
+the whole time, just visually buried under the other one.
+
+**Worth checking once this is in**: any inventory that had guns sitting close together
+before 2.8.0's footprint change may still have some of that pre-existing crowding. This fix
+makes it render sanely (one big, the rest as plain 1x1 until moved apart), but the actual fix
+for the crowding itself is just to drag the affected guns apart once - reconcile() doesn't
+retroactively rearrange anything, it only decides who wins a contest that already exists.
 
 ## Verified
 
-Pulled the same full deduplicated error-message list as the last two drops and diffed it
-directly against the last known-good one - identical, meaning nothing in this change
-introduced a new error class. **Still nothing here has run in game**; this drop especially is
-a diagnostic step as much as a fix, and its own honesty depends on what the log says next.
+Same full deduplicated error-message diff as every drop since 2.8.0 - identical to the known-
+good baseline, nothing new introduced. This one has actual log evidence behind it rather than
+a screenshot-only guess, which is the most confidence I've had in a fix this whole thread -
+but the fix itself still hasn't been watched render in game, so the usual caveat still applies.
