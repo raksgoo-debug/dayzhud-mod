@@ -78,15 +78,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int EQUIP_SPACING = 26;
 
     private static final int GEAR_X = 18;
-    private static final int GEAR_Y = 170;
+    private static final int GEAR_Y = 264;
     private static final int GEAR_COLS = 6;
     private static final int GEAR_SPACING = 22;
 
     // 2x2 crafting grid + result, bottom-left under GEAR.
     private static final int CRAFT_X = 20;
-    private static final int CRAFT_Y = 234;
+    private static final int CRAFT_Y = 324;
     public static final int CRAFT_RESULT_X = 92;
-    public static final int CRAFT_RESULT_Y = 243;
+    public static final int CRAFT_RESULT_Y = 333;
 
     // Right-hand container grid, present only when a chest/crate was opened.
     public static final int CONTAINER_X = 372;
@@ -135,13 +135,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int HOTBAR_Y = 100;
 
     /**
-     * The loadout row - hotbar slots 0-3, typed and drawn here instead of in the plain
-     * hotbar row below. Same underlying inventory indices as before (so 1-4 still draws the
-     * weapon in world), just a restricted Slot subclass and a different position.
+     * The loadout cluster - hotbar slots 0-3, typed, drawn as its own 2x2 block of labelled
+     * boxes right under the paperdoll (where GEAR used to start; GEAR moved down to make
+     * room). Same underlying inventory indices as before (so 1-4 still draws the weapon in
+     * world), just a restricted Slot subclass and a bigger, differently-shaped box each.
+     *
+     * Index order matches {@link WeaponSlots#ORDER} (PRIMARY, SECONDARY, HOLSTER, SHEATH).
+     * Primary/secondary get a wide box (there's a real icon to show and a bound-key badge to
+     * fit); holster/sheath are narrower, matching the reference this was built from.
      */
-    public static final int WEAPON_X = 16;
-    public static final int WEAPON_SPACING = 30;
-    public static final int WEAPON_Y = 296;
+    public static final int[] WEAPON_BOX_X = {16, 16, 84, 84};
+    public static final int[] WEAPON_BOX_Y = {168, 212, 168, 212};
+    public static final int[] WEAPON_BOX_W = {60, 60, 34, 34};
+    public static final int[] WEAPON_BOX_H = {30, 30, 30, 30};
 
     private static final int BACKPACK_X = 186;
     private static final int BACKPACK_Y = 138;
@@ -290,16 +296,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                     GEAR_Y + (i / GEAR_COLS) * GEAR_SPACING);
         }
 
-        // --- Offhand, level with the weapon mirror row ---
-        this.offhandX = 136;
-        this.offhandY = 296;
+        // --- Offhand: third slot in the paperdoll's side column, under mask/back curios ---
+        this.offhandX = SIDE_COL_X;
+        this.offhandY = EQUIP_START_Y + 2 * EQUIP_SPACING;
         addSlot(new Slot(playerInventory, 40, offhandX, offhandY));
 
         // --- Inventory (27) + hotbar (9) ---
         this.inventoryStartIndex = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new GridSlot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18, true));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, INV_X + col * 18, INV_Y + row * 18));
             }
         }
         // Hotbar 0-3 are the loadout slots (typed, drawn in the WEAPONS row below rather
@@ -308,8 +314,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // hotbar block right after the 27 main slots) doesn't need to know anything changed.
         for (int col = 0; col < 9; col++) {
             if (col < WeaponSlots.ORDER.length) {
-                WeaponSlot ws = new WeaponSlot(playerInventory, WeaponSlots.ORDER[col], col,
-                        WEAPON_X + col * WEAPON_SPACING, WEAPON_Y);
+                // The Slot's own x/y is its real, fixed-size 16x16 clickable region (vanilla
+                // doesn't support a variably-sized Slot) - centred inside the bigger visual
+                // box the screen draws, rather than pinned to the box's corner, so clicking
+                // near the middle of the box (where the icon actually is) hits it.
+                int slotX = WEAPON_BOX_X[col] + (WEAPON_BOX_W[col] - 16) / 2;
+                int slotY = WEAPON_BOX_Y[col] + (WEAPON_BOX_H[col] - 16) / 2;
+                WeaponSlot ws = new WeaponSlot(playerInventory, WeaponSlots.ORDER[col], col, slotX, slotY);
                 weaponSlots[col] = ws;
                 addSlot(ws);
             } else {
@@ -350,11 +361,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             if (isCorpse()) {
                 addCorpseSlots(container);
             } else {
-                boolean gridEligible = !(container instanceof SearchedContainer);
                 for (int i = 0; i < container.getContainerSize(); i++) {
-                    addSlot(new GridSlot(container, i,
+                    addSlot(new Slot(container, i,
                             CONTAINER_X + (i % CONTAINER_COLS) * 18,
-                            CONTAINER_Y + (i / CONTAINER_COLS) * 18, gridEligible));
+                            CONTAINER_Y + (i / CONTAINER_COLS) * 18));
                 }
             }
         }
@@ -1011,7 +1021,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * has selected in world when that hotbar slot is active - this only adds the type check
      * and moves where the slot is drawn.
      */
-    private static class WeaponSlot extends Slot {
+    static class WeaponSlot extends Slot {
         private final WeaponSlots type;
 
         WeaponSlot(Inventory inventory, WeaponSlots type, int index, int x, int y) {
@@ -1022,47 +1032,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         @Override
         public boolean mayPlace(ItemStack stack) {
             return type.accepts(stack);
-        }
-    }
-
-    /**
-     * Every slot in either grid region. The only thing it changes from a plain Slot is
-     * {@link #isActive()} - which turns out to be the actual fix for something the first
-     * version of this got wrong.
-     *
-     * {@code AbstractContainerScreen.renderSlot} - the method that draws a slot's item - is
-     * private, not protected, so it can't be overridden from here at all (a mistake CI
-     * caught that no amount of local parse-checking without the real jar could have). But
-     * isActive() is public, virtual, and specifically meant for exactly this: it's the same
-     * hook that already makes an unusable backpack slot render as empty. When it's false,
-     * vanilla's own render pass draws nothing for that slot - no icon, no count, no
-     * durability bar, no hover highlight - which is exactly what a shadow cell needs (it
-     * should show nothing at all) and what a multi-cell anchor needs (nothing from the
-     * NORMAL 16x16 pass, since drawGridPlacementPreview's sibling draws its own bigger icon
-     * afterward in TarkovInventoryScreen's existing custom render pass instead).
-     *
-     * False only for a reservation marker or a real multi-cell item, and only when this
-     * particular slot is actually part of an active grid region right now - {@code
-     * gridEligible} is false for a container's slots when that container is wrapped for
-     * search (grid mechanics stand down there, per ItemGrid's scope notes; a rifle sitting
-     * in a searched chest must still render and get masked completely normally, or the
-     * search-cover loop in the screen - which also reads isActive() - would wrongly treat it
-     * as already searched). A normal 1x1 item is untouched either way.
-     */
-    static class GridSlot extends Slot {
-        private final boolean gridEligible;
-
-        GridSlot(Container container, int index, int x, int y, boolean gridEligible) {
-            super(container, index, x, y);
-            this.gridEligible = gridEligible;
-        }
-
-        @Override
-        public boolean isActive() {
-            if (!gridEligible || !com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return true;
-            ItemStack stack = getItem();
-            return !(com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(stack)
-                    || com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(stack));
         }
     }
 }

@@ -65,10 +65,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 360;
-        this.imageHeight = 322;
+        this.imageHeight = 376;
         if (menu.isCorpse()) {
             this.imageWidth = TarkovInventoryMenu.CORPSE_INV_X + 9 * 18 + 12;
-            this.imageHeight = 362; // taller: corpse column now has two stacked sections
+            this.imageHeight = 376; // at least as tall as the player's own left panel now needs
         } else if (menu.hasContainer()) {
             // Grow rightwards to fit the container grid; the loadout side keeps its layout.
             this.imageWidth = TarkovInventoryMenu.CONTAINER_X
@@ -161,14 +161,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
 
         graphics.fill(x + 176, y + 16, x + 177, y + 274, PANEL_BORDER); // vertical divider
-        graphics.fill(x + 8, y + 280, x + 352, y + 281, PANEL_BORDER);  // horizontal divider
+        graphics.fill(x + 8, y + 246, x + 352, y + 247, PANEL_BORDER);  // below the loadout cluster
 
         for (var slot : menu.slots) {
-            // GridSlot overloads isActive() to mean something different (see its class doc):
-            // "vanilla shouldn't auto-draw this cell's ITEM," not "this cell doesn't exist."
-            // A grid cell's background box is drawn either way; only a genuinely-absent
-            // backpack slot beyond the bag's real capacity skips its box.
-            if (!slot.isActive() && !(slot instanceof TarkovInventoryMenu.GridSlot)) continue;
+            if (!slot.isActive()) continue; // inactive backpack slots shouldn't leave ghost squares
+            if (slot instanceof TarkovInventoryMenu.WeaponSlot) continue; // drawn bigger, separately
             drawSlotBackdrop(graphics, x + slot.x, y + slot.y);
         }
     }
@@ -259,7 +256,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     private void drawSectionHeaders(GuiGraphics graphics) {
         drawHeader(graphics, "EQUIPMENT", leftPos + 12, topPos + 8, 54);
-        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 156, 30);
+        drawHeader(graphics, "GEAR", leftPos + 12, topPos + 250, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
         drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
         if (menu.isCorpse()) {
@@ -287,8 +284,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             drawHeader(graphics, name, leftPos + TarkovInventoryMenu.CONTAINER_X,
                     topPos + TarkovInventoryMenu.CONTAINER_Y - 18, rule);
         }
-        drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 220, 48);
-        drawHeader(graphics, "WEAPONS", leftPos + 12, topPos + 282, 46);
+        drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 310, 48);
         if (menu.getActiveBackpackSlots() > 0) {
             drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 124, 50);
         }
@@ -328,27 +324,51 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     /**
-     * Labels and, for an empty slot, a ghost silhouette of what it accepts - so an empty
-     * loadout row reads as four different kinds of socket rather than four identical blanks.
+     * Backgrounds, ghost icons for an empty slot, a bigger real icon for an occupied one,
+     * and labels - for the four loadout boxes, each a different size (see
+     * TarkovInventoryMenu.WEAPON_BOX_*), styled after the reference image rather than the
+     * plain 16x16 grid cell these used to be.
      *
-     * The items themselves are no longer drawn here: these are real Slots now (see
-     * TarkovInventoryMenu.WeaponSlot), so vanilla's own slot pass already rendered them by
-     * the time this runs. Drawing them again here would double them up.
+     * These are still real Slots (see TarkovInventoryMenu.WeaponSlot) with a real, normal
+     * 16x16 clickable region - centred inside the bigger box, not resized, since vanilla
+     * doesn't support a variable-size Slot. Vanilla's own render pass still draws its usual
+     * small icon there underneath; drawBigWeaponIcon paints over it with a bigger one for
+     * exactly the same reason drawGridIcons does the same thing for grid items - see that
+     * method's doc for why nothing here ever touches isActive().
      */
     private void drawWeaponSlotDecor(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
-            int mx = leftPos + TarkovInventoryMenu.WEAPON_X + i * TarkovInventoryMenu.WEAPON_SPACING;
-            int my = topPos + TarkovInventoryMenu.WEAPON_Y;
+            int bx = leftPos + TarkovInventoryMenu.WEAPON_BOX_X[i];
+            int by = topPos + TarkovInventoryMenu.WEAPON_BOX_Y[i];
+            int bw = TarkovInventoryMenu.WEAPON_BOX_W[i];
+            int bh = TarkovInventoryMenu.WEAPON_BOX_H[i];
+            WeaponSlots type = WeaponSlots.ORDER[i];
 
-            if (menu.weaponSlots[i].getItem().isEmpty()) {
-                drawWeaponGhost(graphics, WeaponSlots.ORDER[i], mx, my);
+            graphics.fill(bx, by, bx + bw, by + bh, SLOT_BG);
+            graphics.renderOutline(bx, by, bw, bh, SLOT_BORDER);
+
+            ItemStack stack = menu.weaponSlots[i].getItem();
+            if (stack.isEmpty()) {
+                drawWeaponGhost(graphics, type, bx, by, bw, bh);
+            } else {
+                drawBigWeaponIcon(graphics, stack, bx, by, bw, bh);
             }
 
             graphics.pose().pushPose();
-            graphics.pose().translate(mx - 2, my + 18, 0);
+            graphics.pose().translate(bx - 2, by - 8, 0);
             graphics.pose().scale(0.5f, 0.5f, 1f);
-            graphics.drawString(font, WeaponSlots.ORDER[i].label, 0, 0, LABEL_DIM, false);
+            graphics.drawString(font, type.label, 0, 0, LABEL_DIM, false);
             graphics.pose().popPose();
+
+            // Bound-key badge - primary/secondary only, matching the reference (holster and
+            // sheath don't show one there either, even though they're bound the same way).
+            if (type == WeaponSlots.PRIMARY || type == WeaponSlots.SECONDARY) {
+                graphics.pose().pushPose();
+                graphics.pose().translate(bx + 2, by + 1, 0);
+                graphics.pose().scale(0.6f, 0.6f, 1f);
+                graphics.drawString(font, type == WeaponSlots.PRIMARY ? "1" : "2", 0, 0, LABEL_DIM, false);
+                graphics.pose().popPose();
+            }
         }
 
         // The offhand is a real slot too (drawn by vanilla), so it just needs its label here.
@@ -359,42 +379,70 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
     }
 
+    /** Draws {@code stack}'s icon scaled to fill most of its loadout box, padded a few
+     *  pixels in from the box edges so it doesn't run into the border or the key badge. */
+    private void drawBigWeaponIcon(GuiGraphics graphics, ItemStack stack, int bx, int by, int bw, int bh) {
+        int pad = 4;
+        int iw = bw - pad * 2;
+        int ih = bh - pad * 2;
+        int ix = bx + pad;
+        int iy = by + pad;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(ix, iy, 0);
+        graphics.pose().scale(iw / 16f, ih / 16f, 1f);
+        graphics.renderItem(stack, 0, 0);
+        graphics.pose().popPose();
+
+        graphics.renderItemDecorations(font, stack, ix + iw - 16, iy + ih - 16);
+    }
+
     /**
      * A crude silhouette of the slot's weapon category, drawn with flat fills rather than a
      * texture - same reasoning as the search cover's hatching: cheap, and it keeps the look
      * consistent with the rest of this screen instead of introducing one textured icon.
+     *
+     * The shapes are authored once against a 16x16 box and scaled uniformly (never
+     * stretched) to sit centred in whatever the slot's actual box size is.
      */
-    private void drawWeaponGhost(GuiGraphics graphics, WeaponSlots type, int x, int y) {
+    private void drawWeaponGhost(GuiGraphics graphics, WeaponSlots type, int bx, int by, int bw, int bh) {
+        float scale = Math.min((bw - 8) / 16f, (bh - 8) / 16f);
+        graphics.pose().pushPose();
+        graphics.pose().translate(bx + (bw - 16 * scale) / 2f, by + (bh - 16 * scale) / 2f, 0);
+        graphics.pose().scale(scale, scale, 1f);
         switch (type) {
             case PRIMARY, SECONDARY -> {
                 // Barrel + a stock block at the left end.
-                graphics.fill(x + 1, y + 7, x + 15, y + 9, WEAPON_GHOST_COLOR);
-                graphics.fill(x + 1, y + 5, x + 4, y + 12, WEAPON_GHOST_COLOR);
-                graphics.fill(x + 9, y + 9, x + 11, y + 13, WEAPON_GHOST_COLOR);
+                graphics.fill(1, 7, 15, 9, WEAPON_GHOST_COLOR);
+                graphics.fill(1, 5, 4, 12, WEAPON_GHOST_COLOR);
+                graphics.fill(9, 9, 11, 13, WEAPON_GHOST_COLOR);
             }
             case HOLSTER -> {
                 // Slide + grip.
-                graphics.fill(x + 3, y + 6, x + 13, y + 8, WEAPON_GHOST_COLOR);
-                graphics.fill(x + 3, y + 8, x + 6, y + 14, WEAPON_GHOST_COLOR);
+                graphics.fill(3, 6, 13, 8, WEAPON_GHOST_COLOR);
+                graphics.fill(3, 8, 6, 14, WEAPON_GHOST_COLOR);
             }
             case SHEATH -> {
                 // Diagonal blade, stepped one pixel at a time (as drawSearchCover does),
                 // plus a small handle block at the lower-right end.
                 for (int d = 0; d < 10; d++) {
-                    graphics.fill(x + 2 + d, y + 3 + d, x + 4 + d, y + 5 + d, WEAPON_GHOST_COLOR);
+                    graphics.fill(2 + d, 3 + d, 4 + d, 5 + d, WEAPON_GHOST_COLOR);
                 }
-                graphics.fill(x + 10, y + 11, x + 14, y + 14, WEAPON_GHOST_COLOR);
+                graphics.fill(10, 11, 14, 14, WEAPON_GHOST_COLOR);
             }
         }
+        graphics.pose().popPose();
     }
 
     /** Explains what an empty loadout slot accepts. Non-empty slots get vanilla's own
      *  item tooltip automatically, so this only has to handle the empty case. */
     private void drawWeaponHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
-            int mx = leftPos + TarkovInventoryMenu.WEAPON_X + i * TarkovInventoryMenu.WEAPON_SPACING;
-            int my = topPos + TarkovInventoryMenu.WEAPON_Y;
-            if (mouseX < mx || mouseX >= mx + 16 || mouseY < my || mouseY >= my + 16) continue;
+            int bx = leftPos + TarkovInventoryMenu.WEAPON_BOX_X[i];
+            int by = topPos + TarkovInventoryMenu.WEAPON_BOX_Y[i];
+            int bw = TarkovInventoryMenu.WEAPON_BOX_W[i];
+            int bh = TarkovInventoryMenu.WEAPON_BOX_H[i];
+            if (mouseX < bx || mouseX >= bx + bw || mouseY < by || mouseY >= by + bh) continue;
             if (!menu.weaponSlots[i].getItem().isEmpty()) return; // vanilla handles this one
 
             WeaponSlots type = WeaponSlots.ORDER[i];
@@ -412,11 +460,21 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     // ---- Multi-cell grid rendering/interaction ----
 
     /**
-     * Draws every multi-cell item's icon big, spanning its footprint. Vanilla's own render
-     * pass already drew nothing for these - not via an override of its (private, as it turns
-     * out) per-slot render method, but because {@link TarkovInventoryMenu.GridSlot#isActive}
-     * reports false for exactly these slots. See that class's doc for why. A shadow cell is
-     * also inactive, and needs nothing drawn here at all - it's covered by its anchor's icon.
+     * Draws every multi-cell item's icon big, spanning its footprint, over the top of
+     * whatever vanilla's own render pass already drew at that slot's normal 16x16 position.
+     *
+     * There's deliberately no attempt to suppress vanilla's own small icon underneath. An
+     * earlier version tried exactly that via {@code Slot.isActive()} - the only public hook
+     * available, since the actual per-slot render method turned out to be private and
+     * un-overridable - and that briefly worked visually but broke something more important:
+     * {@code isActive() == false} also makes vanilla's own mouse hit-testing skip the slot
+     * entirely, which is what let a placed multi-cell item render correctly while becoming
+     * permanently unclickable. Simplest fix once that was understood: don't touch
+     * isActive() at all. This method runs after super.render() every frame, so the bigger
+     * icon it draws - same top-left origin, strictly larger - fully covers the smaller one
+     * underneath on its own, with the slot staying completely normal (and clickable) as far
+     * as vanilla is concerned. A shadow cell's marker item has a blank texture and a count of
+     * 1, so vanilla draws literally nothing for it either way - nothing to cover there.
      */
     private void drawGridIcons(GuiGraphics graphics) {
         for (Slot slot : menu.slots) {

@@ -19,8 +19,8 @@ import java.util.Optional;
  */
 public enum WeaponSlots {
 
-    PRIMARY("PRIMARY", WeaponSlotConfig.PRIMARY_GUN_TYPES),
-    SECONDARY("SECONDARY", WeaponSlotConfig.SECONDARY_GUN_TYPES),
+    PRIMARY("PRIMARY WEAPON", WeaponSlotConfig.PRIMARY_GUN_TYPES),
+    SECONDARY("SECONDARY WEAPON", WeaponSlotConfig.SECONDARY_GUN_TYPES),
     HOLSTER("HOLSTER", WeaponSlotConfig.HOLSTER_GUN_TYPES),
     SHEATH("SHEATH", null);
 

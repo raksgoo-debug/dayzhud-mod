@@ -34,7 +34,7 @@ public final class GridConfig {
                         "horizontal dimension). A gunIdFootprints entry below takes priority",
                         "over this for a specific gun.")
                 .defineList("gunTypeFootprints", List.of(
-                                "pistol=2x1", "smg=3x1", "rifle=4x1", "shotgun=4x1",
+                                "pistol=2x1", "smg=3x2", "rifle=4x2", "shotgun=4x1",
                                 "sniper=5x1", "mg=5x1", "rpg=4x2"),
                         o -> o instanceof String);
         GUN_ID_FOOTPRINTS = b.comment(
