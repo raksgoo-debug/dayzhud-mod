@@ -2,6 +2,7 @@ package com.dayzhud.mod.search;
 
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.BitSet;
 import java.util.Map;
@@ -69,7 +70,15 @@ public final class SearchProgress {
             // would make the sweep pause only where the loot is, giving the position away as
             // plainly as not covering it. With it off (the default) empties are revealed on
             // the spot, so the sweep goes straight from one item to the next.
-            if (!maskEmpty && container.getItem(slot).isEmpty()) {
+            //
+            // A multi-cell item's shadow cells (see ItemGrid) hold a real, non-empty marker
+            // stack, but nothing about them is ever going to visibly resolve - counting them
+            // as "an item to search" would cost the sweep several extra steps per big item
+            // for a reveal the player would never see. They're treated as empty here for
+            // exactly the same reason maskEmptySlots=false treats a genuinely empty slot
+            // that way.
+            ItemStack stack = container.getItem(slot);
+            if (!maskEmpty && (stack.isEmpty() || com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(stack))) {
                 revealed.set(slot);
                 continue;
             }

@@ -1,80 +1,82 @@
-# dayzhud 2.7.0 - loadout restyle, a real interactivity bug fix, taller guns
+# dayzhud 2.8.0 - grid everywhere, and guns tilted flat
 
-**6 changed files.** Unzip over the repo root, on top of 2.6.1.
+**8 changed/new files.** Unzip over the repo root, on top of 2.7.0.
 
-## Fixed: multi-cell items became permanently unclickable once placed
+## Multi-cell items now work in the worn backpack, and everywhere on a corpse
 
-The real bug behind "once i place them in the inv, i cant interact with it anymore." Sorry -
-this was a mistake in the CI fix from the last drop, and it's a good example of exactly the
-kind of thing local checking here can't catch, so worth explaining precisely.
+Previously only the player's own INVENTORY grid and an opened chest. Now also: the worn
+BACKPACK, and (looting a corpse) its inventory, hotbar, and loot bag - all six regions, same
+mechanism.
 
-`Slot.isActive()` doesn't just control rendering, the way last drop's fix assumed - it also
-gates vanilla's own mouse hit-testing. A slot reporting `isActive() == false` isn't just drawn
-as empty, it's **skipped entirely** when the game decides what you're hovering or clicking.
-Once a multi-cell item was placed (making its slot report inactive, which is what suppressed
-vanilla's small icon underneath), that same slot became invisible to the mouse - you could no
-longer click it at all, to pick it up or anything else.
+The backpack and corpse bag needed a real change, not just wiring: both are backed by another
+mod's `IItemHandlerModifiable` (a bag item's own inventory), not a `Container`, and
+`ItemGrid` only knew how to talk to a `Container`. It now works through a small new
+`GridStorage` interface instead - `get(index)`/`set(index, stack)` - with an adapter for each,
+so the placement/reservation logic itself didn't need to change at all, only what it's
+allowed to talk to.
 
-Fixed by not touching `isActive()` for this at all. The actual, much simpler realization: this
-mod's own icon-drawing pass already runs *after* vanilla's normal render, every frame - so
-just letting vanilla draw its ordinary small icon underneath, and painting a bigger one on top
-of it afterward (same origin, strictly larger, so it fully covers the smaller one), gets the
-same visual result with no need to suppress anything or touch interactivity at all. `GridSlot`
-(last drop's addition) is gone entirely; both grid regions are back to plain `Slot`s, exactly
-as they were before any of this multi-cell work started. Multi-cell items should now pick up
-and place normally, including by clicking anywhere on their footprint (not just their own
-top-left cell) - the anchor-redirect logic for that was already written last drop; it just
-couldn't ever run, for the same reason.
+**Search-masking is no longer a reason to disable grid mechanics.** The last drop stood grid
+placement down entirely on a container currently wrapped for search, reasoning that the two
+systems "weren't tried together." Actually working through it: the only real interaction is
+that the CLIENT's own copy of a not-yet-searched cell reads as empty (search hides the item
+itself, not just its icon), so a placement touching one gets client-predicted optimistically
+and then corrected by the server's next authoritative sync - the same ordinary correction
+vanilla multiplayer containers already do constantly, not a new failure mode. Excluding
+corpses specifically would have made this whole expansion nearly pointless, since a corpse is
+normally exactly what's mid-search when a multi-cell item would matter.
 
-## Rifles and SMGs are now 2 tall
+One real, avoidable side effect of that got fixed rather than just accepted: a multi-cell
+item's invisible shadow-cell markers are real, non-empty stacks, and the search sweep was
+about to start counting each one as "another thing to search" - extra phantom delay per big
+item for a reveal that would never visibly resolve into anything. `SearchProgress` and the
+corpse-bag-occupied check both now treat a shadow marker as empty for search-pacing purposes,
+same as a genuinely empty slot.
 
-`gunTypeFootprints` defaults changed: `rifle=4x1` -> `rifle=4x2`, `smg=3x1` -> `smg=3x2`.
-Shotgun/sniper/MG/launcher unchanged.
+## Guns tilted toward lying flat
 
-**Existing `config/dayzhud-grid.toml` won't pick this up** - same trap as every default-value
-change in this project's config files. Edit those two lines yourself, or delete the file so
-Forge regenerates it with the new defaults.
+New: `grid.flatItemAngleX` in `dayzhud-grid.toml` (default 55 degrees). Applied as an extra
+rotation on top of however TACZ normally renders a gun's GUI icon, tipping it further toward
+a top-down view - both in the grid and in the loadout boxes, since both have the same "3D
+model looks sheared when stretched into a wide cell" problem.
 
-## Loadout slots restyled and moved
+**This is a first guess, not a measured value.** Nobody has looked at an actual gun in an
+actual grid cell in this game yet. 0 turns it off entirely; nudge toward 90 for more top-down.
+Existing `dayzhud-grid.toml` won't pick up the new default either way - it's a new key, so
+Forge will add it with its default on next load even to an existing file (unlike changing an
+existing key's default, this one key is safe either way).
 
-PRIMARY/SECONDARY/HOLSTER/SHEATH are now a 2x2 block of bigger, individually-sized boxes -
-primary/secondary wide (with a bound-key badge, "1"/"2"), holster/sheath narrower - each
-labelled above rather than below, matching the reference image. Positioned where GEAR used to
-start, right under the paperdoll; GEAR and CRAFTING both moved down to make room. OFFHAND
-moved up into the paperdoll's side column, under the mask/back curio slots, since the row it
-used to share with the loadout boxes doesn't exist in that spot anymore.
+## What I can't verify here, in order of how much I'd double-check first
 
-The window grew to fit: 322 -> 376 (corpse view too, 362 -> 376, since it has to be at least
-as tall as the player's own left panel now needs regardless of the corpse's own content).
-
-**Left deliberately alone:** the CRAFTING grid. The reference image doesn't show one, but
-"removed 2x2 crafting" read to me as describing how that mockup was put together, not
-necessarily a request to remove crafting from the real mod - removing an actual feature on a
-guess felt like the wrong side to err on. Say so explicitly if you do want it gone; it's a
-small removal once confirmed.
-
-## Known rough edges, not fixed here
-
-- **None of this was visually tested.** Box sizes, padding, badge position (top-left corner),
-  and the new window height are all reasoned from the reference image and the existing
-  layout's numbers, not seen in game. Expect to want to nudge something.
-- **The right-hand column (INVENTORY/HOTBAR/BACKPACK) is much shorter than the new left
-  column**, so there's a visible gap under it now. Only the left side needed the height.
-- Hovering the edge of an occupied loadout box - inside the bigger visual box, but outside the
-  real 16x16 clickable centre - shows no tooltip at all (neither vanilla's, since the mouse
-  isn't really over the slot, nor this mod's own, which only covers the empty case). Same shape
-  of gap as the shadow-cell tooltip rough edge already noted for the grid feature.
+1. **The rotation itself** (`com.mojang.math.Axis.XP.rotationDegrees`) - the actual PoseStack
+   rotation API for this Minecraft version. I'm reasonably confident this is right for 1.20.1,
+   but local checking here has no real Forge jar to confirm an API shape against, which is
+   exactly how the `renderSlot` mistake two drops ago happened. If guns render invisible,
+   wildly distorted, or the game crashes opening the inventory, this line is the first thing
+   to look at.
+2. **Whether a reservation marker written into a corpse's worn bag ever outlives that
+   corpse.** If a player takes the whole bag as a physical item (not just its contents) while
+   it's holding a leftover marker, that marker would sit invisibly inside it until the next
+   time ANY dayzhud grid-aware screen opens that same bag - reconcile() always fully recomputes
+   from scratch, so it self-heals the moment that happens, but there's a window where an
+   invisible, nameless junk item could show up in some completely unrelated inventory viewer
+   (JEI, a different mod's bag UI) if someone happened to look at exactly the right moment.
+3. Everything already flagged as unverified in the 2.6.0-2.7.0 changelogs still applies and
+   hasn't changed: icon stretch/shear, box sizing, the new window height, none of it seen in
+   game.
 
 ## Verified
 
-Every changed file passes this project's usual filtered `javac -Xmaxerrs` check - real errors
-only, missing-Minecraft/Forge symbols are expected noise with no MDK in this workspace. Checked
-by hand again, not just grep, specifically for the interactivity fix and the new layout code -
-nothing in the filtered error list names any symbol this changed.
+Every changed file passes the usual filtered `javac -Xmaxerrs` check. This time I went further
+than grepping the touched files: I pulled the FULL deduplicated list of every distinct error
+*message* across the whole tree (not just which files they're in) and confirmed every one is
+either an expected missing-package cascade or the same pre-existing ambiguous-overload
+artifact already seen with `ScrollingBackpackView`'s constructor (caused by a Forge interface
+that can't resolve locally, not a real conflict - `Container`-typed arguments to the same
+`GridStorage.of` calls, right next to the flagged ones, resolve fine). No "incompatible
+types", no "missing return", no "unreported exception" - the classes of error that WOULD mean
+a real bug - anywhere in the output.
 
-**Nothing here has run in game.** First test should specifically try: placing a rifle or SMG
-and confirming it's now 2 cells tall and reads right at that shape; placing any multi-cell
-item and picking it up again afterward (the actual bug fix - try clicking a cell that isn't
-its top-left too); dragging a pistol into PRIMARY (should still bounce) and into HOLSTER
-(should still work); and just opening the inventory to see how the new loadout cluster and the
-taller window actually look before nudging any of the numbers above.
+**Nothing here has run in game**, same as every drop before it. This one especially needs a
+real look before trusting it: open a corpse mid-search with a rifle on it, watch a shadow cell
+stop costing search time, place something in the worn backpack, and actually see what angle
+55 degrees looks like.

@@ -1,11 +1,12 @@
 package com.dayzhud.mod.inventory.grid;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Multi-cell items in a flat, 1-slot-per-index {@link Container}.
+ * Multi-cell items in a flat, 1-slot-per-index {@link GridStorage} - a {@code Container}
+ * (the player's own inventory, an opened chest) or an {@code IItemHandlerModifiable} (a worn
+ * backpack, a corpse's loot bag), whichever the region is backed by.
  *
  * Minecraft's container model has no concept of "reserved but empty" - a slot either holds a
  * stack or it doesn't, and vanilla auto-pickup, hoppers, and other mods all write into the
@@ -82,14 +83,14 @@ public final class ItemGrid {
      * item would: this is what stops one item's footprint quietly eating into a neighbour's,
      * which reconcile()'s scan-order tie-break would otherwise paper over invisibly.
      */
-    public static boolean fits(Container container, int start, int cols, int rows,
+    public static boolean fits(GridStorage storage, int start, int cols, int rows,
                                 int col, int row, Footprint footprint) {
         if (col < 0 || row < 0) return false;
         if (col + footprint.width() > cols || row + footprint.height() > rows) return false;
         for (int dr = 0; dr < footprint.height(); dr++) {
             for (int dc = 0; dc < footprint.width(); dc++) {
                 int idx = start + (row + dr) * cols + (col + dc);
-                if (!container.getItem(idx).isEmpty()) return false;
+                if (!storage.get(idx).isEmpty()) return false;
             }
         }
         return true;
@@ -110,19 +111,19 @@ public final class ItemGrid {
      * state this method didn't itself create (fits() already refuses a placement that would
      * cause it).
      */
-    public static void reconcile(Container container, int start, int cols, int rows) {
+    public static void reconcile(GridStorage storage, int start, int cols, int rows) {
         int size = cols * rows;
 
         for (int i = 0; i < size; i++) {
             int idx = start + i;
-            if (isReservation(container.getItem(idx))) {
-                container.setItem(idx, ItemStack.EMPTY);
+            if (isReservation(storage.get(idx))) {
+                storage.set(idx, ItemStack.EMPTY);
             }
         }
 
         for (int i = 0; i < size; i++) {
             int idx = start + i;
-            ItemStack stack = container.getItem(idx);
+            ItemStack stack = storage.get(idx);
             if (stack.isEmpty()) continue;
 
             Footprint fp = footprintOf(stack);
@@ -137,7 +138,7 @@ public final class ItemGrid {
             for (int dr = 0; dr < fp.height(); dr++) {
                 for (int dc = 0; dc < fp.width(); dc++) {
                     if (dc == 0 && dr == 0) continue;
-                    if (!container.getItem(start + (row + dr) * cols + (col + dc)).isEmpty()) {
+                    if (!storage.get(start + (row + dr) * cols + (col + dc)).isEmpty()) {
                         clear = false;
                         break outer;
                     }
@@ -148,7 +149,7 @@ public final class ItemGrid {
             for (int dr = 0; dr < fp.height(); dr++) {
                 for (int dc = 0; dc < fp.width(); dc++) {
                     if (dc == 0 && dr == 0) continue;
-                    container.setItem(start + (row + dr) * cols + (col + dc), reservationFor(idx));
+                    storage.set(start + (row + dr) * cols + (col + dc), reservationFor(idx));
                 }
             }
         }

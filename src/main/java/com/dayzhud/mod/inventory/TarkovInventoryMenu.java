@@ -199,6 +199,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private final int backpackStartIndex;
     private final int craftStartIndex;
     private final int containerStartIndex;
+    /** Menu indices of the corpse's own inventory/hotbar/bag sections - -1 when not
+     *  applicable (no corpse open). Captured in addCorpseSlots(), since the curio column
+     *  ahead of them is variable-length. */
+    private int corpseInvStartIndex = -1;
+    private int corpseHotbarStartIndex = -1;
+    private int corpseBagStartIndex = -1;
 
     /**
      * The loot container behind this menu, when it is one that has to be searched.
@@ -371,6 +377,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // So the very first frame already shows correct footprint claims rather than
         // waiting for the next tick's broadcastChanges() to run reconcileGrids().
+        buildGridRegions();
         reconcileGrids();
     }
 
@@ -409,12 +416,14 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         // The corpse's own inventory and hotbar are fixed, labelled sections - they always
         // fit, so there's nothing to gain from scrolling them.
+        this.corpseInvStartIndex = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(corpse, CORPSE_MAIN_START + col + row * 9,
                         CORPSE_INV_X + col * 18, CORPSE_INV_Y + row * 18));
             }
         }
+        this.corpseHotbarStartIndex = slots.size();
         for (int col = 0; col < 9; col++) {
             addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
                     CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
@@ -434,6 +443,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         this.corpseLootView.setRange(CorpseLootHandler.BASE_COUNT, () -> corpseLoot.bagSlots());
 
         for (int i = 0; i < CORPSE_BAG_SLOTS; i++) {
+            if (i == 0) this.corpseBagStartIndex = slots.size();
             addSlot(new CorpseLootSlot(corpseLootView, i,
                     CORPSE_INV_X + (i % CORPSE_LOOT_COLS) * 18,
                     CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
@@ -536,10 +546,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return corpseLoot == null ? 0 : corpseLoot.serverBagSlots();
     }
 
-    /** Whether a bag slot holds anything, so the search can skip empty ones. */
+    /** Whether a bag slot holds anything real, so the search can skip empty ones - and skip
+     *  a multi-cell item's invisible shadow markers, which would otherwise cost the sweep an
+     *  extra step per covered cell for something the player was never going to see resolve. */
     public boolean corpseBagSlotOccupied(int bagSlot) {
         if (corpseLoot == null) return false;
-        return !corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot).isEmpty();
+        ItemStack stack = corpseLoot.getStackInSlot(CorpseLootHandler.BASE_COUNT + bagSlot);
+        return !stack.isEmpty() && !com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(stack);
     }
 
     /**
@@ -648,48 +661,73 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return corpseLayout;
     }
 
-    // ---- Multi-cell grid: player's own INVENTORY, and an opened container when it isn't
-    // ---- search-masked or corpse-laid-out. See ItemGrid's class doc for the "why".
+    // ---- Multi-cell grid: every fixed-size, indexed storage region this menu shows -
+    // ---- player's own INVENTORY and worn BACKPACK, an opened container, and (viewing a
+    // ---- corpse) its own inventory, hotbar and loot bag. See ItemGrid's class doc for how
+    // ---- a "reserved but empty" cell is made to mean something to code outside this menu.
+    //
+    // Deliberately NOT excluded here: a container or corpse currently being search-masked.
+    // An earlier version of this excluded them, reasoning that the two systems "weren't
+    // tried together." Having now actually thought it through: the only real interaction is
+    // that the CLIENT's own copy of an unsearched cell reads as empty (search hides the item,
+    // not just its icon), so a placement attempt touching one can be optimistically predicted
+    // client-side and then corrected once the server's authoritative response arrives -
+    // exactly the ordinary client-prediction correction vanilla containers already do
+    // constantly, not a new failure mode. Excluding corpses entirely would have defeated the
+    // point of adding this here at all, since a corpse is normally exactly what's mid-search
+    // when a multi-cell item would matter.
 
-    /** A rectangular region of one container that participates in grid placement.
+    /** A rectangular region of one indexed storage that participates in grid placement.
      *  {@code menuStart} is the menu index of this region's own (0,0). */
-    private record GridRegion(Container container, int start, int cols, int rows, int menuStart) {
+    private record GridRegion(com.dayzhud.mod.inventory.grid.GridStorage storage,
+                               int start, int cols, int rows, int menuStart) {
         int size() {
             return cols * rows;
         }
+
+        boolean contains(int menuSlotId) {
+            return menuSlotId >= menuStart && menuSlotId < menuStart + size();
+        }
     }
 
-    private GridRegion mainGridRegion() {
-        return new GridRegion(player.getInventory(), 9, 9, 3, inventoryStartIndex);
-    }
+    /** Built once, in the constructor - identities don't change over the menu's lifetime,
+     *  only (for the corpse regions) whether they exist at all for this particular menu. */
+    private List<GridRegion> gridRegions;
 
-    /** Null when there's nothing to grid (no container open, a corpse's own layout, or a
-     *  container currently wrapped for search - none of those are in scope for this). */
-    private GridRegion containerGridRegion() {
-        if (openedContainer == null || corpseLayout || searchedContainer != null) return null;
-        return new GridRegion(openedContainer, 0, CONTAINER_COLS, containerRows, containerStartIndex);
+    private void buildGridRegions() {
+        List<GridRegion> regions = new java.util.ArrayList<>();
+        regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(player.getInventory()),
+                9, 9, 3, inventoryStartIndex));
+        regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(backpackView),
+                0, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS, backpackStartIndex));
+        if (openedContainer != null && !corpseLayout) {
+            regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(openedContainer),
+                    0, CONTAINER_COLS, containerRows, containerStartIndex));
+        }
+        if (corpseLayout) {
+            regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
+                    CORPSE_MAIN_START, 9, 3, corpseInvStartIndex));
+            regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
+                    CORPSE_HOTBAR_START, 9, 1, corpseHotbarStartIndex));
+            regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseLootView),
+                    0, CORPSE_LOOT_COLS, CORPSE_BAG_VISIBLE_ROWS, corpseBagStartIndex));
+        }
+        this.gridRegions = List.copyOf(regions);
     }
 
     private GridRegion regionFor(int menuSlotId) {
         if (!com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return null;
-        GridRegion main = mainGridRegion();
-        if (menuSlotId >= main.menuStart() && menuSlotId < main.menuStart() + main.size()) return main;
-        GridRegion container = containerGridRegion();
-        if (container != null && menuSlotId >= container.menuStart()
-                && menuSlotId < container.menuStart() + container.size()) {
-            return container;
+        for (GridRegion region : gridRegions) {
+            if (region.contains(menuSlotId)) return region;
         }
         return null;
     }
 
     private void reconcileGrids() {
         if (!com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return;
-        GridRegion main = mainGridRegion();
-        com.dayzhud.mod.inventory.grid.ItemGrid.reconcile(main.container(), main.start(), main.cols(), main.rows());
-        GridRegion container = containerGridRegion();
-        if (container != null) {
+        for (GridRegion region : gridRegions) {
             com.dayzhud.mod.inventory.grid.ItemGrid.reconcile(
-                    container.container(), container.start(), container.cols(), container.rows());
+                    region.storage(), region.start(), region.cols(), region.rows());
         }
     }
 
@@ -711,11 +749,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         int col = local % region.cols();
         int row = local / region.cols();
         return com.dayzhud.mod.inventory.grid.ItemGrid.fits(
-                region.container(), region.start(), region.cols(), region.rows(), col, row, footprint);
+                region.storage(), region.start(), region.cols(), region.rows(), col, row, footprint);
     }
 
     /**
-     * The click path for the two grid regions. Only PICKUP-type clicks (plain left/right
+     * The click path for every grid region. Only PICKUP-type clicks (plain left/right
      * click) get special handling here; everything else that targets a grid region either
      * falls through to vanilla (safe for an ordinary 1x1 item) or is refused outright (a
      * reservation cell, or shift-click on a multi-cell item via {@link #quickMoveStack}).
@@ -784,7 +822,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             com.dayzhud.mod.inventory.grid.Footprint fp =
                     com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(carried);
             if (!com.dayzhud.mod.inventory.grid.ItemGrid.fits(
-                    region.container(), region.start(), region.cols(), region.rows(), col, row, fp)) {
+                    region.storage(), region.start(), region.cols(), region.rows(), col, row, fp)) {
                 return; // wouldn't fit - bounce, same as the preview outline already showed
             }
             clickedSlot.set(carried.copy());

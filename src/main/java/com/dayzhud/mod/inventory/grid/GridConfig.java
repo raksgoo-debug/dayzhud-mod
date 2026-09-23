@@ -5,10 +5,12 @@ import net.minecraftforge.common.ForgeConfigSpec;
 import java.util.List;
 
 /**
- * How big each item is, in grid cells, within the player's own INVENTORY grid and an opened
- * chest's grid. Nothing else (hotbar, loadout slots, armor, worn backpack, corpse loot bag)
- * is affected by this - see the class doc on {@link ItemGrid} for the scope this was built
- * against and why.
+ * How big each item is, in grid cells - within the player's own INVENTORY and worn BACKPACK,
+ * an opened container, and (viewing a corpse) its inventory, hotbar and loot bag - plus how
+ * a multi-cell item's bigger icon is tilted when drawn. Not the loadout slots (PRIMARY etc.):
+ * those are always exactly one item regardless of footprint, but they do share the tilt
+ * angle below, since the same "is it a big 3D model looking sheared" problem applies there
+ * too.
  */
 public final class GridConfig {
 
@@ -17,6 +19,7 @@ public final class GridConfig {
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GUN_TYPE_FOOTPRINTS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GUN_ID_FOOTPRINTS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_FOOTPRINTS;
+    public static final ForgeConfigSpec.DoubleValue FLAT_ITEM_ANGLE_X;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -49,6 +52,17 @@ public final class GridConfig {
                         "isn't a TACZ gun - backpacks, meds, resources, tools. Empty by default;",
                         "anything not listed here or above stays 1x1.")
                 .defineList("itemFootprints", List.of(), o -> o instanceof String);
+        FLAT_ITEM_ANGLE_X = b.comment(
+                        "Extra tilt (degrees, around the X axis) applied when drawing a big",
+                        "item icon - in the grid, and in the loadout boxes - on top of",
+                        "whatever angle it normally renders at. TACZ guns render as a 3D model",
+                        "even in a GUI slot, and their default angle doesn't lie flat the way a",
+                        "grid full of guns is supposed to look; this tips them further toward",
+                        "a top-down view.",
+                        "This is a first guess (55), not a measured one - nobody has actually",
+                        "looked at a gun in a grid cell in game yet to know the right number.",
+                        "Nudge it up toward 90 for more top-down, down toward 0 to turn it off.")
+                .defineInRange("flatItemAngleX", 55.0, 0.0, 90.0);
         b.pop();
         SPEC = b.build();
     }

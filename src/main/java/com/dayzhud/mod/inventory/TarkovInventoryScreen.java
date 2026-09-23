@@ -379,22 +379,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
     }
 
-    /** Draws {@code stack}'s icon scaled to fill most of its loadout box, padded a few
-     *  pixels in from the box edges so it doesn't run into the border or the key badge. */
+    /** Draws {@code stack}'s icon, tilted the same way as a grid item (see
+     *  renderTiltedItem), scaled to fill most of its loadout box - padded a few pixels in
+     *  from the box edges so it doesn't run into the border or the key badge. */
     private void drawBigWeaponIcon(GuiGraphics graphics, ItemStack stack, int bx, int by, int bw, int bh) {
         int pad = 4;
-        int iw = bw - pad * 2;
-        int ih = bh - pad * 2;
-        int ix = bx + pad;
-        int iy = by + pad;
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(ix, iy, 0);
-        graphics.pose().scale(iw / 16f, ih / 16f, 1f);
-        graphics.renderItem(stack, 0, 0);
-        graphics.pose().popPose();
-
-        graphics.renderItemDecorations(font, stack, ix + iw - 16, iy + ih - 16);
+        renderTiltedItem(graphics, stack, bx + pad, by + pad, bw - pad * 2, bh - pad * 2);
     }
 
     /**
@@ -493,20 +483,38 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      * ratio. Worth a look in game before deciding it needs a flatter, purpose-made icon
      * instead; this was never render-tested here, only reasoned through.
      */
+    /**
+     * Renders {@code stack} tilted toward lying flat and scaled to fill a {@code w}x{@code h}
+     * box at ({@code x},{@code y}) - the shared implementation behind both drawBigGridIcon
+     * and drawBigWeaponIcon, since both have the same "big 3D gun model in a GUI slot"
+     * problem. See GridConfig.FLAT_ITEM_ANGLE_X for why the angle is a first guess.
+     *
+     * Rotating around the box's own centre (translate there first, rotate, then render at
+     * an offset of half the item's native 16-unit size) rather than around its top-left
+     * corner - rotating around a corner would visibly swing the icon off to one side instead
+     * of tipping it in place.
+     */
+    private void renderTiltedItem(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h) {
+        float angle = (float) com.dayzhud.mod.inventory.grid.GridConfig.FLAT_ITEM_ANGLE_X.get();
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(x + w / 2f, y + h / 2f, 0);
+        if (angle != 0f) {
+            graphics.pose().mulPose(com.mojang.math.Axis.XP.rotationDegrees(angle));
+        }
+        graphics.pose().scale(w / 16f, h / 16f, 1f);
+        graphics.renderItem(stack, -8, -8);
+        graphics.pose().popPose();
+
+        graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
+    }
+
     private void drawBigGridIcon(GuiGraphics graphics, Slot slot, Footprint footprint) {
-        ItemStack stack = slot.getItem();
         int x = leftPos + slot.x;
         int y = topPos + slot.y;
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(x, y, 0);
-        graphics.pose().scale(w / 16f, h / 16f, 1f);
-        graphics.renderItem(stack, 0, 0);
-        graphics.pose().popPose();
-
-        graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
+        renderTiltedItem(graphics, slot.getItem(), x, y, w, h);
     }
 
     /**
