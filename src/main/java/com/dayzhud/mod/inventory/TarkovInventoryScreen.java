@@ -5,6 +5,9 @@ import com.dayzhud.mod.search.ClientSearchState;
 import com.dayzhud.mod.client.UiSounds;
 import com.dayzhud.mod.compat.FirstAidCompat;
 import com.dayzhud.mod.compat.ThirstWasTakenCompat;
+import com.dayzhud.mod.inventory.grid.Footprint;
+import com.dayzhud.mod.inventory.grid.ItemGrid;
+import com.dayzhud.mod.inventory.grid.RotateCarriedPacket;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -16,6 +19,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 
@@ -191,6 +195,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawBackpackScrollbar(graphics);
         drawCorpseScrollbar(graphics);
         drawStatBar(graphics);
+        drawGridPlacementPreview(graphics, mouseX, mouseY);
 
         renderTooltip(graphics, mouseX, mouseY);
         drawCurioHoverTooltip(graphics, mouseX, mouseY);
@@ -397,6 +402,89 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                     mouseX, mouseY);
             return;
         }
+    }
+
+    // ---- Multi-cell grid rendering/interaction ----
+
+    /**
+     * Suppresses vanilla's normal 16x16 item draw for a grid anchor (drawn big instead, by
+     * {@link #drawBigGridIcon}) and for a shadow cell (nothing to draw - its marker item's
+     * texture is blank anyway, but skipping the call is cheaper and clearer about why).
+     * Everything else - every slot outside the two grid regions, plus a plain 1x1 item
+     * inside one - renders exactly as vanilla always has.
+     */
+    @Override
+    protected void renderSlot(GuiGraphics graphics, Slot slot) {
+        ItemStack stack = slot.getItem();
+        if (ItemGrid.isReservation(stack)) return;
+        if (!stack.isEmpty() && ItemGrid.isMultiCell(stack) && menu.isGridSlot(slot.index)) {
+            drawBigGridIcon(graphics, slot, ItemGrid.footprintOf(stack));
+            return;
+        }
+        super.renderSlot(graphics, slot);
+    }
+
+    /**
+     * Draws {@code slot}'s item scaled to fill its whole footprint instead of one cell.
+     *
+     * Stretched to fill the rectangle exactly, matching how the reference grid looks - which
+     * does mean a gun modelled in 3D (as TACZ's are) can look mildly sheared at a wide aspect
+     * ratio. Worth a look in game before deciding it needs a flatter, purpose-made icon
+     * instead; this was never render-tested here, only reasoned through.
+     */
+    private void drawBigGridIcon(GuiGraphics graphics, Slot slot, Footprint footprint) {
+        ItemStack stack = slot.getItem();
+        int x = leftPos + slot.x;
+        int y = topPos + slot.y;
+        int w = footprint.width() * 18 - 2;
+        int h = footprint.height() * 18 - 2;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(w / 16f, h / 16f, 1f);
+        graphics.renderItem(stack, 0, 0);
+        graphics.pose().popPose();
+
+        graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
+    }
+
+    /**
+     * While carrying a multi-cell item and hovering a grid region, outlines where it would
+     * land - green if {@link TarkovInventoryMenu#gridFits} agrees, red if it wouldn't fit
+     * here. Purely a preview; clicked() re-checks the same fit server-side regardless.
+     */
+    private void drawGridPlacementPreview(GuiGraphics graphics, int mouseX, int mouseY) {
+        ItemStack carried = menu.getCarried();
+        if (carried.isEmpty() || !ItemGrid.isMultiCell(carried)) return;
+        if (hoveredSlot == null || !menu.isGridSlot(hoveredSlot.index)) return;
+
+        Footprint fp = ItemGrid.footprintOf(carried);
+        boolean fits = menu.gridFits(hoveredSlot.index, fp);
+
+        int x = leftPos + hoveredSlot.x - 1;
+        int y = topPos + hoveredSlot.y - 1;
+        int w = fp.width() * 18;
+        int h = fp.height() * 18;
+        int color = fits ? 0xA000FF00 : 0xA0FF0000;
+        graphics.fill(x, y, x + w, y + h, (color & 0x00FFFFFF) | 0x30000000);
+        graphics.renderOutline(x, y, w, h, color);
+    }
+
+    /**
+     * "R" while carrying a multi-cell item rotates it. Not yet a rebindable KeyMapping -
+     * hardcoded, matching the reference this was built from, which showed the same fixed key.
+     */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_R) {
+            ItemStack carried = menu.getCarried();
+            if (!carried.isEmpty() && ItemGrid.isMultiCell(carried)) {
+                ItemGrid.setRotated(carried, !ItemGrid.isRotated(carried));
+                NetworkHandler.CHANNEL.sendToServer(new RotateCarriedPacket());
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private void drawStatBar(GuiGraphics graphics) {

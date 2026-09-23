@@ -101,5 +101,12 @@ public class NetworkHandler {
                 SearchNetwork.Packet::encode,
                 SearchNetwork.Packet::decode,
                 SearchNetwork.Packet::handle);
+
+        // Grid. Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.inventory.grid.RotateCarriedPacket.class,
+                com.dayzhud.mod.inventory.grid.RotateCarriedPacket::encode,
+                com.dayzhud.mod.inventory.grid.RotateCarriedPacket::decode,
+                com.dayzhud.mod.inventory.grid.RotateCarriedPacket::handle);
     }
 }

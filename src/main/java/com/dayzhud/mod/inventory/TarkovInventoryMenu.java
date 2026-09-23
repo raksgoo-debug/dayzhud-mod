@@ -357,6 +357,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 }
             }
         }
+
+        // So the very first frame already shows correct footprint claims rather than
+        // waiting for the next tick's broadcastChanges() to run reconcileGrids().
+        reconcileGrids();
     }
 
     /**
@@ -598,6 +602,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     @Override
     public void broadcastChanges() {
+        // Every tick, before anything gets synced - see ItemGrid's class doc on why this is
+        // the correct place: reconciliation has to run regardless of WHAT changed a grid
+        // region (a click through this menu, a hopper feeding a chest, another mod), and
+        // broadcastChanges() is the one hook that already runs every tick unconditionally.
+        reconcileGrids();
+
         // Refresh the synced count before the data slots go out, so the client's view of
         // how many backpack slots exist is always up to date - including the moment a bag
         // is equipped or removed.
@@ -625,6 +635,156 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     public boolean isCorpse() {
         return corpseLayout;
+    }
+
+    // ---- Multi-cell grid: player's own INVENTORY, and an opened container when it isn't
+    // ---- search-masked or corpse-laid-out. See ItemGrid's class doc for the "why".
+
+    /** A rectangular region of one container that participates in grid placement.
+     *  {@code menuStart} is the menu index of this region's own (0,0). */
+    private record GridRegion(Container container, int start, int cols, int rows, int menuStart) {
+        int size() {
+            return cols * rows;
+        }
+    }
+
+    private GridRegion mainGridRegion() {
+        return new GridRegion(player.getInventory(), 9, 9, 3, inventoryStartIndex);
+    }
+
+    /** Null when there's nothing to grid (no container open, a corpse's own layout, or a
+     *  container currently wrapped for search - none of those are in scope for this). */
+    private GridRegion containerGridRegion() {
+        if (openedContainer == null || corpseLayout || searchedContainer != null) return null;
+        return new GridRegion(openedContainer, 0, CONTAINER_COLS, containerRows, containerStartIndex);
+    }
+
+    private GridRegion regionFor(int menuSlotId) {
+        if (!com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return null;
+        GridRegion main = mainGridRegion();
+        if (menuSlotId >= main.menuStart() && menuSlotId < main.menuStart() + main.size()) return main;
+        GridRegion container = containerGridRegion();
+        if (container != null && menuSlotId >= container.menuStart()
+                && menuSlotId < container.menuStart() + container.size()) {
+            return container;
+        }
+        return null;
+    }
+
+    private void reconcileGrids() {
+        if (!com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return;
+        GridRegion main = mainGridRegion();
+        com.dayzhud.mod.inventory.grid.ItemGrid.reconcile(main.container(), main.start(), main.cols(), main.rows());
+        GridRegion container = containerGridRegion();
+        if (container != null) {
+            com.dayzhud.mod.inventory.grid.ItemGrid.reconcile(
+                    container.container(), container.start(), container.cols(), container.rows());
+        }
+    }
+
+    /**
+     * Whether {@code footprint} would fit with its top-left at whatever cell menu index
+     * {@code menuSlotId} is - used by the screen to draw the green/red placement preview.
+     * False for a menu index outside any grid region.
+     */
+    /** Whether {@code menuSlotId} is inside either grid region at all - used by the screen
+     *  to decide whether to draw the placement preview outline while hovering it. */
+    public boolean isGridSlot(int menuSlotId) {
+        return regionFor(menuSlotId) != null;
+    }
+
+    public boolean gridFits(int menuSlotId, com.dayzhud.mod.inventory.grid.Footprint footprint) {
+        GridRegion region = regionFor(menuSlotId);
+        if (region == null) return false;
+        int local = menuSlotId - region.menuStart();
+        int col = local % region.cols();
+        int row = local / region.cols();
+        return com.dayzhud.mod.inventory.grid.ItemGrid.fits(
+                region.container(), region.start(), region.cols(), region.rows(), col, row, footprint);
+    }
+
+    /**
+     * The click path for the two grid regions. Only PICKUP-type clicks (plain left/right
+     * click) get special handling here; everything else that targets a grid region either
+     * falls through to vanilla (safe for an ordinary 1x1 item) or is refused outright (a
+     * reservation cell, or shift-click on a multi-cell item via {@link #quickMoveStack}).
+     *
+     * No new network packet: this menu class runs on both sides, so overriding the one
+     * vanilla already routes every container click through - client-side for prediction,
+     * server-side from the network packet - is enough. See RotateCarriedPacket for the one
+     * interaction that genuinely isn't a slot click and does need its own packet.
+     */
+    @Override
+    public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType,
+                         Player player) {
+        GridRegion region = (slotId >= 0 && slotId < slots.size()) ? regionFor(slotId) : null;
+        if (region == null) {
+            super.clicked(slotId, button, clickType, player);
+            return;
+        }
+
+        Slot clickedSlot = slots.get(slotId);
+        ItemStack there = clickedSlot.getItem();
+        boolean clickedIsReservation = com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(there);
+
+        if (clickType != net.minecraft.world.inventory.ClickType.PICKUP) {
+            // A shadow cell can only ever be picked up through its anchor (below) - every
+            // other click type (throw, swap, clone, collect-all) would otherwise act on the
+            // invisible marker directly, which is exactly the corruption this whole
+            // mechanism exists to prevent.
+            if (clickedIsReservation) return;
+            super.clicked(slotId, button, clickType, player);
+            reconcileGrids();
+            return;
+        }
+
+        ItemStack carried = getCarried();
+
+        if (carried.isEmpty()) {
+            if (clickedIsReservation) {
+                int anchorIdx = com.dayzhud.mod.inventory.grid.ItemGrid.anchorOf(there);
+                Slot anchorSlot = slots.get(region.menuStart() + anchorIdx - region.start());
+                ItemStack anchorStack = anchorSlot.getItem();
+                if (!anchorStack.isEmpty()) {
+                    setCarried(anchorStack.copy());
+                    anchorSlot.set(ItemStack.EMPTY);
+                    reconcileGrids();
+                }
+                return;
+            }
+            if (!there.isEmpty() && com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(there)) {
+                setCarried(there.copy());
+                clickedSlot.set(ItemStack.EMPTY);
+                reconcileGrids();
+                return;
+            }
+            super.clicked(slotId, button, clickType, player);
+            return;
+        }
+
+        // Carried is non-empty from here.
+        if (clickedIsReservation) return; // go to the anchor instead - see the block above
+
+        if (com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(carried)) {
+            if (!there.isEmpty()) return; // something real is already here - bounce
+            int local = slotId - region.menuStart();
+            int col = local % region.cols();
+            int row = local / region.cols();
+            com.dayzhud.mod.inventory.grid.Footprint fp =
+                    com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(carried);
+            if (!com.dayzhud.mod.inventory.grid.ItemGrid.fits(
+                    region.container(), region.start(), region.cols(), region.rows(), col, row, fp)) {
+                return; // wouldn't fit - bounce, same as the preview outline already showed
+            }
+            clickedSlot.set(carried.copy());
+            setCarried(ItemStack.EMPTY);
+            reconcileGrids();
+            return;
+        }
+
+        // A normal 1x1 item being placed/swapped onto a normal cell - fully vanilla, safe.
+        super.clicked(slotId, button, clickType, player);
+        reconcileGrids();
     }
 
     /** Recompute the crafting result whenever the 2x2 grid changes. */
@@ -722,8 +882,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        // Multi-cell items must be dragged, never shift-clicked: vanilla's move-to-first-
+        // free-slot logic below has no idea some empty-looking cells are shadow reservations
+        // for something else, and no idea a footprint bigger than 1x1 needs more than one
+        // free INDEX at the destination. A reservation cell is refused for the same reason
+        // clicked() refuses one - it's never a valid target or source on its own.
         Slot sourceSlot = slots.get(index);
         if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;
+        ItemStack maybeGridStack = sourceSlot.getItem();
+        if (com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(maybeGridStack)
+                || (com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(maybeGridStack)
+                        && regionFor(index) != null)) {
+            return ItemStack.EMPTY;
+        }
 
         ItemStack sourceStack = sourceSlot.getItem();
         ItemStack original = sourceStack.copy();

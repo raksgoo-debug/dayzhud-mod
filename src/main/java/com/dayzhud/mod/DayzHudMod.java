@@ -29,6 +29,7 @@ public class DayzHudMod {
 
         TarkovMenuTypes.MENU_TYPES.register(modEventBus);
         ModSounds.SOUNDS.register(modEventBus);
+        com.dayzhud.mod.inventory.grid.ModGridItems.ITEMS.register(modEventBus);
 
         // Market economy settings. COMMON rather than SERVER so single-player and a
         // dedicated server read the same file, and so the client can price sell quotes
@@ -39,6 +40,8 @@ public class DayzHudMod {
                 "dayzhud-search.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
                 com.dayzhud.mod.inventory.WeaponSlotConfig.SPEC, "dayzhud-weaponslots.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.inventory.grid.GridConfig.SPEC, "dayzhud-grid.toml");
         modEventBus.addListener(this::commonSetup);
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature
