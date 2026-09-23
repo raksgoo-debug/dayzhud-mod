@@ -471,7 +471,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             ItemStack stack = slot.getItem();
             if (stack.isEmpty() || ItemGrid.isReservation(stack)) continue;
             if (!ItemGrid.isMultiCell(stack) || !menu.isGridSlot(slot.index)) continue;
-            drawBigGridIcon(graphics, slot, ItemGrid.footprintOf(stack));
+            Footprint fp = ItemGrid.footprintOf(stack);
+            if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
+                com.dayzhud.mod.DayzHudMod.LOGGER.info(
+                        "grid draw: menu slot {} at screen ({},{}) footprint={} item={}",
+                        slot.index, leftPos + slot.x, topPos + slot.y, fp, stack.getItem());
+            }
+            drawBigGridIcon(graphics, slot, fp);
         }
     }
 

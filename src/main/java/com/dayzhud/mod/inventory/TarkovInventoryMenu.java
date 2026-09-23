@@ -795,6 +795,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 Slot anchorSlot = slots.get(region.menuStart() + anchorIdx - region.start());
                 ItemStack anchorStack = anchorSlot.getItem();
                 if (!anchorStack.isEmpty()) {
+                    if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
+                        com.dayzhud.mod.DayzHudMod.LOGGER.info(
+                                "grid pickup via shadow: clicked menu slot {} -> anchor menu slot {}",
+                                slotId, anchorSlot.index);
+                    }
                     setCarried(anchorStack.copy());
                     anchorSlot.set(ItemStack.EMPTY);
                     reconcileGrids();
@@ -802,6 +807,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 return;
             }
             if (!there.isEmpty() && com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(there)) {
+                if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
+                    com.dayzhud.mod.DayzHudMod.LOGGER.info(
+                            "grid pickup: menu slot {} region.menuStart={} footprint={}",
+                            slotId, region.menuStart(), com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(there));
+                }
                 setCarried(there.copy());
                 clickedSlot.set(ItemStack.EMPTY);
                 reconcileGrids();
@@ -824,6 +834,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             if (!com.dayzhud.mod.inventory.grid.ItemGrid.fits(
                     region.storage(), region.start(), region.cols(), region.rows(), col, row, fp)) {
                 return; // wouldn't fit - bounce, same as the preview outline already showed
+            }
+            if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
+                com.dayzhud.mod.DayzHudMod.LOGGER.info(
+                        "grid place: menu slot {} region.menuStart={} col={} row={} footprint={}",
+                        slotId, region.menuStart(), col, row, fp);
             }
             clickedSlot.set(carried.copy());
             setCarried(ItemStack.EMPTY);

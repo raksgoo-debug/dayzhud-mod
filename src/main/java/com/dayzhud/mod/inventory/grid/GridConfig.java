@@ -20,6 +20,7 @@ public final class GridConfig {
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GUN_ID_FOOTPRINTS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_FOOTPRINTS;
     public static final ForgeConfigSpec.DoubleValue FLAT_ITEM_ANGLE_X;
+    public static final ForgeConfigSpec.BooleanValue DEBUG_LOGGING;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -55,14 +56,24 @@ public final class GridConfig {
         FLAT_ITEM_ANGLE_X = b.comment(
                         "Extra tilt (degrees, around the X axis) applied when drawing a big",
                         "item icon - in the grid, and in the loadout boxes - on top of",
-                        "whatever angle it normally renders at. TACZ guns render as a 3D model",
-                        "even in a GUI slot, and their default angle doesn't lie flat the way a",
-                        "grid full of guns is supposed to look; this tips them further toward",
-                        "a top-down view.",
-                        "This is a first guess (55), not a measured one - nobody has actually",
-                        "looked at a gun in a grid cell in game yet to know the right number.",
-                        "Nudge it up toward 90 for more top-down, down toward 0 to turn it off.")
-                .defineInRange("flatItemAngleX", 55.0, 0.0, 90.0);
+                        "whatever angle it normally renders at, tipping it toward a top-down",
+                        "view.",
+                        "Defaults to 0 (off). It was briefly 55 by default; reverted after a",
+                        "report that big icons were only showing at their normal small size -",
+                        "the likely cause is this: the icon is scaled non-uniformly (stretched",
+                        "to fill a wide, short rectangle) AFTER being tilted in 3D, and that",
+                        "combination can render a thin, barely-visible sliver rather than a",
+                        "flattened gun, leaving only vanilla's own untouched small icon",
+                        "actually visible. Left in as an opt-in rather than removed, since the",
+                        "non-uniform-stretch part of that reasoning is a guess too - if you",
+                        "turn this on and it looks fine, that guess was wrong. Nudge up toward",
+                        "90 for more top-down; the config reloads live, no restart needed.")
+                .defineInRange("flatItemAngleX", 0.0, 0.0, 90.0);
+        DEBUG_LOGGING = b.comment(
+                        "Logs one line per multi-cell pickup, placement, and big-icon draw -",
+                        "menu slot index, region, footprint. Off by default; it repeats every",
+                        "frame once something is on screen; turn on only for a short test.")
+                .define("debugLogging", false);
         b.pop();
         SPEC = b.build();
     }
