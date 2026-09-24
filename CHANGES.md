@@ -1,52 +1,43 @@
-# dayzhud 2.12.3 - every gun sized to its real shape; wider loadout boxes
+# dayzhud 2.12.4 - guns draw at full size, always the right way up
 
-**4 changed/new files** (plus version bump). Unzip over the repo root, on top of 2.12.2.
-No config edits needed this time.
+**2 changed files** (plus version bump). Unzip over the repo root, on top of 2.12.3.
+Slot sizes are unchanged - pistols stay 2x1; the guns just draw bigger.
 
-## Per-gun footprints from each model's real proportions
+## Why guns looked too small (AK, pistols) - fixed
 
-Footprints were one size per gun *type*, but proportions vary a lot within a type - an M700
-is nearly 7:1, a Vector 1.8:1 - so some guns looked squeezed or lost in their box. Each of
-the 54 guns in TACZ's default pack now has its own footprint, sized from its actual model.
+Every TACZ gun model carries two hand-position markers (`lefthand_pos` / `righthand_pos`):
+opaque 4x12 boxes that reach far above the gun. TACZ hides them when it draws a gun, but not
+before my size measurement ran, so they counted. Across the 54 default guns, 48 had their
+measured height inflated - pistols worst (a Glock measured 25 units tall against a real 11).
+The gun was then shrunk to fit a box that was mostly empty space. They're now explicitly
+hidden, by bone name, for the measuring pass and the draw, and restored straight after. The
+name match is anchored, so it can't catch parts like "Handguard".
 
-Why not measure live in game, as the renderer does: footprints decide what fits where, and
-that is decided on the server, which never loads gun models (a dedicated server has none).
-So sizes have to be data both sides share - a built-in table, `DefaultGunFootprints`.
+The gun was also padded twice - 2 px by the panel and 2 px again inside the renderer - so a
+2x1 slot (18 px tall) left the gun 10 px. Now it's 1 px inside the panel outline in the grid
+and 2 px in the loadout boxes, nothing extra in the renderer.
 
-How the numbers were made, from the TACZ jar you sent: each gun's default-configuration model
-measured side-on over every vertex (the same measure the in-game renderer fits by), at one
-shared scale - 9 model units per cell - so guns sit at a consistent real-world size relative
-to each other, like a Tarkov grid. Then your rules: non-pistols at least 2 tall, pistols at
-least 2 wide, nothing over 9x3.
+Net effect (see render-size-before-after.png): pistols about 4.4-4.9x bigger in the same 2x1
+slot; rifles about 1.3-1.5x.
 
-Examples: Glock 2x1, Lonetrail 3x1, MP5 / Uzi / Vector 3x2, M4A1 / AK-47 5x2, HK416D / SCAR
-4x2, SPAS-12 / FAL 6x2, AWP / M95 7x2, M107 7x3, minigun 6x3. The full check sheet is
-attached - every gun rendered inside its new footprint at real grid pixel size, fitted by
-the same rule the game uses.
+## Why the SCAR was upside down - fixed, for every gun
 
-Lookup order: a `gunIdFootprints` config entry beats the built-in table, which beats the
-per-type defaults - so any gun can still be overridden, and guns from other packs keep their
-type's size. Your existing config doesn't need touching.
+The "which way is up" check compared the muzzle's height with the middle of the measured
+model. The hand markers dragged that middle upward, and even without them the check fails on
+4 guns (a tall scope sits well above an M700's muzzle; the HK416D, MP5 and P90 are too close
+to call).
 
-Guns already sitting close together in an inventory may overlap at their new sizes; they draw
-as 1x1 until dragged apart once.
+It turns out no per-gun guessing is needed. From TACZ's bytecode: every model is converted
+the same way on load (Y flipped, X and Z kept), and every default gun is authored the same
+way (muzzle toward -Z - true for all 52 that have a muzzle bone). So every gun is oriented
+identically, and the renderer now applies one fixed rotation. Verified on all 54 full-detail
+models before shipping - orientation-all-54-guns.png shows every one barrel-left and upright,
+including the SCAR, M700, HK416D, MP5 and P90.
 
-Two measuring mistakes caught and fixed while building the table, noted so the numbers can be
-trusted: a hide rule for hand bones also matched "Handguard", and an earlier pass hid
-"muzzle_default" (a real muzzle device) - both made guns measure short. The final table uses
-an audited hide list that removes only non-default variants (extended mags, alternative
-"oem_" stocks) and non-geometry bones.
+This also removes two things CI still had to confirm from 2.12.2 (the muzzle-bone walk used
+`PoseStack.last().pose()` and JOML `transformPosition`).
 
-## Loadout boxes: yes, every gun fits - and now they're bigger
+## Debugging
 
-Every gun always fits, because the model is scaled down to fit the box, never cut off. The
-real problem was size: at 60 px wide, a long sniper came out barely a quarter of the box
-tall. PRIMARY/SECONDARY are now 100 px wide and HOLSTER/SHEATH 44 px, still inside the
-section panel. The comparison sheet shows current vs new for the worst cases.
-
-## Known: a couple of models have detached parts
-
-The minigun (ammo feed hanging well below) and a few others have small separate pieces away
-from the main body. They count toward the measured size, so those guns draw a little smaller
-than their neighbours. That's the model, not the fit rule; override via `gunIdFootprints` if
-one bothers you.
+`debugLogging = true` logs one line per gun: vertex count, full draw vs body only, how many
+hand parts were hidden, and the measured length and height.

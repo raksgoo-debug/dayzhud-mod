@@ -384,7 +384,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 // Equipped TACZ gun: its real model, side-on, filling the box - same as the
                 // grid. The box outline/background above stays; the panel covers vanilla's
                 // small icon in the centred 16x16 slot.
-                drawFlatGunBox(graphics, stack, bx, by, bw, bh, 3);
+                drawFlatGunBox(graphics, stack, bx, by, bw, bh, 2);
             }
             // Anything else equipped (a knife in SHEATH, a non-TACZ gun) shows vanilla's own
             // small icon, drawn underneath by the normal slot pass - no overlay.
@@ -592,7 +592,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int h = footprint.height() * 18 - 2;
 
         if (TaczFlatGunRenderer.canRender(stack)
-                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 2)) {
+                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 1)) {
             return;
         }
         renderTiltedItem(graphics, stack, x, y, w, h);

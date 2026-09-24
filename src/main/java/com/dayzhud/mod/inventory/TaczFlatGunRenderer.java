@@ -25,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.joml.Vector3f;
 
 /**
  * Draws a TACZ gun as its real 3D model, side-on, barrel pointing left, contained (never
@@ -56,19 +55,26 @@ import org.joml.Vector3f;
  * draws stocks, scopes etc. as separate attachment models on top - so guns whose stock is a
  * (built-in) attachment measured too short and overflowed their box. Measurement now runs the
  * model's complete render with Minecraft's global buffer (the one TACZ insists on) briefly
- * pointed at the recorder, so it sees exactly what gets drawn. The muzzle end now comes from
- * the model's own muzzle-flash bone, walked exactly the way TACZ itself locates it
- * ({@code getMuzzleFlashPosPath()} + {@code translateAndRotateAndScale}, in list order); the
- * thin-end guess below is only the fallback for a model without that bone. Guns whose pack
- * ships only a low-detail model now fall back to it instead of not drawing at all.
+ * pointed at the recorder, so it sees exactly what gets drawn. Guns whose pack ships only a
+ * low-detail model now fall back to it instead of not drawing at all. (2.12.2 also located
+ * the muzzle from the muzzle-flash bone; superseded by the constant orientation below.)
  *
- * <h2>Orientation: read from the geometry, not from TACZ's conventions</h2>
- * From the measured vertices: the gun's length axis is the longer of X and Z; the muzzle is
- * the thinner end along it (barrels are thin, stocks and grips are tall); "up" is the side
- * the muzzle sits on vertically (the bore runs along the top of a gun - grips, magazines and
- * stock drops hang below it). Three rotations then put the muzzle left and the top up. All
- * are proper rotations, never mirrors, so the gun's real side faces out. Can mis-guess on a
- * gun equally thick at both ends (a plain launcher tube) - that only flips its facing.
+ * <h2>2.12.4: orientation is a constant, and the hand markers are hidden</h2>
+ * Every TACZ gun model is authored the same way, and TACZ converts them all the same way on
+ * load (verified in BedrockModel.convertPivot / convertOrigin bytecode: Y is flipped, X and Z
+ * are kept - Minecraft's y-down model convention). So in model space every gun has its length
+ * along Z, its muzzle at -Z (checked across all 52 default guns that have a muzzle bone) and
+ * its top toward -Y. The pose is therefore fixed - roll 180 about the length axis, then turn
+ * +Z onto screen-right - with no per-gun guessing. The earlier "muzzle is the thinner end" and
+ * "muzzle sits above the middle" guesses got the AK and SCAR wrong respectively.
+ *
+ * Every model also carries two hand-position markers ({@code lefthand_pos} /
+ * {@code righthand_pos}, under {@code leftHand} / {@code rightHand}): opaque 4x12 boxes that
+ * reach far above the gun. TACZ hides them when it draws a gun, but not before our
+ * measurement ran, so they inflated the measured height of 48 of 54 guns - up to 2.3x on
+ * pistols - shrinking the drawn gun to fit a mostly-empty box and dragging the old "middle"
+ * off-centre (which is what flipped the SCAR). They are now explicitly hidden, by bone name,
+ * for both the measuring pass and the draw, and restored afterwards.
  *
  * <h2>Failure mode</h2>
  * Any exception latches {@link #broken} and every caller falls back to the plain item render
@@ -77,13 +83,10 @@ import org.joml.Vector3f;
 public final class TaczFlatGunRenderer {
 
     private static final int FULL_BRIGHT = 15728880;
-    /** Fraction of the model's length, at each end, sampled to decide which end is the muzzle. */
-    private static final float END_BAND = 0.15f;
 
-    /** Model-space extent plus the orientation decisions derived from it. */
-    private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ,
-                          boolean lengthAlongZ, boolean muzzleAtMax, boolean upIsNegativeY) {
-        float length() { return lengthAlongZ ? maxZ - minZ : maxX - minX; }
+    /** Model-space extent. Orientation is constant (see class doc), so length is always Z. */
+    private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ) {
+        float length() { return maxZ - minZ; }
         float height() { return maxY - minY; }
     }
 
@@ -97,7 +100,7 @@ public final class TaczFlatGunRenderer {
     private static boolean broken;
     private static boolean reflectionReady;
     private static Method getGunDisplay, getGunModel, getModelTexture, getLodModel, getShouldRender,
-            partRender, partTransform;
+            partRender;
     private static Field globalBufferField;
     private static boolean globalBufferLookupDone;
     private static final Map<Class<?>, Method> MODEL_RENDER = new java.util.HashMap<>();
@@ -119,7 +122,6 @@ public final class TaczFlatGunRenderer {
             Class<?> part = Class.forName("com.tacz.guns.client.model.bedrock.BedrockPart");
             partRender = part.getMethod("render", PoseStack.class, ItemDisplayContext.class,
                     VertexConsumer.class, int.class, int.class);
-            partTransform = part.getMethod("translateAndRotateAndScale", PoseStack.class);
             reflectionReady = true;
             return true;
         } catch (Throwable t) {
@@ -172,8 +174,10 @@ public final class TaczFlatGunRenderer {
     public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z) {
         if (!canRender(stack)) return false;
         Bounds b = bounds(stack);
-        int pad = 2;
-        float s = Math.min((w - pad * 2) / b.length(), (h - pad * 2) / b.height());
+        // No padding here: the caller's box is already inset from its panel border. (2.12.x
+        // padded twice - 2 px in the caller plus 2 px here - leaving a 2x1 pistol 10 of its
+        // 18 px of height.)
+        float s = Math.min(w / b.length(), h / b.height());
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
@@ -185,17 +189,11 @@ public final class TaczFlatGunRenderer {
             // View space from here on: +X screen-right, +Y screen-up (the Y flip, like
             // vanilla's own GUI item render, turns model-up into screen-up).
             pose.scale(s, -s, s);
-            // Rotations listed outermost first; each vertex sees them innermost first:
-            // (1) roll 180 about the length axis if the gun came out upside down,
-            // (2) turn a Z-length model so its length lies along X,
-            // (3) turn 180 about vertical if the muzzle is now on the right.
-            // (1) doesn't move the muzzle along the length axis and (2) maps +Z to +X, so
-            // "muzzle at the max end" is still the right test for (3).
-            if (b.muzzleAtMax()) pose.mulPose(Axis.YP.rotationDegrees(180f));
-            if (b.lengthAlongZ()) pose.mulPose(Axis.YP.rotationDegrees(90f));
-            if (b.upIsNegativeY()) {
-                pose.mulPose((b.lengthAlongZ() ? Axis.ZP : Axis.XP).rotationDegrees(180f));
-            }
+            // Constant pose (see class doc). Listed outermost first; each vertex sees them
+            // innermost first: roll 180 about Z (model top -Y becomes screen-up +Y), then turn
+            // +Z onto +X (muzzle at -Z becomes screen-left). Proper rotations, never mirrors.
+            pose.mulPose(Axis.YP.rotationDegrees(90f));
+            pose.mulPose(Axis.ZP.rotationDegrees(180f));
             pose.translate(-(b.minX() + b.maxX()) / 2f, -(b.minY() + b.maxY()) / 2f,
                     -(b.minZ() + b.maxZ()) / 2f);
 
@@ -205,8 +203,13 @@ public final class TaczFlatGunRenderer {
             // TACZ draws into Minecraft's global buffer and flushes it itself, so make sure
             // anything already queued in the GUI (the panel behind the gun) goes out first.
             graphics.flush();
-            modelRender(m.model().getClass()).invoke(m.model(), pose, stack, ItemDisplayContext.FIXED,
-                    RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            List<Object> hidden = hideHandParts(m.model());
+            try {
+                modelRender(m.model().getClass()).invoke(m.model(), pose, stack, ItemDisplayContext.FIXED,
+                        RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            } finally {
+                restoreVisible(hidden);
+            }
             return true;
         } catch (Throwable t) {
             fail(t);
@@ -230,16 +233,21 @@ public final class TaczFlatGunRenderer {
             Model m = modelFor(stack);
             if (m == null) return null;
             Recorder rec = new Recorder();
-            boolean full = measureFullDraw(m, stack, rec);
-            if (!full) {
-                // Body only (misses attachment models like a separate stock), but better than nothing.
-                PoseStack ps = new PoseStack();
-                for (Object part : (List<?>) getShouldRender.invoke(m.model())) {
-                    partRender.invoke(part, ps, ItemDisplayContext.FIXED, rec, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            List<Object> hidden = hideHandParts(m.model());
+            boolean full;
+            try {
+                full = measureFullDraw(m, stack, rec);
+                if (!full) {
+                    // Body only (misses attachment models like a separate stock), but better than nothing.
+                    PoseStack ps = new PoseStack();
+                    for (Object part : (List<?>) getShouldRender.invoke(m.model())) {
+                        partRender.invoke(part, ps, ItemDisplayContext.FIXED, rec, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                    }
                 }
+            } finally {
+                restoreVisible(hidden);
             }
-            Vector3f muzzle = muzzlePoint(m.model());
-            Bounds b = rec.toBounds(muzzle);
+            Bounds b = rec.toBounds();
             if (b == null) {
                 if (WARNED_EMPTY.add(key)) {
                     DayzHudMod.LOGGER.warn("dayzhud: measured no geometry for gun {}; drawing it "
@@ -249,11 +257,8 @@ public final class TaczFlatGunRenderer {
             }
             CACHE.put(key, b);
             if (GridConfig.DEBUG_LOGGING.get()) {
-                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts ({}), length {} along {}, height {}, "
-                                + "muzzle at {} end ({}), up is {}Y",
-                        key, rec.n, full ? "full draw" : "body only", b.length(), b.lengthAlongZ() ? "Z" : "X",
-                        b.height(), b.muzzleAtMax() ? "max" : "min",
-                        muzzle != null ? "muzzle bone" : "thin-end guess", b.upIsNegativeY() ? "-" : "+");
+                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts ({}), {} hand parts hidden, length {}, height {}",
+                        key, rec.n, full ? "full draw" : "body only", hidden.size(), b.length(), b.height());
             }
             return b;
         } catch (Throwable t) {
@@ -328,22 +333,52 @@ public final class TaczFlatGunRenderer {
         return globalBufferField;
     }
 
+    /** TACZ's hand-position marker bones: rightHand / leftHand and their *_pos boxes. Case-
+     *  insensitive and anchored, so it never matches e.g. "Handguard". */
+    private static final java.util.regex.Pattern HAND_PART =
+            java.util.regex.Pattern.compile("(?i)^(left|right)_?hand(_pos)?$");
+    private static Field partName, partVisible, partChildren;
+
     /**
-     * The muzzle-flash point in model space, located exactly the way TACZ's own
-     * GunItemRendererWrapper.cacheMuzzlePosition does it (verified in bytecode): walk
-     * getMuzzleFlashPosPath() in list order applying each part's translateAndRotateAndScale,
-     * then read the resulting translation. Null if the model has no such bone.
+     * Sets visible=false on every hand-marker part in the model's tree (TACZ's BedrockPart has
+     * public name / visible / children fields) and returns the parts it changed, so the caller
+     * can restore them. Hiding a parent hides its children (e.g. bullets held during reload).
      */
-    private static Vector3f muzzlePoint(Object model) {
+    private static List<Object> hideHandParts(Object model) {
+        List<Object> changed = new java.util.ArrayList<>();
         try {
-            Method pathGetter = model.getClass().getMethod("getMuzzleFlashPosPath");
-            List<?> path = (List<?>) pathGetter.invoke(model);
-            if (path == null || path.isEmpty()) return null;
-            PoseStack ps = new PoseStack();
-            for (Object part : path) partTransform.invoke(part, ps);
-            return ps.last().pose().transformPosition(new Vector3f());
+            if (partName == null) {
+                Class<?> part = Class.forName("com.tacz.guns.client.model.bedrock.BedrockPart");
+                partName = part.getField("name");
+                partVisible = part.getField("visible");
+                partChildren = part.getField("children");
+            }
+            java.util.ArrayDeque<Object> todo = new java.util.ArrayDeque<>((List<?>) getShouldRender.invoke(model));
+            while (!todo.isEmpty()) {
+                Object p = todo.pop();
+                Object name = partName.get(p);
+                if (name instanceof String n && HAND_PART.matcher(n).matches()) {
+                    if (partVisible.getBoolean(p)) {
+                        partVisible.setBoolean(p, false);
+                        changed.add(p);
+                    }
+                    continue;
+                }
+                Object kids = partChildren.get(p);
+                if (kids instanceof java.util.Collection<?> c) todo.addAll(c);
+            }
         } catch (Throwable t) {
-            return null;
+            DayzHudMod.LOGGER.debug("dayzhud: couldn't hide TACZ hand parts", t);
+        }
+        return changed;
+    }
+
+    private static void restoreVisible(List<Object> parts) {
+        for (Object p : parts) {
+            try {
+                partVisible.setBoolean(p, true);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -389,7 +424,7 @@ public final class TaczFlatGunRenderer {
         public void defaultColor(int r, int g, int b, int a) {}
         public void unsetDefaultColor() {}
 
-        Bounds toBounds(Vector3f muzzle) {
+        Bounds toBounds() {
             if (n == 0) return null;
             float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE,
                     maxY = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
@@ -398,32 +433,7 @@ public final class TaczFlatGunRenderer {
                 minY = Math.min(minY, ys[i]); maxY = Math.max(maxY, ys[i]);
                 minZ = Math.min(minZ, zs[i]); maxZ = Math.max(maxZ, zs[i]);
             }
-            boolean alongZ = (maxZ - minZ) > (maxX - minX);
-            float[] len = alongZ ? zs : xs;
-            float lo = alongZ ? minZ : minX, hi = alongZ ? maxZ : maxX;
-            float band = (hi - lo) * END_BAND;
-
-            float loMin = Float.MAX_VALUE, loMax = -Float.MAX_VALUE, hiMin = Float.MAX_VALUE, hiMax = -Float.MAX_VALUE;
-            for (int i = 0; i < n; i++) {
-                if (len[i] <= lo + band) { loMin = Math.min(loMin, ys[i]); loMax = Math.max(loMax, ys[i]); }
-                if (len[i] >= hi - band) { hiMin = Math.min(hiMin, ys[i]); hiMax = Math.max(hiMax, ys[i]); }
-            }
-            boolean muzzleAtMax;
-            float muzzleCentre;
-            if (muzzle != null) {
-                // The model's own muzzle-flash point: authoritative.
-                float along = alongZ ? muzzle.z() : muzzle.x();
-                muzzleAtMax = along > (lo + hi) / 2f;
-                muzzleCentre = muzzle.y();
-            } else {
-                // Fallback guess: the muzzle is the thinner end.
-                muzzleAtMax = (hiMax - hiMin) < (loMax - loMin);
-                muzzleCentre = muzzleAtMax ? (hiMin + hiMax) / 2f : (loMin + loMax) / 2f;
-            }
-            // The bore runs along the top: if the muzzle sits below the model's middle, the
-            // model is upside down in this space.
-            boolean upNegative = muzzleCentre < (minY + maxY) / 2f;
-            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, alongZ, muzzleAtMax, upNegative);
+            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ);
         }
     }
 }
