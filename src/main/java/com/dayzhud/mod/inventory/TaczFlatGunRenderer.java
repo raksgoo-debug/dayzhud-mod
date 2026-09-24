@@ -6,20 +6,26 @@ import com.dayzhud.mod.market.TaczMarketCompat;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.joml.Vector3f;
 
 /**
  * Draws a TACZ gun as its real 3D model, side-on, barrel pointing left, contained (never
@@ -44,6 +50,17 @@ import java.util.Optional;
  * take a consumer, and {@code BedrockModel.getShouldRender()} is the exact list of top-level
  * parts the model draws - so measuring now walks those parts into the recorder directly. An
  * empty measurement also logs a warning now instead of failing silently.
+ *
+ * <h2>2.12.2: measuring the whole draw, and reading the real muzzle</h2>
+ * Walking {@code getShouldRender()} measured the gun body but not its attachments - TACZ
+ * draws stocks, scopes etc. as separate attachment models on top - so guns whose stock is a
+ * (built-in) attachment measured too short and overflowed their box. Measurement now runs the
+ * model's complete render with Minecraft's global buffer (the one TACZ insists on) briefly
+ * pointed at the recorder, so it sees exactly what gets drawn. The muzzle end now comes from
+ * the model's own muzzle-flash bone, walked exactly the way TACZ itself locates it
+ * ({@code getMuzzleFlashPosPath()} + {@code translateAndRotateAndScale}, in list order); the
+ * thin-end guess below is only the fallback for a model without that bone. Guns whose pack
+ * ships only a low-detail model now fall back to it instead of not drawing at all.
  *
  * <h2>Orientation: read from the geometry, not from TACZ's conventions</h2>
  * From the measured vertices: the gun's length axis is the longer of X and Z; the muzzle is
@@ -79,7 +96,10 @@ public final class TaczFlatGunRenderer {
 
     private static boolean broken;
     private static boolean reflectionReady;
-    private static Method getGunDisplay, getGunModel, getModelTexture, getShouldRender, partRender;
+    private static Method getGunDisplay, getGunModel, getModelTexture, getLodModel, getShouldRender,
+            partRender, partTransform;
+    private static Field globalBufferField;
+    private static boolean globalBufferLookupDone;
     private static final Map<Class<?>, Method> MODEL_RENDER = new java.util.HashMap<>();
     private static final java.util.Set<String> WARNED_EMPTY = new java.util.HashSet<>();
 
@@ -93,11 +113,13 @@ public final class TaczFlatGunRenderer {
             Class<?> display = Class.forName("com.tacz.guns.client.resource.GunDisplayInstance");
             getGunModel = display.getMethod("getGunModel");
             getModelTexture = display.getMethod("getModelTexture");
+            getLodModel = display.getMethod("getLodModel");
             Class<?> bedrockModel = Class.forName("com.tacz.guns.client.model.bedrock.BedrockModel");
             getShouldRender = bedrockModel.getMethod("getShouldRender");
             Class<?> part = Class.forName("com.tacz.guns.client.model.bedrock.BedrockPart");
             partRender = part.getMethod("render", PoseStack.class, ItemDisplayContext.class,
                     VertexConsumer.class, int.class, int.class);
+            partTransform = part.getMethod("translateAndRotateAndScale", PoseStack.class);
             reflectionReady = true;
             return true;
         } catch (Throwable t) {
@@ -113,8 +135,14 @@ public final class TaczFlatGunRenderer {
         if (display.isEmpty()) return null;
         Object model = getGunModel.invoke(display.get());
         Object texture = getModelTexture.invoke(display.get());
-        if (model == null || !(texture instanceof ResourceLocation tex)) return null;
-        return new Model(model, tex);
+        if (model != null && texture instanceof ResourceLocation tex) return new Model(model, tex);
+        // Some packs ship only the low-detail model; TACZ's own renderer falls back the same way.
+        Object lod = getLodModel.invoke(display.get());
+        if (lod == null) return null;
+        Object lodModel = lod.getClass().getMethod("getLeft").invoke(lod);
+        Object lodTex = lod.getClass().getMethod("getRight").invoke(lod);
+        if (lodModel == null || !(lodTex instanceof ResourceLocation tex)) return null;
+        return new Model(lodModel, tex);
     }
 
     private static Method modelRender(Class<?> modelClass) throws NoSuchMethodException {
@@ -202,11 +230,16 @@ public final class TaczFlatGunRenderer {
             Model m = modelFor(stack);
             if (m == null) return null;
             Recorder rec = new Recorder();
-            PoseStack ps = new PoseStack();
-            for (Object part : (List<?>) getShouldRender.invoke(m.model())) {
-                partRender.invoke(part, ps, ItemDisplayContext.FIXED, rec, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            boolean full = measureFullDraw(m, stack, rec);
+            if (!full) {
+                // Body only (misses attachment models like a separate stock), but better than nothing.
+                PoseStack ps = new PoseStack();
+                for (Object part : (List<?>) getShouldRender.invoke(m.model())) {
+                    partRender.invoke(part, ps, ItemDisplayContext.FIXED, rec, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                }
             }
-            Bounds b = rec.toBounds();
+            Vector3f muzzle = muzzlePoint(m.model());
+            Bounds b = rec.toBounds(muzzle);
             if (b == null) {
                 if (WARNED_EMPTY.add(key)) {
                     DayzHudMod.LOGGER.warn("dayzhud: measured no geometry for gun {}; drawing it "
@@ -216,14 +249,100 @@ public final class TaczFlatGunRenderer {
             }
             CACHE.put(key, b);
             if (GridConfig.DEBUG_LOGGING.get()) {
-                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts, length {} along {}, height {}, "
-                                + "muzzle at {} end, up is {}Y",
-                        key, rec.n, b.length(), b.lengthAlongZ() ? "Z" : "X", b.height(),
-                        b.muzzleAtMax() ? "max" : "min", b.upIsNegativeY() ? "-" : "+");
+                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts ({}), length {} along {}, height {}, "
+                                + "muzzle at {} end ({}), up is {}Y",
+                        key, rec.n, full ? "full draw" : "body only", b.length(), b.lengthAlongZ() ? "Z" : "X",
+                        b.height(), b.muzzleAtMax() ? "max" : "min",
+                        muzzle != null ? "muzzle bone" : "thin-end guess", b.upIsNegativeY() ? "-" : "+");
             }
             return b;
         } catch (Throwable t) {
             fail(t);
+            return null;
+        }
+    }
+
+    /**
+     * Runs the model's complete render (body AND attachment models) with Minecraft's global
+     * buffer briefly replaced by one that feeds {@code rec}. TACZ fetches that buffer itself
+     * rather than taking one as a parameter, so this is the only way to see everything it
+     * draws. Render-thread only, restored in {@code finally}. Returns false (having recorded
+     * nothing) if the swap isn't possible, so the caller can fall back.
+     *
+     * The field is found by identity - whichever {@code BufferSource}-typed field on
+     * RenderBuffers currently holds {@code bufferSource()} - not by name, so obfuscated
+     * field names don't matter. TACZ's render also toggles the stencil buffer (clear with
+     * mask 1024, stencil ops GL_KEEP) - checked in bytecode; nothing else global.
+     */
+    private static boolean measureFullDraw(Model m, ItemStack stack, Recorder rec) {
+        RenderBuffers buffers = Minecraft.getInstance().renderBuffers();
+        MultiBufferSource.BufferSource real = buffers.bufferSource();
+        Field f = globalBufferField(buffers, real);
+        if (f == null) return false;
+        MultiBufferSource.BufferSource capture = new MultiBufferSource.BufferSource(new BufferBuilder(256), Map.of()) {
+            @Override
+            public VertexConsumer getBuffer(RenderType type) {
+                return rec;
+            }
+
+            @Override
+            public void endBatch() {}
+
+            @Override
+            public void endBatch(RenderType type) {}
+        };
+        try {
+            f.set(buffers, capture);
+            modelRender(m.model().getClass()).invoke(m.model(), new PoseStack(), stack, ItemDisplayContext.FIXED,
+                    RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            return rec.n > 0;
+        } catch (Throwable t) {
+            DayzHudMod.LOGGER.debug("dayzhud: full-draw measurement failed, using body-only", t);
+            return false;
+        } finally {
+            try {
+                f.set(buffers, real);
+            } catch (Throwable restore) {
+                fail(restore);
+            }
+        }
+    }
+
+    private static Field globalBufferField(RenderBuffers buffers, Object current) {
+        if (globalBufferLookupDone) return globalBufferField;
+        globalBufferLookupDone = true;
+        try {
+            for (Field f : RenderBuffers.class.getDeclaredFields()) {
+                if (!MultiBufferSource.BufferSource.class.isAssignableFrom(f.getType())) continue;
+                f.setAccessible(true);
+                if (f.get(buffers) == current) {
+                    globalBufferField = f;
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            DayzHudMod.LOGGER.warn("dayzhud: can't reach the global render buffer; flat guns will be "
+                    + "measured without their attachment models.", t);
+            globalBufferField = null;
+        }
+        return globalBufferField;
+    }
+
+    /**
+     * The muzzle-flash point in model space, located exactly the way TACZ's own
+     * GunItemRendererWrapper.cacheMuzzlePosition does it (verified in bytecode): walk
+     * getMuzzleFlashPosPath() in list order applying each part's translateAndRotateAndScale,
+     * then read the resulting translation. Null if the model has no such bone.
+     */
+    private static Vector3f muzzlePoint(Object model) {
+        try {
+            Method pathGetter = model.getClass().getMethod("getMuzzleFlashPosPath");
+            List<?> path = (List<?>) pathGetter.invoke(model);
+            if (path == null || path.isEmpty()) return null;
+            PoseStack ps = new PoseStack();
+            for (Object part : path) partTransform.invoke(part, ps);
+            return ps.last().pose().transformPosition(new Vector3f());
+        } catch (Throwable t) {
             return null;
         }
     }
@@ -270,7 +389,7 @@ public final class TaczFlatGunRenderer {
         public void defaultColor(int r, int g, int b, int a) {}
         public void unsetDefaultColor() {}
 
-        Bounds toBounds() {
+        Bounds toBounds(Vector3f muzzle) {
             if (n == 0) return null;
             float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE,
                     maxY = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
@@ -289,11 +408,20 @@ public final class TaczFlatGunRenderer {
                 if (len[i] <= lo + band) { loMin = Math.min(loMin, ys[i]); loMax = Math.max(loMax, ys[i]); }
                 if (len[i] >= hi - band) { hiMin = Math.min(hiMin, ys[i]); hiMax = Math.max(hiMax, ys[i]); }
             }
-            // Muzzle = the thinner end.
-            boolean muzzleAtMax = (hiMax - hiMin) < (loMax - loMin);
-            // The bore runs along the top: if the muzzle's vertical centre is below the
-            // model's middle, the model is upside down in this space.
-            float muzzleCentre = muzzleAtMax ? (hiMin + hiMax) / 2f : (loMin + loMax) / 2f;
+            boolean muzzleAtMax;
+            float muzzleCentre;
+            if (muzzle != null) {
+                // The model's own muzzle-flash point: authoritative.
+                float along = alongZ ? muzzle.z() : muzzle.x();
+                muzzleAtMax = along > (lo + hi) / 2f;
+                muzzleCentre = muzzle.y();
+            } else {
+                // Fallback guess: the muzzle is the thinner end.
+                muzzleAtMax = (hiMax - hiMin) < (loMax - loMin);
+                muzzleCentre = muzzleAtMax ? (hiMin + hiMax) / 2f : (loMin + loMax) / 2f;
+            }
+            // The bore runs along the top: if the muzzle sits below the model's middle, the
+            // model is upside down in this space.
             boolean upNegative = muzzleCentre < (minY + maxY) / 2f;
             return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, alongZ, muzzleAtMax, upNegative);
         }

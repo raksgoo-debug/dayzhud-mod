@@ -52,6 +52,18 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     /** Ghost icon drawn in an empty loadout slot, so an unrestricted-looking box doesn't
      *  read as "any item goes here" - see drawWeaponSlotDecor. */
     private static final int WEAPON_GHOST_COLOR = 0x40AFAFAF;
+    private int lastMouseX, lastMouseY;
+
+    /**
+     * GUI depths for the flat-gun layer. Vanilla draws a slot's item at z 100 (renderSlot's
+     * own push) + 150 (renderItem's) = ~250, so anything meant to cover it - the panel that
+     * hides TACZ's little diagonal icon - must sit above that. 2.12.1 put the panel at 190,
+     * UNDER the icon, which is why the icon still showed. Carried item (~382) and tooltips
+     * (400) stay above all of this.
+     */
+    private static final float FLAT_PANEL_Z = 280, FLAT_GUN_Z = 330, FLAT_HOVER_Z = 345,
+            FLAT_DECOR_Z = 150, FLAT_PREVIEW_Z = 360;
+    private static final int FLAT_HOVER_COLOR = 0x30FFFFFF;
 
     /**
      * Flat, top-down weapon icons - user-supplied art, sliced from one composite reference
@@ -194,6 +206,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
         renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
 
@@ -366,12 +380,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 int pad = 4;
                 drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
                         WEAPON_GHOST_COLOR);
+            } else if (TaczFlatGunRenderer.canRender(stack)) {
+                // Equipped TACZ gun: its real model, side-on, filling the box - same as the
+                // grid. The box outline/background above stays; the panel covers vanilla's
+                // small icon in the centred 16x16 slot.
+                drawFlatGunBox(graphics, stack, bx, by, bw, bh, 3);
             }
-            // Equipped: nothing drawn here at all - just vanilla's own small icon, already
-            // rendered underneath by the normal slot pass. The flat category icon was only
-            // ever useful as a placeholder for "nothing here yet"; once a real weapon is
-            // equipped, overlaying a generic silhouette on top of it added nothing and, per
-            // feedback, is better gone than dim-then-bright.
+            // Anything else equipped (a knife in SHEATH, a non-TACZ gun) shows vanilla's own
+            // small icon, drawn underneath by the normal slot pass - no overlay.
 
             graphics.pose().pushPose();
             graphics.pose().translate(bx - 2, by - 8, 0);
@@ -383,7 +399,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             // sheath don't show one there either, even though they're bound the same way).
             if (type == WeaponSlots.PRIMARY || type == WeaponSlots.SECONDARY) {
                 graphics.pose().pushPose();
-                graphics.pose().translate(bx + 2, by + 1, 0);
+                // Above the flat-gun panel, which would otherwise hide the badge.
+                graphics.pose().translate(bx + 2, by + 1, FLAT_HOVER_Z + 1);
                 graphics.pose().scale(0.6f, 0.6f, 1f);
                 graphics.drawString(font, type == WeaponSlots.PRIMARY ? "1" : "2", 0, 0, LABEL_DIM, false);
                 graphics.pose().popPose();
@@ -531,6 +548,37 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     /**
+     * One panel over the box (x,y,w,h) - covering TACZ's small diagonal icon that vanilla
+     * already drew in the slot, and the grid's internal cell borders - then the gun's real
+     * model on it, side-on (TaczFlatGunRenderer), then decorations and a hover highlight
+     * (vanilla's own highlight is under the panel now). Shared by the grid and the loadout
+     * boxes. Returns false if the model draw failed, so the caller can fall back.
+     */
+    private boolean drawFlatGunBox(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, int inset) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, FLAT_PANEL_Z);
+        graphics.fill(x, y, x + w, y + h, SLOT_BG);
+        graphics.renderOutline(x, y, w, h, SLOT_BORDER);
+        graphics.pose().popPose();
+
+        if (!TaczFlatGunRenderer.render(graphics, stack, x + inset, y + inset, w - inset * 2, h - inset * 2, FLAT_GUN_Z)) {
+            return false;
+        }
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, FLAT_DECOR_Z);
+        graphics.renderItemDecorations(font, stack, x + w - 17, y + h - 17);
+        graphics.pose().popPose();
+
+        if (lastMouseX >= x && lastMouseX < x + w && lastMouseY >= y && lastMouseY < y + h) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(0, 0, FLAT_HOVER_Z);
+            graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, FLAT_HOVER_COLOR);
+            graphics.pose().popPose();
+        }
+        return true;
+    }
+
+    /**
      * Always the real gun's own 3D render, at its real colours and texture - not TACZ's
      * flat grayscale HUD icon (tried in 2.11.0; reverted per feedback: original-looking guns
      * matter more here than avoiding the render entirely). Only the rotation and the
@@ -543,25 +591,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
 
-        if (TaczFlatGunRenderer.canRender(stack)) {
-            // One panel across the whole footprint, like a Tarkov grid item: hides the
-            // internal cell borders AND the small diagonal sprite vanilla already drew in the
-            // anchor cell (at item depth ~150), which the side-on model alone wouldn't fully
-            // cover. Depth 190 sits above that sprite; the gun draws above this at 250.
-            graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, 190);
-            graphics.fill(x - 1, y - 1, x + w + 1, y + h + 1, SLOT_BG);
-            graphics.renderOutline(x - 1, y - 1, w + 2, h + 2, SLOT_BORDER);
-            graphics.pose().popPose();
-            if (TaczFlatGunRenderer.render(graphics, stack, x, y, w, h, 250)) {
-                // Vanilla decorations draw at +200 of the current depth - lift them clear
-                // of the gun so a count/durability overlay isn't hidden behind the model.
-                graphics.pose().pushPose();
-                graphics.pose().translate(0, 0, 100);
-                graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
-                graphics.pose().popPose();
-                return;
-            }
+        if (TaczFlatGunRenderer.canRender(stack)
+                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 2)) {
+            return;
         }
         renderTiltedItem(graphics, stack, x, y, w, h);
         graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
@@ -585,10 +617,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = fp.width() * 18;
         int h = fp.height() * 18;
         int color = fits ? 0xA000FF00 : 0xA0FF0000;
-        // Above the flat-gun panels (190) and models (250), or a red "won't fit" outline
+        // Above the flat-gun panels and models (FLAT_PANEL_Z / FLAT_GUN_Z), or a red "won't fit" outline
         // over an existing gun would be hidden behind it - exactly when it matters most.
         graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, 300);
+        graphics.pose().translate(0, 0, FLAT_PREVIEW_Z);
         graphics.fill(x, y, x + w, y + h, (color & 0x00FFFFFF) | 0x30000000);
         graphics.renderOutline(x, y, w, h, color);
         graphics.pose().popPose();

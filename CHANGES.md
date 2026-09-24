@@ -1,49 +1,62 @@
-# dayzhud 2.12.1 - flat 3D guns actually draw now
+# dayzhud 2.12.2 - flat guns: leftover icon, facing, stocks, missing guns, loadout boxes
 
-**1 changed file** (plus version bump). Unzip over the repo root, on top of 2.12.0.
+**2 changed files** (plus version bump). Unzip over the repo root, on top of 2.12.1.
 
-## Why 2.12.0 showed nothing new
+## TACZ's small icon still showing in the corner - fixed
 
-Your log confirmed 2.12.0 loaded and never errored, so the renderer ran and quietly decided
-it couldn't draw. The reason, found in TACZ's bytecode: to size each gun, 2.12.0 drew it once
-into a recording buffer to measure it. But TACZ's model renderer ignores any buffer you hand
-it - it grabs Minecraft's global buffer itself and flushes it itself. The recorder never saw a
-single vertex, the measurement came back empty, and every gun fell back to the old sprite
-without a word. I had checked the top of that call chain last time, not the bottom.
+A depth-order bug of mine. Vanilla draws a slot's item at z ~250 (its own +100 for slots,
+plus +150 per item), and the panel meant to cover TACZ's little diagonal icon sat at 190 -
+underneath it. All flat-gun layers now sit above vanilla's item layer: panel 280, gun 330,
+hover 345, decorations 350, placement outline 360. The carried item (~382) and tooltips (400)
+stay on top. Since the panel now also covers vanilla's hover highlight, a hover highlight is
+drawn on the panel instead.
 
-## The fix
+## Some guns facing right - fixed
 
-One level down, TACZ's model parts DO accept a buffer (`BedrockPart.render(..., VertexConsumer, ...)`),
-and `BedrockModel.getShouldRender()` is the exact list of parts the model draws - confirmed
-in bytecode that the model's own render walks precisely that list. So measuring now walks
-those parts straight into the recorder.
+2.12.1 guessed the muzzle as "the thinner end". That held for the low-detail models I tested
+with, but high-detail models (muzzle brakes, rails, suppressors) break it - your AK. The muzzle
+now comes from the model's own muzzle-flash bone, located exactly the way TACZ itself locates
+it (verified in its bytecode). The thin-end guess only remains as a fallback for a model that
+has no such bone.
 
-Drawing changed too: instead of the item-frame path (where TACZ chooses the pose and its
-orientation had to be guessed), TACZ's model render is now called directly with a pose built
-here. TACZ still draws its own model with its own code, attachments included; all TACZ calls
-are by reflection, so TACZ stays optional.
+## Stocks cut off - fixed
 
-Orientation now comes from the measured geometry itself:
-- length axis = the longer horizontal extent,
-- muzzle = the thinner end (barrels are thin; stocks and grips are tall),
-- up = the side the muzzle sits on (the bore runs along the top; grips, mags and stock drops
-  hang below).
+The size measurement walked only the gun body. TACZ draws stocks, scopes and the like as
+separate attachment models on top (including built-in ones), so those guns measured too short
+and the stock spilled past the box. Measurement now runs TACZ's complete draw, attachments
+included. TACZ insists on using Minecraft's global render buffer, so for that one measuring
+pass the global buffer is briefly swapped for a recorder and restored straight after
+(render-thread only, restored in a `finally`). It is found by identity, not by field name, so
+obfuscation doesn't matter. The only other global state TACZ's draw touches is the stencil
+buffer (checked in bytecode). If the swap ever isn't possible, it falls back to body-only
+measurement with one log warning.
 
-Tested before shipping by porting that exact logic to Python and running it on real vertex
-data from six of your guns (DB-4, M4A1, AK-47, MP5, M870, Glock), in both Bedrock's raw axes
-and the flipped axes TACZ probably uses internally: all twelve came out barrel-left and
-upright, and both conventions gave identical results - so it doesn't depend on guessing
-TACZ's internal axis convention.
+## Some guns not getting the new render - likely fixed
 
-An empty measurement now logs a warning naming the gun, instead of failing silently.
+Most likely those guns' packs ship only a low-detail model, which returned nothing from the
+call 2.12.1 used. TACZ's own renderer falls back to the low-detail model in that case, and so
+does this now. If any gun still shows the old icon, the log will now say why: "measured no
+geometry for gun X".
+
+## Loadout boxes (PRIMARY / SECONDARY / HOLSTER)
+
+An equipped TACZ gun now draws as its real side-on model filling the box, same as the grid.
+The key badge ("1" / "2") is lifted above it. A knife in SHEATH, or any non-TACZ item, still
+shows its normal icon.
 
 ## What CI has to confirm
 
-Everything this uses compiled in 2.12.0 except one call: `RenderType.entityCutoutNoCull(ResourceLocation)`.
-Every TACZ method is verified against your jar's bytecode.
+Confirmed by TACZ's own bytecode: `Minecraft.renderBuffers()`, `RenderBuffers.bufferSource()`,
+`BufferSource.getBuffer` / `endBatch(RenderType)`, `PoseStack.last().pose()`.
 
-## If it still doesn't show
+Not yet proven (each fails at compile time if wrong - none can fail silently):
+- the `MultiBufferSource.BufferSource(BufferBuilder, Map)` constructor
+- `new BufferBuilder(int)`
+- no-arg `BufferSource.endBatch()` (has `@Override`, so a wrong one fails loudly)
+- JOML `Matrix4f.transformPosition(Vector3f)`
 
-Set `debugLogging = true` in `dayzhud-grid.toml` and open the inventory with a gun in it. Each
-gun logs one line: vertex count, length axis, muzzle end, and which way is up. That line (or
-the warning if it measured nothing) says exactly where it stopped.
+## Debugging
+
+`debugLogging = true` logs one line per gun: vertex count, whether it measured the full draw
+or body only, the length axis, the muzzle end and whether it came from the muzzle bone or the
+fallback guess, and which way is up.
