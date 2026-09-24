@@ -133,9 +133,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * Primary/secondary get a wide box (there's a real icon to show and a bound-key badge to
      * fit); holster/sheath are narrower, matching the reference this was built from.
      */
-    public static final int[] WEAPON_BOX_X = {16, 16, 84, 84};
+    // Widened in 2.12.3 (60 -> 100, 34 -> 44) once the boxes show the real gun model: at 60 px
+    // a long sniper rendered barely a quarter of the box tall. Every gun is scaled to fit
+    // either way; wider just means bigger. 16..116 and 122..166 stay inside the section panel.
+    public static final int[] WEAPON_BOX_X = {16, 16, 122, 122};
     public static final int[] WEAPON_BOX_Y = {168, 212, 168, 212};
-    public static final int[] WEAPON_BOX_W = {60, 60, 34, 34};
+    public static final int[] WEAPON_BOX_W = {100, 100, 44, 44};
     public static final int[] WEAPON_BOX_H = {30, 30, 30, 30};
 
     private static final int BACKPACK_X = 186;

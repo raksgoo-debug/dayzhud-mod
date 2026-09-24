@@ -89,6 +89,9 @@ public final class ItemFootprints {
         if (gunId.isPresent()) {
             Footprint byId = gunIdMap.get(gunId.get());
             if (byId != null) return byId;
+            // Built-in per-gun sizes from each model's real proportions (DefaultGunFootprints).
+            Footprint builtin = DefaultGunFootprints.TABLE.get(gunId.get().toString());
+            if (builtin != null) return builtin;
             Optional<String> type = TaczMarketCompat.gunTypeOf(stack);
             if (type.isPresent()) {
                 Footprint byType = gunTypeMap.get(type.get());
