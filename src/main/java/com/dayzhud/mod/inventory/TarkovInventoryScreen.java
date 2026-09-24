@@ -509,12 +509,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     /**
-     * Fallback for a gun this mod doesn't have a bundled flat icon for (see TaczHudIcons) -
-     * scales TACZ's normal 3D GUI render UNIFORMLY to fit the box, rather than the earlier
-     * non-uniform stretch that caused the shearing this was built to fix. A gun rendered at
-     * its native aspect ratio and just made bigger reads fine; forced independently in width
-     * and height to fill a wide, short rectangle is what turned it into a thin diagonal
-     * streak.
+     * Scales TACZ's normal 3D GUI render UNIFORMLY to fit the box, rather than the earlier
+     * non-uniform stretch that caused the shearing this was originally built to fix. A gun
+     * rendered at its native aspect ratio and just made bigger reads fine; forced
+     * independently in width and height to fill a wide, short rectangle is what turned it
+     * into a thin diagonal streak. The rotation is the other half of this mod's own doing -
+     * see GridConfig.FLAT_ITEM_ANGLE_X - and defaults off (0) pending an in-game look.
      */
     private void renderTiltedItem(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h) {
         float angle = com.dayzhud.mod.inventory.grid.GridConfig.FLAT_ITEM_ANGLE_X.get().floatValue();
@@ -530,26 +530,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
     }
 
-    /** Draws a flat texture (a TaczHudIcons entry) at its own native aspect ratio, scaled to
-     *  CONTAIN within the box and centred - never stretched, and no tint: these already have
-     *  the right colours and shading baked in, unlike the generic loadout icons. */
-    private void drawContainedIcon(GuiGraphics graphics, ResourceLocation texture, int nativeW, int nativeH,
-                                    int boxX, int boxY, int boxW, int boxH) {
-        float scale = Math.min((float) boxW / nativeW, (float) boxH / nativeH);
-        int drawW = Math.round(nativeW * scale);
-        int drawH = Math.round(nativeH * scale);
-        int x = boxX + (boxW - drawW) / 2;
-        int y = boxY + (boxH - drawH) / 2;
-
-        RenderSystem.enableBlend();
-        graphics.blit(texture, x, y, 0, 0, drawW, drawH, drawW, drawH);
-        RenderSystem.disableBlend();
-    }
-
     /**
-     * The gun's real flat icon when this mod has one bundled (see TaczHudIcons - covers
-     * TACZ's own default gun pack), otherwise the 3D-render fallback above. Either way,
-     * fitted into the footprint rather than stretched to fill it.
+     * Always the real gun's own 3D render, at its real colours and texture - not TACZ's
+     * flat grayscale HUD icon (tried in 2.11.0; reverted per feedback: original-looking guns
+     * matter more here than avoiding the render entirely). Only the rotation and the
+     * contain-vs-stretch fit are this mod's own doing - see renderTiltedItem.
      */
     private void drawBigGridIcon(GuiGraphics graphics, Slot slot, Footprint footprint) {
         ItemStack stack = slot.getItem();
@@ -558,12 +543,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
 
-        var hud = TaczHudIcons.iconFor(stack);
-        if (hud.isPresent()) {
-            drawContainedIcon(graphics, hud.get().texture(), hud.get().width(), hud.get().height(), x, y, w, h);
-        } else {
-            renderTiltedItem(graphics, stack, x, y, w, h);
-        }
+        renderTiltedItem(graphics, stack, x, y, w, h);
         graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
     }
 
