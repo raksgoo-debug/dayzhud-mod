@@ -25,6 +25,9 @@ public final class ItemFootprints {
     private static Map<String, Footprint> gunTypeMap;
     private static Map<ResourceLocation, Footprint> gunIdMap;
     private static Map<ResourceLocation, Footprint> itemIdMap;
+    private static Map<String, Footprint> armorTypeMap;
+    private static java.util.Set<String> armorMods;
+    private static final String[] LR_TAGS = {"MeleeWeaponId", "ConsumableId", "ThrowableId"};
 
     private ItemFootprints() {}
 
@@ -33,6 +36,8 @@ public final class ItemFootprints {
         gunTypeMap = parseTypeMap(GridConfig.GUN_TYPE_FOOTPRINTS.get());
         gunIdMap = parseIdMap(GridConfig.GUN_ID_FOOTPRINTS.get());
         itemIdMap = parseIdMap(GridConfig.ITEM_FOOTPRINTS.get());
+        armorTypeMap = parseTypeMap(GridConfig.ARMOR_TYPE_FOOTPRINTS.get());
+        armorMods = new java.util.HashSet<>(GridConfig.ARMOR_FOOTPRINT_MODS.get());
     }
 
     private static Map<String, Footprint> parseTypeMap(List<? extends String> raw) {
@@ -99,10 +104,41 @@ public final class ItemFootprints {
             }
         }
 
+        // LR Tactical variants: the variant id lives in NBT (see DefaultItemFootprints).
+        if (stack.hasTag()) {
+            for (String tag : LR_TAGS) {
+                if (!stack.getTag().contains(tag)) continue;
+                ResourceLocation variant = ResourceLocation.tryParse(stack.getTag().getString(tag));
+                if (variant == null) break;
+                Footprint byConfig = gunIdMap.get(variant);          // gunIdFootprints also covers these ids
+                if (byConfig != null) return byConfig;
+                Footprint builtin = DefaultItemFootprints.LR_VARIANTS.get(variant.toString());
+                if (builtin != null) return builtin;
+                break;
+            }
+        }
+
         ResourceLocation itemId = ForgeRegistries.ITEMS.getKey(stack.getItem());
         if (itemId != null) {
             Footprint byItem = itemIdMap.get(itemId);
             if (byItem != null) return byItem;
+            Footprint builtin = DefaultItemFootprints.ITEMS.get(itemId.toString());
+            if (builtin != null) return builtin;
+            // Armor by type, for the listed mods (CAPS: 61 of its items are real ArmorItems).
+            if (stack.getItem() instanceof net.minecraft.world.item.ArmorItem armor
+                    && armorMods.contains(itemId.getNamespace())) {
+                // getType().getSlot() - both proven by CAPS's own bytecode; mapped to the config
+                // names here rather than trusting Type.getName(), which nothing verifies.
+                String typeName = switch (armor.getType().getSlot()) {
+                    case HEAD -> "helmet";
+                    case CHEST -> "chestplate";
+                    case LEGS -> "leggings";
+                    case FEET -> "boots";
+                    default -> "";
+                };
+                Footprint byType = armorTypeMap.get(typeName);
+                if (byType != null) return byType;
+            }
         }
         return Footprint.SINGLE;
     }

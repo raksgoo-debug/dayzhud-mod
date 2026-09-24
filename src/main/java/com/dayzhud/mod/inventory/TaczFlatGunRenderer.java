@@ -84,10 +84,15 @@ public final class TaczFlatGunRenderer {
 
     private static final int FULL_BRIGHT = 15728880;
 
-    /** Model-space extent. Orientation is constant (see class doc), so length is always Z. */
-    private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ) {
-        float length() { return maxZ - minZ; }
-        float height() { return maxY - minY; }
+    /**
+     * Model-space extent, plus how it maps to the flat view. For TACZ guns the orientation is a
+     * constant (see class doc): length along Z, height along Y, {@code rot} null. For LR
+     * Tactical items (melee, consumables, throwables) there is no shared convention, so
+     * {@code rot} is a model-to-view rotation read from the geometry (see
+     * Recorder.toBounds), and length/height are the extents along its horizontal/vertical.
+     */
+    private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ,
+                          float length, float height, float[] rot, float cx, float cy, float cz) {
     }
 
     private static final Map<String, Bounds> CACHE = new LinkedHashMap<>(64, 0.75f, true) {
@@ -100,7 +105,10 @@ public final class TaczFlatGunRenderer {
     private static boolean broken;
     private static boolean reflectionReady;
     private static Method getGunDisplay, getGunModel, getModelTexture, getLodModel, getShouldRender,
-            partRender;
+            partRender, plainModelRender;
+    /** LrTacticalAPI.getMeleeDisplay / getConsumableDisplay / getThrowableDisplay, keyed by the
+     *  NBT tag that marks each kind. Empty when LR Tactical isn't installed. */
+    private static final Map<String, Method> LR_DISPLAY = new java.util.HashMap<>();
     private static Field globalBufferField;
     private static boolean globalBufferLookupDone;
     private static final Map<Class<?>, Method> MODEL_RENDER = new java.util.HashMap<>();
@@ -122,6 +130,18 @@ public final class TaczFlatGunRenderer {
             Class<?> part = Class.forName("com.tacz.guns.client.model.bedrock.BedrockPart");
             partRender = part.getMethod("render", PoseStack.class, ItemDisplayContext.class,
                     VertexConsumer.class, int.class, int.class);
+            // TACZ's model render without an ItemStack - what LR Tactical's models (a TACZ
+            // BedrockAnimatedModel subclass) are drawn with. Verified public in TACZ 1.1.8.
+            plainModelRender = bedrockModel.getMethod("render", PoseStack.class, ItemDisplayContext.class,
+                    RenderType.class, int.class, int.class);
+            try {
+                Class<?> lr = Class.forName("me.xjqsh.lrtactical.api.LrTacticalAPI");
+                LR_DISPLAY.put("MeleeWeaponId", lr.getMethod("getMeleeDisplay", ItemStack.class));
+                LR_DISPLAY.put("ConsumableId", lr.getMethod("getConsumableDisplay", ItemStack.class));
+                LR_DISPLAY.put("ThrowableId", lr.getMethod("getThrowableDisplay", ItemStack.class));
+            } catch (Throwable absent) {
+                // LR Tactical not installed - guns only.
+            }
             reflectionReady = true;
             return true;
         } catch (Throwable t) {
@@ -130,21 +150,57 @@ public final class TaczFlatGunRenderer {
         }
     }
 
-    private record Model(Object model, ResourceLocation texture) {}
+    private record Model(Object model, ResourceLocation texture, boolean gun) {}
+
+    /** The LR Tactical NBT id tag this stack carries (MeleeWeaponId / ConsumableId /
+     *  ThrowableId), or null if it isn't an LR Tactical item with a display. */
+    static String lrTag(ItemStack stack) {
+        if (!stack.hasTag()) return null;
+        for (String tag : new String[]{"MeleeWeaponId", "ConsumableId", "ThrowableId"}) {
+            if (stack.getTag().contains(tag)) return tag;
+        }
+        return null;
+    }
 
     private static Model modelFor(ItemStack stack) throws Exception {
-        Optional<?> display = (Optional<?>) getGunDisplay.invoke(null, stack);
+        if (TaczMarketCompat.gunIdOf(stack).isPresent()) {
+            Optional<?> display = (Optional<?>) getGunDisplay.invoke(null, stack);
+            if (display.isEmpty()) return null;
+            Object model = getGunModel.invoke(display.get());
+            Object texture = getModelTexture.invoke(display.get());
+            if (model != null && texture instanceof ResourceLocation tex) return new Model(model, tex, true);
+            // Some packs ship only the low-detail model; TACZ's own renderer falls back the same way.
+            Object lod = getLodModel.invoke(display.get());
+            if (lod == null) return null;
+            Object lodModel = lod.getClass().getMethod("getLeft").invoke(lod);
+            Object lodTex = lod.getClass().getMethod("getRight").invoke(lod);
+            if (lodModel == null || !(lodTex instanceof ResourceLocation tex)) return null;
+            return new Model(lodModel, tex, true);
+        }
+        String tag = lrTag(stack);
+        Method getter = tag == null ? null : LR_DISPLAY.get(tag);
+        if (getter == null) return null;
+        Optional<?> display = (Optional<?>) getter.invoke(null, stack);
         if (display.isEmpty()) return null;
-        Object model = getGunModel.invoke(display.get());
-        Object texture = getModelTexture.invoke(display.get());
-        if (model != null && texture instanceof ResourceLocation tex) return new Model(model, tex);
-        // Some packs ship only the low-detail model; TACZ's own renderer falls back the same way.
-        Object lod = getLodModel.invoke(display.get());
-        if (lod == null) return null;
-        Object lodModel = lod.getClass().getMethod("getLeft").invoke(lod);
-        Object lodTex = lod.getClass().getMethod("getRight").invoke(lod);
-        if (lodModel == null || !(lodTex instanceof ResourceLocation tex)) return null;
-        return new Model(lodModel, tex);
+        Object d = display.get();
+        Object model = d.getClass().getMethod("getModel").invoke(d);
+        Object texture = d.getClass().getMethod("getTexture").invoke(d);
+        if (model == null || !(texture instanceof ResourceLocation tex)) return null;
+        return new Model(model, tex, false);
+    }
+
+    /** One call that draws the model the way its owner does: TACZ guns through
+     *  BedrockGunModel.render (with the stack, for attachments), LR items through the plain
+     *  BedrockModel.render. */
+    private static void drawModel(Model m, PoseStack pose, ItemStack stack) throws Exception {
+        RenderType type = RenderType.entityCutoutNoCull(m.texture());
+        if (m.gun()) {
+            modelRender(m.model().getClass()).invoke(m.model(), pose, stack, ItemDisplayContext.FIXED,
+                    type, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+        } else {
+            plainModelRender.invoke(m.model(), pose, ItemDisplayContext.FIXED, type, FULL_BRIGHT,
+                    OverlayTexture.NO_OVERLAY);
+        }
     }
 
     private static Method modelRender(Class<?> modelClass) throws NoSuchMethodException {
@@ -160,7 +216,7 @@ public final class TaczFlatGunRenderer {
     /** Whether {@link #render} will draw this stack - measures it (once) if needed. */
     public static boolean canRender(ItemStack stack) {
         if (broken || !GridConfig.FLAT_GUN_RENDER.get()) return false;
-        if (TaczMarketCompat.gunIdOf(stack).isEmpty()) return false;
+        if (TaczMarketCompat.gunIdOf(stack).isEmpty() && lrTag(stack) == null) return false;
         if (!initReflection()) return false;
         Bounds b = bounds(stack);
         return b != null && b.length() > 1e-4f && b.height() > 1e-4f;
@@ -173,15 +229,37 @@ public final class TaczFlatGunRenderer {
      */
     public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z,
                                  boolean rotated) {
+        return render(graphics, stack, x, y, w, h, z, rotated, -1f);
+    }
+
+    /**
+     * The scale this item is drawn at in the grid, inside its own (unrotated) footprint -
+     * pixels per model unit. The loadout boxes use this so equipping a gun doesn't make it
+     * bigger or smaller than it looks in your inventory (2.12.6); a box only scales it down
+     * further when the gun is genuinely longer than the box. -1 if it can't be measured.
+     */
+    public static float gridScale(ItemStack stack) {
+        if (!canRender(stack)) return -1f;
+        Bounds b = bounds(stack);
+        com.dayzhud.mod.inventory.grid.Footprint fp =
+                com.dayzhud.mod.inventory.grid.ItemFootprints.baseFootprintOf(stack);
+        // Same area drawFlatGunBox gives a grid item: the footprint minus its 1 px inset.
+        return Math.min((fp.width() * 18 - 2) / b.length(), (fp.height() * 18 - 2) / b.height());
+    }
+
+    /**
+     * Draws the item side-on in the box. {@code maxScale} > 0 caps the scale (pixels per model
+     * unit) - how the loadout boxes keep the grid's size; otherwise it fills the box.
+     */
+    public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z,
+                                 boolean rotated, float maxScale) {
         if (!canRender(stack)) return false;
         Bounds b = bounds(stack);
-        // No padding here: the caller's box is already inset from its panel border. (2.12.x
-        // padded twice - 2 px in the caller plus 2 px here - leaving a 2x1 pistol 10 of its
-        // 18 px of height.)
-        // Rotated (R in the grid): the footprint is tall, so the gun's length fits the box's
-        // height. Before 2.12.5 the gun stayed horizontal and just shrank into the tall box.
+        // No padding here: the caller's box is already inset from its panel border.
+        // Rotated (R in the grid): the footprint is tall, so the length fits the box's height.
         float s = rotated ? Math.min(w / b.height(), h / b.length())
                           : Math.min(w / b.length(), h / b.height());
+        if (maxScale > 0) s = Math.min(s, maxScale);
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
@@ -192,31 +270,32 @@ public final class TaczFlatGunRenderer {
             pose.translate(x + w / 2f, y + h / 2f, z);
             if (rotated) {
                 // Screen-space quarter turn (y-down): screen-left goes to screen-up, so the
-                // barrel points up. Applied outside everything below, so it turns the finished
-                // side-on picture rather than the model.
+                // barrel points up. Applied outside everything below.
                 pose.mulPose(Axis.ZP.rotationDegrees(90f));
             }
-            // View space from here on: +X screen-right, +Y screen-up (the Y flip, like
-            // vanilla's own GUI item render, turns model-up into screen-up).
+            // View space from here on: +X screen-right, +Y screen-up.
             pose.scale(s, -s, s);
-            // Constant pose (see class doc). Listed outermost first; each vertex sees them
-            // innermost first: roll 180 about Z (model top -Y becomes screen-up +Y), then turn
-            // +Z onto +X (muzzle at -Z becomes screen-left). Proper rotations, never mirrors.
-            pose.mulPose(Axis.YP.rotationDegrees(90f));
-            pose.mulPose(Axis.ZP.rotationDegrees(180f));
-            pose.translate(-(b.minX() + b.maxX()) / 2f, -(b.minY() + b.maxY()) / 2f,
-                    -(b.minZ() + b.maxZ()) / 2f);
+            if (b.rot() == null) {
+                // TACZ guns: constant pose (see class doc) - roll 180 about Z, then turn +Z
+                // onto +X. Proper rotations, never mirrors.
+                pose.mulPose(Axis.YP.rotationDegrees(90f));
+                pose.mulPose(Axis.ZP.rotationDegrees(180f));
+            } else {
+                // LR items: the rotation read from the model's own geometry.
+                float[] r = b.rot();
+                // JOML's Matrix3f constructor is column-major: column j = (r[j], r[3+j], r[6+j]).
+                pose.mulPose(new org.joml.Quaternionf().setFromNormalized(new org.joml.Matrix3f(
+                        r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8])));
+            }
+            pose.translate(-b.cx(), -b.cy(), -b.cz());
 
-            // Flat-item lighting lights faces pointing at the viewer - the gun's side, here.
-            // The default 3D-item lighting comes mostly from above and leaves it dark.
             Lighting.setupForFlatItems();
             // TACZ draws into Minecraft's global buffer and flushes it itself, so make sure
-            // anything already queued in the GUI (the panel behind the gun) goes out first.
+            // anything already queued in the GUI (the panel behind the item) goes out first.
             graphics.flush();
             List<Object> hidden = hideHandParts(m.model());
             try {
-                modelRender(m.model().getClass()).invoke(m.model(), pose, stack, ItemDisplayContext.FIXED,
-                        RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                drawModel(m, pose, stack);
             } finally {
                 restoreVisible(hidden);
             }
@@ -231,7 +310,10 @@ public final class TaczFlatGunRenderer {
     }
 
     private static String cacheKey(ItemStack stack) {
-        String id = TaczMarketCompat.gunIdOf(stack).map(Object::toString).orElse("?");
+        String id = TaczMarketCompat.gunIdOf(stack).map(Object::toString).orElseGet(() -> {
+            String tag = lrTag(stack);
+            return tag == null ? "?" : tag + "=" + stack.getTag().getString(tag);
+        });
         return stack.hasTag() ? id + "#" + stack.getTag().hashCode() : id;
     }
 
@@ -246,7 +328,7 @@ public final class TaczFlatGunRenderer {
             List<Object> hidden = hideHandParts(m.model());
             boolean full;
             try {
-                full = measureFullDraw(m, stack, rec);
+                full = measureFullDraw(m, stack, rec, key);
                 if (!full) {
                     // Body only (misses attachment models like a separate stock), but better than nothing.
                     PoseStack ps = new PoseStack();
@@ -257,7 +339,7 @@ public final class TaczFlatGunRenderer {
             } finally {
                 restoreVisible(hidden);
             }
-            Bounds b = rec.toBounds();
+            Bounds b = rec.toBounds(m.gun(), "MeleeWeaponId".equals(lrTag(stack)));
             if (b == null) {
                 if (WARNED_EMPTY.add(key)) {
                     DayzHudMod.LOGGER.warn("dayzhud: measured no geometry for gun {}; drawing it "
@@ -289,15 +371,24 @@ public final class TaczFlatGunRenderer {
      * field names don't matter. TACZ's render also toggles the stencil buffer (clear with
      * mask 1024, stencil ops GL_KEEP) - checked in bytecode; nothing else global.
      */
-    private static boolean measureFullDraw(Model m, ItemStack stack, Recorder rec) {
+    /** Render types contributing fewer vertices than this are effects - muzzle flash and glow
+     *  billboards, laser beams: a few quads - not geometry, and are left out of the size. */
+    private static final int MIN_GEOMETRY_VERTS = 32;
+
+    private static boolean measureFullDraw(Model m, ItemStack stack, Recorder rec, String key) {
         RenderBuffers buffers = Minecraft.getInstance().renderBuffers();
         MultiBufferSource.BufferSource real = buffers.bufferSource();
         Field f = globalBufferField(buffers, real);
         if (f == null) return false;
+        // One recorder per render type, so effects can be told apart from geometry. Filtering
+        // by type NAME doesn't work: TACZ draws attachments with the same translucent type as
+        // its muzzle flash (verified in bytecode). Filtering by SIZE does: an effect is a
+        // billboard of a few quads, a stock or scope is dozens of cubes.
+        Map<RenderType, Recorder> perType = new LinkedHashMap<>();
         MultiBufferSource.BufferSource capture = new MultiBufferSource.BufferSource(new BufferBuilder(256), Map.of()) {
             @Override
             public VertexConsumer getBuffer(RenderType type) {
-                return rec;
+                return perType.computeIfAbsent(type, t -> new Recorder());
             }
 
             @Override
@@ -308,9 +399,7 @@ public final class TaczFlatGunRenderer {
         };
         try {
             f.set(buffers, capture);
-            modelRender(m.model().getClass()).invoke(m.model(), new PoseStack(), stack, ItemDisplayContext.FIXED,
-                    RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
-            return rec.n > 0;
+            drawModel(m, new PoseStack(), stack);
         } catch (Throwable t) {
             DayzHudMod.LOGGER.debug("dayzhud: full-draw measurement failed, using body-only", t);
             return false;
@@ -321,6 +410,20 @@ public final class TaczFlatGunRenderer {
                 fail(restore);
             }
         }
+        boolean anyGeometry = perType.values().stream().anyMatch(r -> r.n >= MIN_GEOMETRY_VERTS);
+        for (Map.Entry<RenderType, Recorder> e : perType.entrySet()) {
+            Recorder r = e.getValue();
+            boolean keep = !anyGeometry || r.n >= MIN_GEOMETRY_VERTS;
+            if (keep) rec.addAll(r);
+            if (GridConfig.DEBUG_LOGGING.get()) {
+                Bounds rb = r.toBounds(true, false);
+                DayzHudMod.LOGGER.info("flat item {}: {} {} verts {} x[{},{}] y[{},{}] z[{},{}]", key,
+                        keep ? "kept" : "SKIPPED (effect)", r.n, e.getKey(),
+                        rb == null ? 0 : rb.minX(), rb == null ? 0 : rb.maxX(), rb == null ? 0 : rb.minY(),
+                        rb == null ? 0 : rb.maxY(), rb == null ? 0 : rb.minZ(), rb == null ? 0 : rb.maxZ());
+            }
+        }
+        return rec.n > 0;
     }
 
     private static Field globalBufferField(RenderBuffers buffers, Object current) {
@@ -434,7 +537,22 @@ public final class TaczFlatGunRenderer {
         public void defaultColor(int r, int g, int b, int a) {}
         public void unsetDefaultColor() {}
 
-        Bounds toBounds() {
+        void addAll(Recorder o) {
+            for (int i = 0; i < o.n; i++) vertex(o.xs[i], o.ys[i], o.zs[i]);
+        }
+
+        /**
+         * TACZ guns: fixed orientation (length Z, height Y). LR Tactical items: read from the
+         * geometry, because its models share no convention (melee run along Y or Z,
+         * consumables any way - measured across every LR / Apocalyptic Arsenal model):
+         * the longest axis becomes horizontal, the second-longest vertical, and you look along
+         * the thinnest - a blade shows its flat. The tip goes left, like a barrel: the tip is
+         * the end farther from where the model is held, which for every LR melee model is its
+         * origin - Bedrock (0,0,0), i.e. (0,24,0) after TACZ's load-time Y flip. Up is model-up
+         * (-Y after that flip) when the vertical axis is Y. Built as a proper rotation (rows
+         * -tip, up, -(tip x up)), never a mirror.
+         */
+        Bounds toBounds(boolean gun, boolean melee) {
             if (n == 0) return null;
             float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE,
                     maxY = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
@@ -443,7 +561,74 @@ public final class TaczFlatGunRenderer {
                 minY = Math.min(minY, ys[i]); maxY = Math.max(maxY, ys[i]);
                 minZ = Math.min(minZ, zs[i]); maxZ = Math.max(maxZ, zs[i]);
             }
-            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ);
+            if (gun) {
+                return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, maxZ - minZ, maxY - minY, null,
+                        (minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
+            }
+            float[] ext = {maxX - minX, maxY - minY, maxZ - minZ};
+            float[] lo = {minX, minY, minZ}, hi = {maxX, maxY, maxZ}, ref = {0f, 24f, 0f};
+            int a0 = 0;
+            for (int i = 1; i < 3; i++) if (ext[i] > ext[a0]) a0 = i;
+            int a1 = -1;
+            for (int i = 0; i < 3; i++) if (i != a0 && (a1 < 0 || ext[i] > ext[a1])) a1 = i;
+
+            // Length direction t (pointing at the tip, which goes screen-left).
+            float[] t = new float[3];
+            if (melee) {
+                // Grip -> farthest point: every LR melee model is held at its origin, and the
+                // farthest point is the tip - which also straightens a model authored at an
+                // angle (the Apocalyptic Arsenal katana is diagonal in its file).
+                int far = 0;
+                float best = -1f;
+                for (int i = 0; i < n; i++) {
+                    float dx = xs[i] - ref[0], dy = ys[i] - ref[1], dz = zs[i] - ref[2];
+                    float d2 = dx * dx + dy * dy + dz * dz;
+                    if (d2 > best) { best = d2; far = i; }
+                }
+                t[0] = xs[far] - ref[0]; t[1] = ys[far] - ref[1]; t[2] = zs[far] - ref[2];
+            } else {
+                t[a0] = Math.abs(hi[a0] - ref[a0]) >= Math.abs(lo[a0] - ref[a0]) ? 1f : -1f;
+            }
+            normalize(t);
+            // Up u: the second-longest model axis (model-up, -Y after TACZ's load-time flip,
+            // when that axis is Y), made perpendicular to t.
+            float[] u = new float[3];
+            u[a1] = a1 == 1 ? -1f : 1f;
+            float dot = u[0] * t[0] + u[1] * t[1] + u[2] * t[2];
+            for (int i = 0; i < 3; i++) u[i] -= dot * t[i];
+            if (!normalize(u)) {           // t lay along that axis: fall back to the third one
+                u = new float[3];
+                u[3 - a0 - a1] = 1f;
+                dot = u[0] * t[0] + u[1] * t[1] + u[2] * t[2];
+                for (int i = 0; i < 3; i++) u[i] -= dot * t[i];
+                normalize(u);
+            }
+            float[] w = {t[1] * u[2] - t[2] * u[1], t[2] * u[0] - t[0] * u[2], t[0] * u[1] - t[1] * u[0]};
+            // Extents along the new axes, and the centre that puts the item mid-box.
+            float tLo = Float.MAX_VALUE, tHi = -Float.MAX_VALUE, uLo = Float.MAX_VALUE, uHi = -Float.MAX_VALUE,
+                    wLo = Float.MAX_VALUE, wHi = -Float.MAX_VALUE;
+            for (int i = 0; i < n; i++) {
+                float pt = xs[i] * t[0] + ys[i] * t[1] + zs[i] * t[2];
+                float pu = xs[i] * u[0] + ys[i] * u[1] + zs[i] * u[2];
+                float pw = xs[i] * w[0] + ys[i] * w[1] + zs[i] * w[2];
+                tLo = Math.min(tLo, pt); tHi = Math.max(tHi, pt);
+                uLo = Math.min(uLo, pu); uHi = Math.max(uHi, pu);
+                wLo = Math.min(wLo, pw); wHi = Math.max(wHi, pw);
+            }
+            float mt = (tLo + tHi) / 2f, mu = (uLo + uHi) / 2f, mw = (wLo + wHi) / 2f;
+            float cx = t[0] * mt + u[0] * mu + w[0] * mw;
+            float cy = t[1] * mt + u[1] * mu + w[1] * mw;
+            float cz = t[2] * mt + u[2] * mu + w[2] * mw;
+            // Rows -t, u, -w: tip -> screen-left, u -> screen-up; det +1 (never a mirror).
+            float[] rot = {-t[0], -t[1], -t[2], u[0], u[1], u[2], -w[0], -w[1], -w[2]};
+            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, tHi - tLo, uHi - uLo, rot, cx, cy, cz);
+        }
+
+        private static boolean normalize(float[] v) {
+            float len = (float) Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+            if (len < 1e-4f) return false;
+            v[0] /= len; v[1] /= len; v[2] /= len;
+            return true;
         }
     }
 }

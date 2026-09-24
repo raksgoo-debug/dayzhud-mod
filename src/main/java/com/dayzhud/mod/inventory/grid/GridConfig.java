@@ -22,6 +22,8 @@ public final class GridConfig {
     public static final ForgeConfigSpec.DoubleValue FLAT_ITEM_ANGLE_X;
     public static final ForgeConfigSpec.BooleanValue DEBUG_LOGGING;
     public static final ForgeConfigSpec.BooleanValue FLAT_GUN_RENDER;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ARMOR_FOOTPRINT_MODS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ARMOR_TYPE_FOOTPRINTS;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -70,6 +72,17 @@ public final class GridConfig {
                         "turn this on and it looks fine, that guess was wrong. Nudge up toward",
                         "90 for more top-down; the config reloads live, no restart needed.")
                 .defineInRange("flatItemAngleX", 0.0, 0.0, 90.0);
+        ARMOR_FOOTPRINT_MODS = b.comment(
+                        "Mods whose armor pieces get a footprint by armor type (see",
+                        "armorTypeFootprints). Matched on the item's namespace. Other mods' armor",
+                        "stays 1x1 unless listed in itemFootprints.")
+                .defineList("armorFootprintMods", List.of("caps_awim_tactical_gear_rework"),
+                        o -> o instanceof String);
+        ARMOR_TYPE_FOOTPRINTS = b.comment(
+                        "Footprint per armor type for those mods, as \"type=WxH\" with type one of",
+                        "helmet, chestplate, leggings, boots. Types not listed stay 1x1.")
+                .defineList("armorTypeFootprints", List.of("helmet=2x2", "chestplate=3x3"),
+                        o -> o instanceof String);
         FLAT_GUN_RENDER = b.comment(
                         "Draw TACZ guns in the grid as their real 3D model, side-on with the",
                         "barrel pointing left, sized to fit their footprint without stretching.",

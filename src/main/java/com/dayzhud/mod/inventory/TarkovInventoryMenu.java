@@ -142,7 +142,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int[] WEAPON_BOX_H = {30, 30, 30, 30};
 
     private static final int BACKPACK_X = 186;
-    private static final int BACKPACK_Y = 138;
+    private static final int BACKPACK_Y = 100;   // 2.12.6: 138 -> 100, closes the gap the old hotbar row left
     private static final int BACKPACK_COLS = 9;
     /** Rows shown at once; anything larger scrolls rather than spilling over the stat strip. */
     public static final int BACKPACK_VISIBLE_ROWS = 4;

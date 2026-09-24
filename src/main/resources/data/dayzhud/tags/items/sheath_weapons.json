@@ -1,6 +1,7 @@
 {
   "values": [
     "#minecraft:swords",
-    "minecraft:trident"
+    "minecraft:trident",
+    { "id": "lrtactical:melee", "required": false }
   ]
 }

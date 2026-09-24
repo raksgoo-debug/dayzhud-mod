@@ -179,7 +179,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x + 8, y + 296, x + 172, y + 342, SECTION_BG);    // hotbar
         graphics.fill(x + 180, y + 20, x + 352, y + 84, SECTION_BG);    // inventory
         if (menu.getActiveBackpackSlots() > 0) {
-            graphics.fill(x + 180, y + 132, x + 352, y + 214, SECTION_BG); // backpack
+            graphics.fill(x + 180, y + 94, x + 352, y + 176, SECTION_BG);  // backpack
         }
 
         if (menu.isCorpse()) {
@@ -333,7 +333,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         }
         drawHeader(graphics, "HOTBAR", leftPos + 12, topPos + 298, 40);
         if (menu.getActiveBackpackSlots() > 0) {
-            drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 124, 50);
+            drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 86, 50);
         }
     }
 
@@ -402,7 +402,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 // Equipped TACZ gun: its real model, side-on, filling the box - same as the
                 // grid. The box outline/background above stays; the panel covers vanilla's
                 // small icon in the centred 16x16 slot.
-                drawFlatGunBox(graphics, stack, bx, by, bw, bh, 2, false);
+                drawFlatGunBox(graphics, stack, bx, by, bw, bh, 2, false, TaczFlatGunRenderer.gridScale(stack));
             }
             // Anything else equipped (a knife in SHEATH, a non-TACZ gun) shows vanilla's own
             // small icon, drawn underneath by the normal slot pass - no overlay.
@@ -621,7 +621,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      * boxes. Returns false if the model draw failed, so the caller can fall back.
      */
     private boolean drawFlatGunBox(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, int inset,
-                                   boolean rotated) {
+                                   boolean rotated, float maxScale) {
         graphics.pose().pushPose();
         graphics.pose().translate(0, 0, FLAT_PANEL_Z);
         graphics.fill(x, y, x + w, y + h, SLOT_BG);
@@ -629,7 +629,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
 
         if (!TaczFlatGunRenderer.render(graphics, stack, x + inset, y + inset, w - inset * 2, h - inset * 2, FLAT_GUN_Z,
-                rotated)) {
+                rotated, maxScale)) {
             return false;
         }
         graphics.pose().pushPose();
@@ -660,11 +660,23 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int h = footprint.height() * 18 - 2;
 
         if (TaczFlatGunRenderer.canRender(stack)
-                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 1, ItemGrid.isRotated(stack))) {
+                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 1, ItemGrid.isRotated(stack), -1f)) {
             return;
         }
+        // Anything else multi-cell (CAPS armor, magazines, ...): same panel, then the item's
+        // own inventory render scaled uniformly into the footprint. Before 2.12.6 this drew
+        // at vanilla's depth with no panel, so the small vanilla icon sat on top of it.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, FLAT_PANEL_Z);
+        graphics.fill(x - 1, y - 1, x + w + 1, y + h + 1, SLOT_BG);
+        graphics.renderOutline(x - 1, y - 1, w + 2, h + 2, SLOT_BORDER);
+        graphics.pose().popPose();
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, FLAT_GUN_Z - 150);   // renderItem adds its own 150
         renderTiltedItem(graphics, stack, x, y, w, h);
+        graphics.pose().translate(0, 0, FLAT_DECOR_Z);
         graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
+        graphics.pose().popPose();
     }
 
     /**
@@ -903,7 +915,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (!view.isScrollable()) return;
 
         int trackX = leftPos + 344;
-        int trackTop = topPos + 138;
+        int trackTop = topPos + 100;
         int trackHeight = TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS * 18;
 
         graphics.fill(trackX, trackTop, trackX + 4, trackTop + trackHeight, 0xFF1C1C1C);
@@ -962,7 +974,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     private boolean isOverBackpackArea(double mouseX, double mouseY) {
         int x1 = leftPos + 180, x2 = leftPos + 352;
-        int y1 = topPos + 132;
+        int y1 = topPos + 94;
         int y2 = y1 + TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS * 18 + 8;
         return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
