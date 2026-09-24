@@ -543,6 +543,26 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
 
+        if (TaczFlatGunRenderer.canRender(stack)) {
+            // One panel across the whole footprint, like a Tarkov grid item: hides the
+            // internal cell borders AND the small diagonal sprite vanilla already drew in the
+            // anchor cell (at item depth ~150), which the side-on model alone wouldn't fully
+            // cover. Depth 190 sits above that sprite; the gun draws above this at 250.
+            graphics.pose().pushPose();
+            graphics.pose().translate(0, 0, 190);
+            graphics.fill(x - 1, y - 1, x + w + 1, y + h + 1, SLOT_BG);
+            graphics.renderOutline(x - 1, y - 1, w + 2, h + 2, SLOT_BORDER);
+            graphics.pose().popPose();
+            if (TaczFlatGunRenderer.render(graphics, stack, x, y, w, h, 250)) {
+                // Vanilla decorations draw at +200 of the current depth - lift them clear
+                // of the gun so a count/durability overlay isn't hidden behind the model.
+                graphics.pose().pushPose();
+                graphics.pose().translate(0, 0, 100);
+                graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
+                graphics.pose().popPose();
+                return;
+            }
+        }
         renderTiltedItem(graphics, stack, x, y, w, h);
         graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
     }
@@ -565,8 +585,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = fp.width() * 18;
         int h = fp.height() * 18;
         int color = fits ? 0xA000FF00 : 0xA0FF0000;
+        // Above the flat-gun panels (190) and models (250), or a red "won't fit" outline
+        // over an existing gun would be hidden behind it - exactly when it matters most.
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, 300);
         graphics.fill(x, y, x + w, y + h, (color & 0x00FFFFFF) | 0x30000000);
         graphics.renderOutline(x, y, w, h, color);
+        graphics.pose().popPose();
     }
 
     /**

@@ -21,6 +21,7 @@ public final class GridConfig {
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_FOOTPRINTS;
     public static final ForgeConfigSpec.DoubleValue FLAT_ITEM_ANGLE_X;
     public static final ForgeConfigSpec.BooleanValue DEBUG_LOGGING;
+    public static final ForgeConfigSpec.BooleanValue FLAT_GUN_RENDER;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -38,8 +39,8 @@ public final class GridConfig {
                         "horizontal dimension). A gunIdFootprints entry below takes priority",
                         "over this for a specific gun.")
                 .defineList("gunTypeFootprints", List.of(
-                                "pistol=2x1", "smg=3x2", "rifle=4x2", "shotgun=4x1",
-                                "sniper=5x1", "mg=5x1", "rpg=4x2"),
+                                "pistol=2x1", "smg=3x2", "rifle=4x2", "shotgun=4x2",
+                                "sniper=5x2", "mg=5x2", "rpg=4x2"),
                         o -> o instanceof String);
         GUN_ID_FOOTPRINTS = b.comment(
                         "Per-gun size overrides, as \"modid:gunid=WxH\" - this is the id",
@@ -69,6 +70,13 @@ public final class GridConfig {
                         "turn this on and it looks fine, that guess was wrong. Nudge up toward",
                         "90 for more top-down; the config reloads live, no restart needed.")
                 .defineInRange("flatItemAngleX", 0.0, 0.0, 90.0);
+        FLAT_GUN_RENDER = b.comment(
+                        "Draw TACZ guns in the grid as their real 3D model, side-on with the",
+                        "barrel pointing left, sized to fit their footprint without stretching.",
+                        "Off falls back to the ordinary inventory icon, fitted the same way.",
+                        "Also switches itself off for the session if it ever throws, with one",
+                        "warning in the log.")
+                .define("flatGunRender", true);
         DEBUG_LOGGING = b.comment(
                         "Logs one line per multi-cell pickup, placement, and big-icon draw -",
                         "menu slot index, region, footprint. Off by default; it repeats every",
