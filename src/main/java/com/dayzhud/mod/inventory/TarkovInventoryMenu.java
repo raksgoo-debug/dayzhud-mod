@@ -6,19 +6,12 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.inventory.DataSlot;
-import net.minecraft.world.inventory.ResultContainer;
-import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -82,11 +75,8 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int GEAR_COLS = 6;
     private static final int GEAR_SPACING = 22;
 
-    // 2x2 crafting grid + result, bottom-left under GEAR.
-    private static final int CRAFT_X = 20;
-    private static final int CRAFT_Y = 324;
-    public static final int CRAFT_RESULT_X = 92;
-    public static final int CRAFT_RESULT_Y = 333;
+    private static final int HOTBAR_X = 20;
+    private static final int HOTBAR_Y = 324;
 
     // Right-hand container grid, present only when a chest/crate was opened.
     public static final int CONTAINER_X = 372;
@@ -132,7 +122,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     private static final int INV_X = 186;
     private static final int INV_Y = 26;
-    private static final int HOTBAR_Y = 100;
 
     /**
      * The loadout cluster - hotbar slots 0-3, typed, drawn as its own 2x2 block of labelled
@@ -197,7 +186,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
-    private final int craftStartIndex;
     private final int containerStartIndex;
     /** Menu indices of the corpse's own inventory/hotbar/bag sections - -1 when not
      *  applicable (no corpse open). Captured in addCorpseSlots(), since the curio column
@@ -222,9 +210,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * BackCurioItemHandler's class notes).
      */
     private final DataSlot backpackSlotCount = DataSlot.standalone();
-
-    private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
-    private final ResultContainer resultSlots = new ResultContainer();
 
     public record CurioSlotInfo(String identifier, int x, int y) {}
 
@@ -331,7 +316,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 addSlot(ws);
             } else {
                 int hotbarCol = col - WeaponSlots.ORDER.length;
-                addSlot(new Slot(playerInventory, col, INV_X + hotbarCol * 18, HOTBAR_Y));
+                addSlot(new Slot(playerInventory, col, HOTBAR_X + hotbarCol * 18, HOTBAR_Y));
             }
         }
 
@@ -341,15 +326,6 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             addSlot(new BackpackSlot(backpackView, i,
                     BACKPACK_X + (i % BACKPACK_COLS) * 18,
                     BACKPACK_Y + (i / BACKPACK_COLS) * 18));
-        }
-
-        // --- 2x2 crafting: result first, then the grid (mirrors vanilla's ordering) ---
-        this.craftStartIndex = slots.size();
-        addSlot(new ResultSlot(player, craftSlots, resultSlots, 0, CRAFT_RESULT_X, CRAFT_RESULT_Y));
-        for (int row = 0; row < 2; row++) {
-            for (int col = 0; col < 2; col++) {
-                addSlot(new Slot(craftSlots, col + row * 2, CRAFT_X + col * 18, CRAFT_Y + row * 18));
-            }
         }
 
         // --- Opened container, laid out to the right of everything else ---
@@ -865,57 +841,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         reconcileGrids();
     }
 
-    /** Recompute the crafting result whenever the 2x2 grid changes. */
-    @Override
-    public void slotsChanged(Container container) {
-        if (container == craftSlots) {
-            updateCraftingResult();
-        } else {
-            super.slotsChanged(container);
-        }
-    }
-
-    /**
-     * Resolves the current 2x2 recipe and pushes the result to the client.
-     *
-     * This duplicates what CraftingMenu.slotChangedCraftingGrid does, because that method
-     * is protected and so can't be called from a menu outside its package. Runs
-     * server-side only; the explicit slot packet is what makes the result appear on the
-     * client, since the result slot isn't backed by normal container sync.
-     */
-    private void updateCraftingResult() {
-        Level level = player.level();
-        if (level.isClientSide || !(player instanceof ServerPlayer serverPlayer)) return;
-
-        ItemStack result = ItemStack.EMPTY;
-        var recipeOpt = level.getServer().getRecipeManager()
-                .getRecipeFor(RecipeType.CRAFTING, craftSlots, level);
-        if (recipeOpt.isPresent()) {
-            CraftingRecipe recipe = recipeOpt.get();
-            if (resultSlots.setRecipeUsed(level, serverPlayer, recipe)) {
-                ItemStack assembled = recipe.assemble(craftSlots, level.registryAccess());
-                if (assembled.isItemEnabled(level.enabledFeatures())) {
-                    result = assembled;
-                }
-            }
-        }
-
-        resultSlots.setItem(0, result);
-        setRemoteSlot(craftStartIndex, result);
-        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(
-                containerId, incrementStateId(), craftStartIndex, result));
-    }
-
     /** Don't let items vanish if the screen closes with something still on the grid. */
     @Override
     public void removed(Player player) {
         super.removed(player);
         if (openedContainer != null) {
             openedContainer.stopOpen(player);
-        }
-        resultSlots.clearContent();
-        if (!player.level().isClientSide) {
-            clearContainer(player, craftSlots);
         }
     }
 
@@ -983,22 +914,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         int invEnd = hotbarStart + 9;
         int bagStart = backpackStartIndex;
         int bagEnd = bagStart + BACKPACK_MAX_SLOTS;
-        int craftResult = craftStartIndex;
-        int craftGridStart = craftStartIndex + 1;
-        int craftGridEnd = craftGridStart + 4;
         int containerStart = containerStartIndex;
         int containerEnd = slots.size();
         boolean hasContainer = containerEnd > containerStart;
 
         boolean moved;
-        if (index == craftResult) {
-            // Crafting output: push to inventory, then let the recipe re-run.
-            moved = moveItemStackTo(sourceStack, invStart, invEnd, true);
-            if (!moved) return ItemStack.EMPTY;
-            sourceSlot.onQuickCraft(sourceStack, original);
-        } else if (index >= craftGridStart && index < craftGridEnd) {
-            moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
-        } else if (index < equipEnd) {
+        if (index < equipEnd) {
             moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
             if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
         } else if (hasContainer && index >= containerStart && index < containerEnd) {

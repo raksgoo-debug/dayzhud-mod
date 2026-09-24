@@ -52,6 +52,27 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     /** Ghost icon drawn in an empty loadout slot, so an unrestricted-looking box doesn't
      *  read as "any item goes here" - see drawWeaponSlotDecor. */
     private static final int WEAPON_GHOST_COLOR = 0x40AFAFAF;
+    /** Equipped-state tint for the flat weapon icons - bright and near-opaque, unlike the
+     *  dim translucent ghost, since this is meant to read as "the real weapon is here." */
+    private static final int WEAPON_EQUIPPED_COLOR = 0xFFE8E8E8;
+
+    /**
+     * Flat, top-down weapon icons - user-supplied art, sliced from one composite reference
+     * image and alpha-extracted from luminance (same technique as the skill icons: the
+     * source was a faint outline on a near-black background, so alpha comes from how bright
+     * each pixel is, and colour comes entirely from the tint applied at draw time - see
+     * drawFlatWeaponIcon). One icon per loadout CATEGORY, not per specific gun: PRIMARY and
+     * SECONDARY both use the rifle icon regardless of which non-pistol type is actually
+     * equipped (smg, shotgun, sniper, mg, rpg all show the same silhouette), since the
+     * supplied art only covers one shape per category. Native pixel sizes are the resized
+     * files' own dimensions, needed by drawFlatWeaponIcon's blit call.
+     */
+    private static final ResourceLocation WEAPON_ICON_RIFLE = rl("weapon_flat_rifle");
+    private static final ResourceLocation WEAPON_ICON_PISTOL = rl("weapon_flat_pistol");
+    private static final ResourceLocation WEAPON_ICON_KNIFE = rl("weapon_flat_knife");
+    private static final int WEAPON_ICON_RIFLE_W = 128, WEAPON_ICON_RIFLE_H = 39;
+    private static final int WEAPON_ICON_PISTOL_W = 128, WEAPON_ICON_PISTOL_H = 67;
+    private static final int WEAPON_ICON_KNIFE_W = 128, WEAPON_ICON_KNIFE_H = 37;
 
     private static final ResourceLocation CORPSE_FIGURE = rl("corpse_figure");
     private static final ResourceLocation ICON_HEART = rl("icon_heart_solid");
@@ -139,14 +160,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
         // Recessed zone backings so the panel reads as distinct regions.
         graphics.fill(x + 8, y + 26, x + 172, y + 150, SECTION_BG);     // paperdoll + armor
-        graphics.fill(x + 8, y + 164, x + 172, y + 214, SECTION_BG);    // gear grid
-        graphics.fill(x + 8, y + 228, x + 172, y + 274, SECTION_BG);    // crafting
+        graphics.fill(x + 8, y + 156, x + 172, y + 246, SECTION_BG);    // loadout cluster
+        graphics.fill(x + 8, y + 248, x + 172, y + 306, SECTION_BG);    // gear grid
+        graphics.fill(x + 8, y + 308, x + 172, y + 354, SECTION_BG);    // hotbar
         graphics.fill(x + 180, y + 20, x + 352, y + 84, SECTION_BG);    // inventory
-        graphics.fill(x + 180, y + 94, x + 352, y + 122, SECTION_BG);   // hotbar
         if (menu.getActiveBackpackSlots() > 0) {
             graphics.fill(x + 180, y + 132, x + 352, y + 214, SECTION_BG); // backpack
         }
-        graphics.fill(x + 8, y + 288, x + 352, y + 316, SECTION_BG);    // weapons + offhand + stats
 
         if (menu.isCorpse()) {
             drawCorpseZones(graphics, x, y);
@@ -184,7 +204,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawPaperdoll(graphics);
         drawSectionHeaders(graphics);
         drawWeaponSlotDecor(graphics, mouseX, mouseY);
-        drawCraftingArrow(graphics);
         drawCraftTableButton(graphics, mouseX, mouseY);
         drawSkillsButton(graphics, mouseX, mouseY);
         if (isOverCraftButton(mouseX, mouseY)) {
@@ -258,7 +277,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawHeader(graphics, "EQUIPMENT", leftPos + 12, topPos + 8, 54);
         drawHeader(graphics, "GEAR", leftPos + 12, topPos + 250, 30);
         drawHeader(graphics, "INVENTORY", leftPos + 184, topPos + 8, 54);
-        drawHeader(graphics, "HOTBAR", leftPos + 184, topPos + 86, 40);
         if (menu.isCorpse()) {
             String name = title.getString().toUpperCase(Locale.ROOT);
             int rule = Math.max(40, Math.round(font.width(name) * 0.8f));
@@ -284,7 +302,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             drawHeader(graphics, name, leftPos + TarkovInventoryMenu.CONTAINER_X,
                     topPos + TarkovInventoryMenu.CONTAINER_Y - 18, rule);
         }
-        drawHeader(graphics, "CRAFTING", leftPos + 12, topPos + 310, 48);
+        drawHeader(graphics, "HOTBAR", leftPos + 12, topPos + 310, 40);
         if (menu.getActiveBackpackSlots() > 0) {
             drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 124, 50);
         }
@@ -349,9 +367,11 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
             ItemStack stack = menu.weaponSlots[i].getItem();
             if (stack.isEmpty()) {
-                drawWeaponGhost(graphics, type, bx, by, bw, bh);
+                int pad = 4;
+                drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
+                        WEAPON_GHOST_COLOR);
             } else {
-                drawBigWeaponIcon(graphics, stack, bx, by, bw, bh);
+                drawBigWeaponIcon(graphics, stack, type, bx, by, bw, bh);
             }
 
             graphics.pose().pushPose();
@@ -379,49 +399,63 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().popPose();
     }
 
-    /** Draws {@code stack}'s icon, tilted the same way as a grid item (see
-     *  renderTiltedItem), scaled to fill most of its loadout box - padded a few pixels in
-     *  from the box edges so it doesn't run into the border or the key badge. */
-    private void drawBigWeaponIcon(GuiGraphics graphics, ItemStack stack, int bx, int by, int bw, int bh) {
+    /** Draws the loadout box's flat category icon at the equipped-item tint, scaled to
+     *  fill most of the box - padded a few pixels in from the box edges so it doesn't run
+     *  into the border or the key badge. Still calls renderItemDecorations for count/
+     *  durability, in case a future weapon type ever needs either shown. */
+    private void drawBigWeaponIcon(GuiGraphics graphics, ItemStack stack, WeaponSlots type,
+                                    int bx, int by, int bw, int bh) {
         int pad = 4;
-        renderTiltedItem(graphics, stack, bx + pad, by + pad, bw - pad * 2, bh - pad * 2);
+        drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
+                WEAPON_EQUIPPED_COLOR);
+        graphics.renderItemDecorations(font, stack, bx + bw - 16, by + bh - 16);
     }
 
     /**
-     * A crude silhouette of the slot's weapon category, drawn with flat fills rather than a
-     * texture - same reasoning as the search cover's hatching: cheap, and it keeps the look
-     * consistent with the rest of this screen instead of introducing one textured icon.
-     *
-     * The shapes are authored once against a 16x16 box and scaled uniformly (never
-     * stretched) to sit centred in whatever the slot's actual box size is.
+     * The flat category icon (see WEAPON_ICON_RIFLE/PISTOL/KNIFE's doc), used for both the
+     * empty ghost and the equipped state - only the tint colour differs between them.
+     * Scaled to CONTAIN within ({@code availW}, {@code availH}) preserving the icon's own
+     * aspect ratio (never stretched, unlike the grid's big-item icons - these are fixed art,
+     * not an arbitrary item's model, so there's no reason to distort them) and centred in
+     * that space.
      */
-    private void drawWeaponGhost(GuiGraphics graphics, WeaponSlots type, int bx, int by, int bw, int bh) {
-        float scale = Math.min((bw - 8) / 16f, (bh - 8) / 16f);
-        graphics.pose().pushPose();
-        graphics.pose().translate(bx + (bw - 16 * scale) / 2f, by + (bh - 16 * scale) / 2f, 0);
-        graphics.pose().scale(scale, scale, 1f);
+    private void drawFlatWeaponIcon(GuiGraphics graphics, WeaponSlots type,
+                                     int availX, int availY, int availW, int availH, int tint) {
+        ResourceLocation icon;
+        int nativeW, nativeH;
         switch (type) {
             case PRIMARY, SECONDARY -> {
-                // Barrel + a stock block at the left end.
-                graphics.fill(1, 7, 15, 9, WEAPON_GHOST_COLOR);
-                graphics.fill(1, 5, 4, 12, WEAPON_GHOST_COLOR);
-                graphics.fill(9, 9, 11, 13, WEAPON_GHOST_COLOR);
+                icon = WEAPON_ICON_RIFLE;
+                nativeW = WEAPON_ICON_RIFLE_W;
+                nativeH = WEAPON_ICON_RIFLE_H;
             }
             case HOLSTER -> {
-                // Slide + grip.
-                graphics.fill(3, 6, 13, 8, WEAPON_GHOST_COLOR);
-                graphics.fill(3, 8, 6, 14, WEAPON_GHOST_COLOR);
+                icon = WEAPON_ICON_PISTOL;
+                nativeW = WEAPON_ICON_PISTOL_W;
+                nativeH = WEAPON_ICON_PISTOL_H;
             }
-            case SHEATH -> {
-                // Diagonal blade, stepped one pixel at a time (as drawSearchCover does),
-                // plus a small handle block at the lower-right end.
-                for (int d = 0; d < 10; d++) {
-                    graphics.fill(2 + d, 3 + d, 4 + d, 5 + d, WEAPON_GHOST_COLOR);
-                }
-                graphics.fill(10, 11, 14, 14, WEAPON_GHOST_COLOR);
+            default -> {
+                icon = WEAPON_ICON_KNIFE;
+                nativeW = WEAPON_ICON_KNIFE_W;
+                nativeH = WEAPON_ICON_KNIFE_H;
             }
         }
-        graphics.pose().popPose();
+
+        float scale = Math.min((float) availW / nativeW, (float) availH / nativeH);
+        int drawW = Math.round(nativeW * scale);
+        int drawH = Math.round(nativeH * scale);
+        int x = availX + (availW - drawW) / 2;
+        int y = availY + (availH - drawH) / 2;
+
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(
+                ((tint >> 16) & 0xFF) / 255f,
+                ((tint >> 8) & 0xFF) / 255f,
+                (tint & 0xFF) / 255f,
+                ((tint >> 24) & 0xFF) / 255f);
+        graphics.blit(icon, x, y, 0, 0, drawW, drawH, drawW, drawH);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
     }
 
     /** Explains what an empty loadout slot accepts. Non-empty slots get vanilla's own
@@ -649,15 +683,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (menu.corpseHasBackpack()) {
             graphics.fill(x + 372, y + 282, x + 548, y + 348, SECTION_BG); // backpack
         }
-    }
-
-    /** Arrow between the 2x2 grid and its result slot. */
-    private void drawCraftingArrow(GuiGraphics graphics) {
-        int ax = leftPos + 68;
-        int ay = topPos + TarkovInventoryMenu.CRAFT_RESULT_Y + 4;
-        graphics.fill(ax, ay, ax + 16, ay + 2, HEADER_ACCENT);
-        graphics.fill(ax + 12, ay - 3, ax + 14, ay + 5, HEADER_ACCENT);
-        graphics.fill(ax + 14, ay - 1, ax + 16, ay + 3, HEADER_ACCENT);
     }
 
     // --- Crafting-table button, sits beside the INVENTORY header ---
