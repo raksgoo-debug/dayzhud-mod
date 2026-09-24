@@ -82,5 +82,71 @@ public final class DefaultGunFootprints {
             Map.entry("tacz:vector45", new Footprint(3, 2))
     );
 
+    /**
+     * Each gun's side-on length in model units, from the same default-configuration models the
+     * table above was sized from. The renderer draws every non-pistol gun at one shared scale -
+     * 2 px per unit, i.e. 9 units per 18-px cell - using this to convert TACZ's in-game model
+     * units, so a gun's drawn size reflects its real length relative to every other gun
+     * instead of how full its footprint happens to be. (Checked against published lengths:
+     * the models are within about 7% of real proportions, e.g. Glock/AK 0.24 vs 0.23,
+     * AWP/AK 1.39 vs 1.36; the Uzi's stock is modelled folded.)
+     */
+    public static final Map<String, Float> LENGTH = Map.ofEntries(
+            Map.entry("tacz:aa12", 41.8f),
+            Map.entry("tacz:ai_awp", 57.1f),
+            Map.entry("tacz:ak47", 41.2f),
+            Map.entry("tacz:aug", 36.7f),
+            Map.entry("tacz:b93r", 12.2f),
+            Map.entry("tacz:cz75", 10.2f),
+            Map.entry("tacz:db_long", 44.6f),
+            Map.entry("tacz:db_short", 22.9f),
+            Map.entry("tacz:deagle", 13.1f),
+            Map.entry("tacz:deagle_golden", 13.1f),
+            Map.entry("tacz:fn_evolys", 45.3f),
+            Map.entry("tacz:fn_fal", 52.8f),
+            Map.entry("tacz:g36k", 41.3f),
+            Map.entry("tacz:glock_17", 9.8f),
+            Map.entry("tacz:hk416d", 37.3f),
+            Map.entry("tacz:hk_g3", 48.9f),
+            Map.entry("tacz:hk_mk23", 12.7f),
+            Map.entry("tacz:hk_mp5a5", 21.9f),
+            Map.entry("tacz:kar98", 52.9f),
+            Map.entry("tacz:lonetrail", 22.2f),
+            Map.entry("tacz:m1014", 47.4f),
+            Map.entry("tacz:m107", 62.0f),
+            Map.entry("tacz:m16a1", 47.5f),
+            Map.entry("tacz:m16a4", 47.5f),
+            Map.entry("tacz:m1911", 10.4f),
+            Map.entry("tacz:m249", 48.0f),
+            Map.entry("tacz:m320", 16.8f),
+            Map.entry("tacz:m4a1", 39.8f),
+            Map.entry("tacz:m700", 47.4f),
+            Map.entry("tacz:m870", 46.4f),
+            Map.entry("tacz:m95", 63.3f),
+            Map.entry("tacz:m9a4", 11.7f),
+            Map.entry("tacz:minigun", 50.0f),
+            Map.entry("tacz:mk14", 46.4f),
+            Map.entry("tacz:p320", 9.3f),
+            Map.entry("tacz:p90", 23.2f),
+            Map.entry("tacz:qbz_191", 40.2f),
+            Map.entry("tacz:qbz_95", 37.1f),
+            Map.entry("tacz:rhino357", 13.2f),
+            Map.entry("tacz:rpg7", 45.4f),
+            Map.entry("tacz:rpk", 49.3f),
+            Map.entry("tacz:scar_h", 38.1f),
+            Map.entry("tacz:scar_l", 37.1f),
+            Map.entry("tacz:sks_tactical", 48.4f),
+            Map.entry("tacz:spas_12", 54.4f),
+            Map.entry("tacz:spr15hb", 50.4f),
+            Map.entry("tacz:springfield1873", 62.6f),
+            Map.entry("tacz:taurus500", 18.7f),
+            Map.entry("tacz:taurus943", 8.0f),
+            Map.entry("tacz:timeless50", 10.4f),
+            Map.entry("tacz:type_81", 46.2f),
+            Map.entry("tacz:ump45", 34.1f),
+            Map.entry("tacz:uzi", 22.5f),
+            Map.entry("tacz:vector45", 27.2f)
+    );
+
     private DefaultGunFootprints() {}
 }

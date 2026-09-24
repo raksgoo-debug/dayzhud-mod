@@ -92,8 +92,18 @@ public final class TaczFlatGunRenderer {
      * Recorder.toBounds), and length/height are the extents along its horizontal/vertical.
      */
     private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ,
-                          float length, float height, float[] rot, float cx, float cy, float cz) {
+                          float length, float height, float[] rot, float cx, float cy, float cz,
+                          float unitScale) {
+        /** unitScale: px per in-game model unit at the shared scale (2 px per default-model
+         *  unit), or -1 to fill the box instead (pistols, and items with no reference length). */
+        Bounds withUnitScale(float u) {
+            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, length, height, rot, cx, cy, cz, u);
+        }
     }
+
+    /** Shared render scale: 2 px per model unit = 9 units per 18-px cell, the same scale the
+     *  footprint tables were sized at. */
+    private static final float PX_PER_UNIT = 2f;
 
     private static final Map<String, Bounds> CACHE = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
@@ -244,7 +254,8 @@ public final class TaczFlatGunRenderer {
         com.dayzhud.mod.inventory.grid.Footprint fp =
                 com.dayzhud.mod.inventory.grid.ItemFootprints.baseFootprintOf(stack);
         // Same area drawFlatGunBox gives a grid item: the footprint minus its 1 px inset.
-        return Math.min((fp.width() * 18 - 2) / b.length(), (fp.height() * 18 - 2) / b.height());
+        float fill = Math.min((fp.width() * 18 - 2) / b.length(), (fp.height() * 18 - 2) / b.height());
+        return b.unitScale() > 0 ? Math.min(fill, b.unitScale()) : fill;
     }
 
     /**
@@ -260,6 +271,7 @@ public final class TaczFlatGunRenderer {
         float s = rotated ? Math.min(w / b.height(), h / b.length())
                           : Math.min(w / b.length(), h / b.height());
         if (maxScale > 0) s = Math.min(s, maxScale);
+        if (b.unitScale() > 0) s = Math.min(s, b.unitScale());   // shared scale; only ever shrinks to fit
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
@@ -275,6 +287,10 @@ public final class TaczFlatGunRenderer {
             }
             // View space from here on: +X screen-right, +Y screen-up.
             pose.scale(s, -s, s);
+            // Self-centering: the offset measured on earlier frames between where the item was
+            // actually drawn and the box centre (see drawTee), in view-space model units.
+            float[] corr = CORRECTION.get(cacheKey(stack));
+            if (corr != null) pose.translate(-corr[0], -corr[1], 0f);
             if (b.rot() == null) {
                 // TACZ guns: constant pose (see class doc) - roll 180 about Z, then turn +Z
                 // onto +X. Proper rotations, never mirrors.
@@ -295,7 +311,7 @@ public final class TaczFlatGunRenderer {
             graphics.flush();
             List<Object> hidden = hideHandParts(m.model());
             try {
-                drawModel(m, pose, stack);
+                drawTee(m, pose, stack, cacheKey(stack), x + w / 2f, y + h / 2f, s, rotated);
             } finally {
                 restoreVisible(hidden);
             }
@@ -307,6 +323,134 @@ public final class TaczFlatGunRenderer {
             Lighting.setupFor3DItems();
             pose.popPose();
         }
+    }
+
+    /** Per item (cache key): accumulated centring correction, view-space model units. */
+    private static final Map<String, float[]> CORRECTION = new java.util.HashMap<>();
+
+    /**
+     * Draws the model with Minecraft's global buffer wrapped in a pass-through that forwards
+     * every vertex unchanged AND records where it landed on screen. Afterwards the drawn centre
+     * (geometry only - render types under MIN_GEOMETRY_VERTS are effects) is compared with
+     * the box centre and the difference is added to CORRECTION, which the next frame applies.
+     *
+     * Why: 2.12.x-2.13.0 centred on a separate measuring pass, and some guns still came out
+     * off-centre - something TACZ draws differently at runtime than in that pass, which could
+     * not be reproduced offline. Correcting from the real draw removes the dependency on
+     * knowing the cause: whatever is drawn ends up centred, one frame after first appearing.
+     */
+    private static void drawTee(Model m, PoseStack pose, ItemStack stack, String key, float boxCx, float boxCy,
+                                float s, boolean rotated) throws Exception {
+        RenderBuffers buffers = Minecraft.getInstance().renderBuffers();
+        MultiBufferSource.BufferSource real = buffers.bufferSource();
+        Field f = globalBufferField(buffers, real);
+        if (f == null) {
+            drawModel(m, pose, stack);
+            return;
+        }
+        Map<RenderType, Recorder> perType = new LinkedHashMap<>();
+        MultiBufferSource.BufferSource tee = new MultiBufferSource.BufferSource(new BufferBuilder(256), Map.of()) {
+            @Override
+            public VertexConsumer getBuffer(RenderType type) {
+                return new Tee(real.getBuffer(type), perType.computeIfAbsent(type, t -> new Recorder()));
+            }
+
+            @Override
+            public void endBatch() {
+                real.endBatch();
+            }
+
+            @Override
+            public void endBatch(RenderType type) {
+                real.endBatch(type);
+            }
+        };
+        try {
+            f.set(buffers, tee);
+            drawModel(m, pose, stack);
+        } finally {
+            f.set(buffers, real);
+        }
+        boolean anyGeometry = perType.values().stream().anyMatch(r -> r.n >= MIN_GEOMETRY_VERTS);
+        float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        for (Recorder r : perType.values()) {
+            if (anyGeometry && r.n < MIN_GEOMETRY_VERTS) continue;
+            for (int i = 0; i < r.n; i++) {
+                minX = Math.min(minX, r.xs[i]); maxX = Math.max(maxX, r.xs[i]);
+                minY = Math.min(minY, r.ys[i]); maxY = Math.max(maxY, r.ys[i]);
+            }
+        }
+        if (minX > maxX || s <= 0) return;
+        float ox = (minX + maxX) / 2f - boxCx, oy = (minY + maxY) / 2f - boxCy;   // screen px, y down
+        if (Math.abs(ox) < 0.25f && Math.abs(oy) < 0.25f) return;
+        // Screen offset -> view units. Unrotated: screen = (vx*s, -vy*s). Rotated adds a screen
+        // quarter turn (x,y)->(-y,x), giving screen = (vy*s, vx*s).
+        float vx = rotated ? oy / s : ox / s;
+        float vy = rotated ? ox / s : -oy / s;
+        float[] c = CORRECTION.computeIfAbsent(key, k -> new float[2]);
+        c[0] += vx;
+        c[1] += vy;
+        if (GridConfig.DEBUG_LOGGING.get()) {
+            DayzHudMod.LOGGER.info("flat item {}: drawn {} px off-centre ({}, {}); correcting by ({}, {}) units",
+                    key, Math.hypot(ox, oy), ox, oy, vx, vy);
+        }
+    }
+
+    /** Forwards every call to the real consumer; records positions on the side. Same method
+     *  set as Recorder, deliberately without @Override (see Recorder's doc). */
+    private static final class Tee implements VertexConsumer {
+        private final VertexConsumer d;
+        private final Recorder r;
+
+        Tee(VertexConsumer d, Recorder r) {
+            this.d = d;
+            this.r = r;
+        }
+
+        public VertexConsumer vertex(double x, double y, double z) { r.vertex(x, y, z); d.vertex(x, y, z); return this; }
+        public VertexConsumer color(int red, int g, int b, int a) { d.color(red, g, b, a); return this; }
+        public VertexConsumer uv(float u, float v) { d.uv(u, v); return this; }
+        public VertexConsumer overlayCoords(int u, int v) { d.overlayCoords(u, v); return this; }
+        public VertexConsumer uv2(int u, int v) { d.uv2(u, v); return this; }
+        public VertexConsumer normal(float x, float y, float z) { d.normal(x, y, z); return this; }
+        public void endVertex() { d.endVertex(); }
+        public void defaultColor(int red, int g, int b, int a) { d.defaultColor(red, g, b, a); }
+        public void unsetDefaultColor() { d.unsetDefaultColor(); }
+    }
+
+    /**
+     * px per in-game unit at the shared scale, or -1 (fill the box). The reference length is
+     * the default model's length in the built-in tables; TACZ's in-game model units are a
+     * fixed multiple of those (16 if parts are in block units, 1 if in pixels), so the ratio is
+     * snapped to one of those two - a fitted suppressor makes the in-game gun longer, and that
+     * must make it LONGER on screen, not shrink it to the reference length.
+     */
+    private static float unitScaleFor(ItemStack stack, Bounds b) {
+        Float ref = null;
+        Optional<ResourceLocation> gunId = TaczMarketCompat.gunIdOf(stack);
+        if (gunId.isPresent()) {
+            // Pistols fill their 2x1 (kept that way on request); everything else is to scale.
+            if (TaczMarketCompat.gunTypeOf(stack).map("pistol"::equals).orElse(false)) return -1f;
+            ref = com.dayzhud.mod.inventory.grid.DefaultGunFootprints.LENGTH.get(gunId.get().toString());
+        } else {
+            String tag = lrTag(stack);
+            if (tag != null) {
+                ref = com.dayzhud.mod.inventory.grid.DefaultItemFootprints.LR_LENGTH.get(stack.getTag().getString(tag));
+            }
+        }
+        if (ref == null || b.length() <= 0) return -1f;
+        return PX_PER_UNIT * (ref / b.length() > 4f ? 16f : 1f);
+    }
+
+    /** Model units per in-game unit (16 if TACZ draws in block units, 1 if pixels), from the
+     *  built-in reference length vs the measured longest extent. 16 when unknown - TACZ parts
+     *  follow Minecraft's ModelPart convention of block units. */
+    private static float unitFactorFor(ItemStack stack, float measuredLongest) {
+        String tag = lrTag(stack);
+        Float ref = tag == null ? null
+                : com.dayzhud.mod.inventory.grid.DefaultItemFootprints.LR_LENGTH.get(stack.getTag().getString(tag));
+        if (ref == null || measuredLongest <= 0) return 16f;
+        return ref / measuredLongest > 4f ? 16f : 1f;
     }
 
     private static String cacheKey(ItemStack stack) {
@@ -328,7 +472,7 @@ public final class TaczFlatGunRenderer {
             List<Object> hidden = hideHandParts(m.model());
             boolean full;
             try {
-                full = measureFullDraw(m, stack, rec, key);
+                full = measureFullDraw(m, stack, rec, key, null);
                 if (!full) {
                     // Body only (misses attachment models like a separate stock), but better than nothing.
                     PoseStack ps = new PoseStack();
@@ -339,7 +483,22 @@ public final class TaczFlatGunRenderer {
             } finally {
                 restoreVisible(hidden);
             }
-            Bounds b = rec.toBounds(m.gun(), "MeleeWeaponId".equals(lrTag(stack)));
+            // LR items are held at their model origin (Bedrock (0,0,0)). TACZ's loader (which LR
+            // uses) maps it to y = 24 - 0 in pixels, and parts are then drawn in block units
+            // (/16) - so in game the origin is (0, 24/k, 0), k being the same unit factor the
+            // shared scale detects. 2.13.0 used (0,24,0) in block units - far above the model,
+            // so the "farthest point" was a knife's bottom edge and it pointed down.
+            // (The hand markers were tried as the grip and rejected: they mark where the
+            // first-person hand model goes, which on bats and karambits is off the item.)
+            float[] grip = null;
+            if (!m.gun()) {
+                Bounds probe = rec.toBounds(true, false, null);
+                float k = unitFactorFor(stack, probe == null ? 0f : Math.max(probe.maxX() - probe.minX(),
+                        Math.max(probe.maxY() - probe.minY(), probe.maxZ() - probe.minZ())));
+                grip = new float[]{0f, 24f / k, 0f};
+            }
+            Bounds b = rec.toBounds(m.gun(), "MeleeWeaponId".equals(lrTag(stack)), grip);
+            if (b != null) b = b.withUnitScale(unitScaleFor(stack, b));
             if (b == null) {
                 if (WARNED_EMPTY.add(key)) {
                     DayzHudMod.LOGGER.warn("dayzhud: measured no geometry for gun {}; drawing it "
@@ -349,8 +508,9 @@ public final class TaczFlatGunRenderer {
             }
             CACHE.put(key, b);
             if (GridConfig.DEBUG_LOGGING.get()) {
-                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts ({}), {} hand parts hidden, length {}, height {}",
-                        key, rec.n, full ? "full draw" : "body only", hidden.size(), b.length(), b.height());
+                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts ({}), {} hand parts hidden, length {}, height {}, "
+                                + "px/unit {}, grip {}", key, rec.n, full ? "full draw" : "body only", hidden.size(),
+                        b.length(), b.height(), b.unitScale(), grip == null ? "-" : Arrays.toString(grip));
             }
             return b;
         } catch (Throwable t) {
@@ -375,7 +535,7 @@ public final class TaczFlatGunRenderer {
      *  billboards, laser beams: a few quads - not geometry, and are left out of the size. */
     private static final int MIN_GEOMETRY_VERTS = 32;
 
-    private static boolean measureFullDraw(Model m, ItemStack stack, Recorder rec, String key) {
+    private static boolean measureFullDraw(Model m, ItemStack stack, Recorder rec, String key, double[] raw) {
         RenderBuffers buffers = Minecraft.getInstance().renderBuffers();
         MultiBufferSource.BufferSource real = buffers.bufferSource();
         Field f = globalBufferField(buffers, real);
@@ -410,13 +570,20 @@ public final class TaczFlatGunRenderer {
                 fail(restore);
             }
         }
+        if (raw != null) {
+            for (Recorder r : perType.values()) {
+                for (int i = 0; i < r.n; i++) { raw[0] += r.xs[i]; raw[1] += r.ys[i]; raw[2] += r.zs[i]; }
+                raw[3] += r.n;
+            }
+            if (rec == null) return raw[3] > 0;
+        }
         boolean anyGeometry = perType.values().stream().anyMatch(r -> r.n >= MIN_GEOMETRY_VERTS);
         for (Map.Entry<RenderType, Recorder> e : perType.entrySet()) {
             Recorder r = e.getValue();
             boolean keep = !anyGeometry || r.n >= MIN_GEOMETRY_VERTS;
             if (keep) rec.addAll(r);
-            if (GridConfig.DEBUG_LOGGING.get()) {
-                Bounds rb = r.toBounds(true, false);
+            if (GridConfig.DEBUG_LOGGING.get() && key != null) {
+                Bounds rb = r.toBounds(true, false, null);
                 DayzHudMod.LOGGER.info("flat item {}: {} {} verts {} x[{},{}] y[{},{}] z[{},{}]", key,
                         keep ? "kept" : "SKIPPED (effect)", r.n, e.getKey(),
                         rb == null ? 0 : rb.minX(), rb == null ? 0 : rb.maxX(), rb == null ? 0 : rb.minY(),
@@ -552,7 +719,7 @@ public final class TaczFlatGunRenderer {
          * (-Y after that flip) when the vertical axis is Y. Built as a proper rotation (rows
          * -tip, up, -(tip x up)), never a mirror.
          */
-        Bounds toBounds(boolean gun, boolean melee) {
+        Bounds toBounds(boolean gun, boolean melee, float[] grip) {
             if (n == 0) return null;
             float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE,
                     maxY = -Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
@@ -563,10 +730,14 @@ public final class TaczFlatGunRenderer {
             }
             if (gun) {
                 return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, maxZ - minZ, maxY - minY, null,
-                        (minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
+                        (minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f, -1f);
             }
             float[] ext = {maxX - minX, maxY - minY, maxZ - minZ};
-            float[] lo = {minX, minY, minZ}, hi = {maxX, maxY, maxZ}, ref = {0f, 24f, 0f};
+            // Where the item is held: the centroid of its hand-position markers, measured in the
+            // same in-game units (see bounds()). 2.13.0 assumed the model origin at (0,24,0) -
+            // an unverified unit/offset guess that made knives point down in game.
+            float[] lo = {minX, minY, minZ}, hi = {maxX, maxY, maxZ},
+                    ref = grip != null ? grip : new float[]{0f, 0f, 0f};
             int a0 = 0;
             for (int i = 1; i < 3; i++) if (ext[i] > ext[a0]) a0 = i;
             int a1 = -1;
@@ -575,9 +746,7 @@ public final class TaczFlatGunRenderer {
             // Length direction t (pointing at the tip, which goes screen-left).
             float[] t = new float[3];
             if (melee) {
-                // Grip -> farthest point: every LR melee model is held at its origin, and the
-                // farthest point is the tip - which also straightens a model authored at an
-                // angle (the Apocalyptic Arsenal katana is diagonal in its file).
+                // Grip -> farthest point: the tip. Also straightens a model authored at an angle.
                 int far = 0;
                 float best = -1f;
                 for (int i = 0; i < n; i++) {
@@ -621,7 +790,7 @@ public final class TaczFlatGunRenderer {
             float cz = t[2] * mt + u[2] * mu + w[2] * mw;
             // Rows -t, u, -w: tip -> screen-left, u -> screen-up; det +1 (never a mirror).
             float[] rot = {-t[0], -t[1], -t[2], u[0], u[1], u[2], -w[0], -w[1], -w[2]};
-            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, tHi - tLo, uHi - uLo, rot, cx, cy, cz);
+            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, tHi - tLo, uHi - uLo, rot, cx, cy, cz, -1f);
         }
 
         private static boolean normalize(float[] v) {

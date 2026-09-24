@@ -50,5 +50,31 @@ public final class DefaultItemFootprints {
             Map.entry("taczmagazines:magazine_small", new Footprint(1, 1))
     );
 
+    /** Each LR variant's length in model units - the shared-scale reference, as for guns. */
+    public static final Map<String, Float> LR_LENGTH = Map.ofEntries(
+            Map.entry("lrtactical:ai2", 3.3f),
+            Map.entry("lrtactical:amoxycillin", 4.6f),
+            Map.entry("lrtactical:baseball_bat", 31.2f),
+            Map.entry("lrtactical:blood_pack", 11.5f),
+            Map.entry("lrtactical:c4", 6.8f),
+            Map.entry("lrtactical:carfak", 7.8f),
+            Map.entry("lrtactical:cms", 9.3f),
+            Map.entry("lrtactical:condensed_milk", 6.0f),
+            Map.entry("lrtactical:dagger", 9.7f),
+            Map.entry("lrtactical:fire_axe", 32.6f),
+            Map.entry("lrtactical:flash_grenade", 7.3f),
+            Map.entry("lrtactical:goldenstar", 2.0f),
+            Map.entry("lrtactical:hardened_katana", 42.8f),
+            Map.entry("lrtactical:ibuprofen", 3.8f),
+            Map.entry("lrtactical:karambit", 7.8f),
+            Map.entry("lrtactical:m67", 6.3f),
+            Map.entry("lrtactical:molotov", 12.7f),
+            Map.entry("lrtactical:rgn", 6.9f),
+            Map.entry("lrtactical:smoke_grenade", 7.6f),
+            Map.entry("lrtactical:surv12", 12.8f),
+            Map.entry("lrtactical:vaseline", 3.0f),
+            Map.entry("lrtactical:wooden_baseball_bat", 31.2f)
+    );
+
     private DefaultItemFootprints() {}
 }
