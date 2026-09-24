@@ -52,9 +52,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     /** Ghost icon drawn in an empty loadout slot, so an unrestricted-looking box doesn't
      *  read as "any item goes here" - see drawWeaponSlotDecor. */
     private static final int WEAPON_GHOST_COLOR = 0x40AFAFAF;
-    /** Equipped-state tint for the flat weapon icons - bright and near-opaque, unlike the
-     *  dim translucent ghost, since this is meant to read as "the real weapon is here." */
-    private static final int WEAPON_EQUIPPED_COLOR = 0xFFE8E8E8;
 
     /**
      * Flat, top-down weapon icons - user-supplied art, sliced from one composite reference
@@ -349,10 +346,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      *
      * These are still real Slots (see TarkovInventoryMenu.WeaponSlot) with a real, normal
      * 16x16 clickable region - centred inside the bigger box, not resized, since vanilla
-     * doesn't support a variable-size Slot. Vanilla's own render pass still draws its usual
-     * small icon there underneath; drawBigWeaponIcon paints over it with a bigger one for
-     * exactly the same reason drawGridIcons does the same thing for grid items - see that
-     * method's doc for why nothing here ever touches isActive().
+     * doesn't support a variable-size Slot. An empty slot gets the flat ghost icon; an
+     * occupied one gets nothing extra at all - vanilla's own small icon, already drawn
+     * underneath by the normal render pass, is left alone rather than overlaid.
      */
     private void drawWeaponSlotDecor(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
@@ -370,9 +366,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 int pad = 4;
                 drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
                         WEAPON_GHOST_COLOR);
-            } else {
-                drawBigWeaponIcon(graphics, stack, type, bx, by, bw, bh);
             }
+            // Equipped: nothing drawn here at all - just vanilla's own small icon, already
+            // rendered underneath by the normal slot pass. The flat category icon was only
+            // ever useful as a placeholder for "nothing here yet"; once a real weapon is
+            // equipped, overlaying a generic silhouette on top of it added nothing and, per
+            // feedback, is better gone than dim-then-bright.
 
             graphics.pose().pushPose();
             graphics.pose().translate(bx - 2, by - 8, 0);
@@ -397,18 +396,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.pose().scale(0.5f, 0.5f, 1f);
         graphics.drawString(font, "OFFHAND", 0, 0, LABEL_DIM, false);
         graphics.pose().popPose();
-    }
-
-    /** Draws the loadout box's flat category icon at the equipped-item tint, scaled to
-     *  fill most of the box - padded a few pixels in from the box edges so it doesn't run
-     *  into the border or the key badge. Still calls renderItemDecorations for count/
-     *  durability, in case a future weapon type ever needs either shown. */
-    private void drawBigWeaponIcon(GuiGraphics graphics, ItemStack stack, WeaponSlots type,
-                                    int bx, int by, int bw, int bh) {
-        int pad = 4;
-        drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
-                WEAPON_EQUIPPED_COLOR);
-        graphics.renderItemDecorations(font, stack, bx + bw - 16, by + bh - 16);
     }
 
     /**
@@ -522,45 +509,62 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     /**
-     * Draws {@code slot}'s item scaled to fill its whole footprint instead of one cell.
-     *
-     * Stretched to fill the rectangle exactly, matching how the reference grid looks - which
-     * does mean a gun modelled in 3D (as TACZ's are) can look mildly sheared at a wide aspect
-     * ratio. Worth a look in game before deciding it needs a flatter, purpose-made icon
-     * instead; this was never render-tested here, only reasoned through.
-     */
-    /**
-     * Renders {@code stack} tilted toward lying flat and scaled to fill a {@code w}x{@code h}
-     * box at ({@code x},{@code y}) - the shared implementation behind both drawBigGridIcon
-     * and drawBigWeaponIcon, since both have the same "big 3D gun model in a GUI slot"
-     * problem. See GridConfig.FLAT_ITEM_ANGLE_X for why the angle is a first guess.
-     *
-     * Rotating around the box's own centre (translate there first, rotate, then render at
-     * an offset of half the item's native 16-unit size) rather than around its top-left
-     * corner - rotating around a corner would visibly swing the icon off to one side instead
-     * of tipping it in place.
+     * Fallback for a gun this mod doesn't have a bundled flat icon for (see TaczHudIcons) -
+     * scales TACZ's normal 3D GUI render UNIFORMLY to fit the box, rather than the earlier
+     * non-uniform stretch that caused the shearing this was built to fix. A gun rendered at
+     * its native aspect ratio and just made bigger reads fine; forced independently in width
+     * and height to fill a wide, short rectangle is what turned it into a thin diagonal
+     * streak.
      */
     private void renderTiltedItem(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h) {
         float angle = com.dayzhud.mod.inventory.grid.GridConfig.FLAT_ITEM_ANGLE_X.get().floatValue();
+        float scale = Math.min(w / 16f, h / 16f);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x + w / 2f, y + h / 2f, 0);
         if (angle != 0f) {
             graphics.pose().mulPose(com.mojang.math.Axis.XP.rotationDegrees(angle));
         }
-        graphics.pose().scale(w / 16f, h / 16f, 1f);
+        graphics.pose().scale(scale, scale, 1f);
         graphics.renderItem(stack, -8, -8);
         graphics.pose().popPose();
-
-        graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
     }
 
+    /** Draws a flat texture (a TaczHudIcons entry) at its own native aspect ratio, scaled to
+     *  CONTAIN within the box and centred - never stretched, and no tint: these already have
+     *  the right colours and shading baked in, unlike the generic loadout icons. */
+    private void drawContainedIcon(GuiGraphics graphics, ResourceLocation texture, int nativeW, int nativeH,
+                                    int boxX, int boxY, int boxW, int boxH) {
+        float scale = Math.min((float) boxW / nativeW, (float) boxH / nativeH);
+        int drawW = Math.round(nativeW * scale);
+        int drawH = Math.round(nativeH * scale);
+        int x = boxX + (boxW - drawW) / 2;
+        int y = boxY + (boxH - drawH) / 2;
+
+        RenderSystem.enableBlend();
+        graphics.blit(texture, x, y, 0, 0, drawW, drawH, drawW, drawH);
+        RenderSystem.disableBlend();
+    }
+
+    /**
+     * The gun's real flat icon when this mod has one bundled (see TaczHudIcons - covers
+     * TACZ's own default gun pack), otherwise the 3D-render fallback above. Either way,
+     * fitted into the footprint rather than stretched to fill it.
+     */
     private void drawBigGridIcon(GuiGraphics graphics, Slot slot, Footprint footprint) {
+        ItemStack stack = slot.getItem();
         int x = leftPos + slot.x;
         int y = topPos + slot.y;
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
-        renderTiltedItem(graphics, slot.getItem(), x, y, w, h);
+
+        var hud = TaczHudIcons.iconFor(stack);
+        if (hud.isPresent()) {
+            drawContainedIcon(graphics, hud.get().texture(), hud.get().width(), hud.get().height(), x, y, w, h);
+        } else {
+            renderTiltedItem(graphics, stack, x, y, w, h);
+        }
+        graphics.renderItemDecorations(font, stack, x + w - 16, y + h - 16);
     }
 
     /**
