@@ -1,43 +1,45 @@
-# dayzhud 2.12.4 - guns draw at full size, always the right way up
+# dayzhud 2.12.5 - carrying, placing, rotating guns; window fits the screen
 
-**2 changed files** (plus version bump). Unzip over the repo root, on top of 2.12.3.
-Slot sizes are unchanged - pistols stay 2x1; the guns just draw bigger.
+**4 changed files** (plus version bump). Unzip over the repo root, on top of 2.12.4.
 
-## Why guns looked too small (AK, pistols) - fixed
+## 1. Picked-up guns showed the small 1-slot icon - fixed
 
-Every TACZ gun model carries two hand-position markers (`lefthand_pos` / `righthand_pos`):
-opaque 4x12 boxes that reach far above the gun. TACZ hides them when it draws a gun, but not
-before my size measurement ran, so they counted. Across the 54 default guns, 48 had their
-measured height inflated - pistols worst (a Glock measured 25 units tall against a real 11).
-The gun was then shrunk to fit a box that was mostly empty space. They're now explicitly
-hidden, by bone name, for the measuring pass and the draw, and restored straight after. The
-name match is anchored, so it can't catch parts like "Handguard".
+Vanilla draws the item on your cursor as its normal inventory icon (for a TACZ gun, the
+small diagonal sprite), and that draw is private, so it can't be replaced directly. For a gun
+that can be drawn flat, the carried item is now hidden for the length of vanilla's render
+pass only (restored in a `finally`, before tooltips or anything else read it) and drawn
+flat at its full footprint size instead. Its top-left cell sits under the cursor - the same
+cell the green/red placement outline shows and a click anchors to.
 
-The gun was also padded twice - 2 px by the panel and 2 px again inside the renderer - so a
-2x1 slot (18 px tall) left the gun 10 px. Now it's 1 px inside the panel outline in the grid
-and 2 px in the loadout boxes, nothing extra in the renderer.
+## 2. Guns could be placed where they didn't fit - fixed (four separate holes)
 
-Net effect (see render-size-before-after.png): pistols about 4.4-4.9x bigger in the same 2x1
-slot; rifles about 1.3-1.5x.
+Only a plain click was checked for fit. Everything else went straight to vanilla:
 
-## Why the SCAR was upside down - fixed, for every gun
+- **Drag-placing** - the actual "sometimes". If the mouse moves even a pixel between press
+  and release while carrying something, vanilla treats it as a drag that spreads the stack
+  across the slots passed over, and drops the gun into the first one. Now refused for
+  multi-cell items on the server side, and on your side a press over the grid while carrying
+  a gun is turned into a normal placement click immediately, so it just works.
+- **Number keys** (1-9 over a grid cell) swapped a hotbar gun in unchecked. Now it must fit.
+- **Shift-click** dropped a gun into the first empty index. Now it searches for the first spot
+  where the whole footprint fits (turning it if that's what fits) - so shift-click works for
+  guns now instead of being refused.
+- **Small bags.** A backpack or corpse bag shows a fixed window of rows, but the bag behind
+  it can have fewer slots. Those missing cells read as empty and silently drop anything
+  written to them - so a gun could be placed hanging off the end of a small bag. Missing cells
+  now count as occupied for both the fit check and the footprint reservation.
 
-The "which way is up" check compared the muzzle's height with the middle of the measured
-model. The hand markers dragged that middle upward, and even without them the check fails on
-4 guns (a tall scope sits well above an M700's muzzle; the HK416D, MP5 and P90 are too close
-to call).
+## 3. Rotating shrank the gun instead of turning it - fixed
 
-It turns out no per-gun guessing is needed. From TACZ's bytecode: every model is converted
-the same way on load (Y flipped, X and Z kept), and every default gun is authored the same
-way (muzzle toward -Z - true for all 52 that have a muzzle bone). So every gun is oriented
-identically, and the renderer now applies one fixed rotation. Verified on all 54 full-detail
-models before shipping - orientation-all-54-guns.png shows every one barrel-left and upright,
-including the SCAR, M700, HK416D, MP5 and P90.
+R rotated the footprint but the gun stayed horizontal and shrank into the tall box. It now
+turns with it - barrel up - and its length fits the box's height. Applies in the grid and to
+the gun on your cursor. Guns in the loadout boxes always show horizontal.
 
-This also removes two things CI still had to confirm from 2.12.2 (the muzzle-bone walk used
-`PoseStack.last().pose()` and JOML `transformPosition`).
+## 4. Top of the window cut off - fixed
 
-## Debugging
-
-`debugLogging = true` logs one line per gun: vertex count, full draw vs body only, how many
-hand parts were hidden, and the measured length and height.
+The window was 376 units tall; at GUI scale 3 on a 1080p screen there are only 360, so it
+centred 8 units above the top edge. The left column now starts 12 units higher (the armor
+column had spare room) with everything below shifted to match, and the window is sized to its
+content: 348 units, leaving 6 above and below at 360. On smaller screens the top is kept on
+screen and the bottom gets clipped instead. The corpse view uses the same height (its bag
+ends at 342).

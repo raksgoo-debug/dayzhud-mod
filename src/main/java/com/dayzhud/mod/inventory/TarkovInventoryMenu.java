@@ -67,16 +67,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     // Equipment columns - even spacing, aligned to the paperdoll's body parts.
     private static final int EQUIP_COL_X = 18;
     private static final int SIDE_COL_X = 138;
-    private static final int EQUIP_START_Y = 44;
+    private static final int EQUIP_START_Y = 32;   // 2.12.5: 44 -> 32, window fits a 360-tall GUI
     private static final int EQUIP_SPACING = 26;
 
     private static final int GEAR_X = 18;
-    private static final int GEAR_Y = 264;
+    private static final int GEAR_Y = 252;
     private static final int GEAR_COLS = 6;
     private static final int GEAR_SPACING = 22;
 
     private static final int HOTBAR_X = 20;
-    private static final int HOTBAR_Y = 324;
+    private static final int HOTBAR_Y = 312;
 
     // Right-hand container grid, present only when a chest/crate was opened.
     public static final int CONTAINER_X = 372;
@@ -137,7 +137,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     // a long sniper rendered barely a quarter of the box tall. Every gun is scaled to fit
     // either way; wider just means bigger. 16..116 and 122..166 stay inside the section panel.
     public static final int[] WEAPON_BOX_X = {16, 16, 122, 122};
-    public static final int[] WEAPON_BOX_Y = {168, 212, 168, 212};
+    public static final int[] WEAPON_BOX_Y = {156, 200, 156, 200};
     public static final int[] WEAPON_BOX_W = {100, 100, 44, 44};
     public static final int[] WEAPON_BOX_H = {30, 30, 30, 30};
 
@@ -659,7 +659,8 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     /** A rectangular region of one indexed storage that participates in grid placement.
      *  {@code menuStart} is the menu index of this region's own (0,0). */
     private record GridRegion(com.dayzhud.mod.inventory.grid.GridStorage storage,
-                               int start, int cols, int rows, int menuStart) {
+                               int start, int cols, int rows, int menuStart,
+                               java.util.function.IntPredicate usable) {
         int size() {
             return cols * rows;
         }
@@ -675,21 +676,23 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     private void buildGridRegions() {
         List<GridRegion> regions = new java.util.ArrayList<>();
+        java.util.function.IntPredicate all = i -> true;
         regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(player.getInventory()),
-                9, 9, 3, inventoryStartIndex));
+                9, 9, 3, inventoryStartIndex, all));
+        // The bag shows a fixed window of rows, but may have fewer real slots behind it.
         regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(backpackView),
-                0, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS, backpackStartIndex));
+                0, BACKPACK_COLS, BACKPACK_VISIBLE_ROWS, backpackStartIndex, backpackView::isVisibleSlotUsable));
         if (openedContainer != null && !corpseLayout) {
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(openedContainer),
-                    0, CONTAINER_COLS, containerRows, containerStartIndex));
+                    0, CONTAINER_COLS, containerRows, containerStartIndex, all));
         }
         if (corpseLayout) {
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
-                    CORPSE_MAIN_START, 9, 3, corpseInvStartIndex));
+                    CORPSE_MAIN_START, 9, 3, corpseInvStartIndex, all));
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
-                    CORPSE_HOTBAR_START, 9, 1, corpseHotbarStartIndex));
+                    CORPSE_HOTBAR_START, 9, 1, corpseHotbarStartIndex, all));
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseLootView),
-                    0, CORPSE_LOOT_COLS, CORPSE_BAG_VISIBLE_ROWS, corpseBagStartIndex));
+                    0, CORPSE_LOOT_COLS, CORPSE_BAG_VISIBLE_ROWS, corpseBagStartIndex, corpseLootView::isVisibleSlotUsable));
         }
         this.gridRegions = List.copyOf(regions);
     }
@@ -706,7 +709,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         if (!com.dayzhud.mod.inventory.grid.GridConfig.ENABLED.get()) return;
         for (GridRegion region : gridRegions) {
             com.dayzhud.mod.inventory.grid.ItemGrid.reconcile(
-                    region.storage(), region.start(), region.cols(), region.rows());
+                    region.storage(), region.start(), region.cols(), region.rows(), region.usable());
         }
     }
 
@@ -728,7 +731,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         int col = local % region.cols();
         int row = local / region.cols();
         return com.dayzhud.mod.inventory.grid.ItemGrid.fits(
-                region.storage(), region.start(), region.cols(), region.rows(), col, row, footprint);
+                region.storage(), region.start(), region.cols(), region.rows(), col, row, footprint, region.usable());
     }
 
     /** Whether the multi-cell item sitting at {@code menuSlotId} actually holds its
@@ -759,6 +762,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     @Override
     public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType,
                          Player player) {
+        // Drag-placing ("quick craft": press, move across slots, release) spreads the carried
+        // stack over the slots it passed - with no idea of footprints, so a gun landed in the
+        // first slot it touched whether it fitted or not. That was the "sometimes" in 2.12.4's
+        // bug report: the mouse moving a pixel between press and release. Refused outright for
+        // a multi-cell item, including the start/end phases (slotId -999); the screen turns a
+        // press over the grid into a plain placement click instead, so nothing is lost.
+        if (clickType == net.minecraft.world.inventory.ClickType.QUICK_CRAFT
+                && com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(getCarried())) {
+            return;
+        }
         GridRegion region = (slotId >= 0 && slotId < slots.size()) ? regionFor(slotId) : null;
         if (region == null) {
             super.clicked(slotId, button, clickType, player);
@@ -775,6 +788,21 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             // invisible marker directly, which is exactly the corruption this whole
             // mechanism exists to prevent.
             if (clickedIsReservation) return;
+            if (clickType == net.minecraft.world.inventory.ClickType.SWAP) {
+                // Number key over a grid cell: vanilla swaps that hotbar slot in, unchecked.
+                // A multi-cell item coming INTO the grid must fit here, on an empty cell.
+                ItemStack incoming = (button >= 0 && button < player.getInventory().getContainerSize())
+                        ? player.getInventory().getItem(button) : ItemStack.EMPTY;
+                if (com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(incoming)) {
+                    int local = slotId - region.menuStart();
+                    if (!there.isEmpty() || !com.dayzhud.mod.inventory.grid.ItemGrid.fits(region.storage(),
+                            region.start(), region.cols(), region.rows(), local % region.cols(),
+                            local / region.cols(), com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(incoming),
+                            region.usable())) {
+                        return;
+                    }
+                }
+            }
             super.clicked(slotId, button, clickType, player);
             reconcileGrids();
             return;
@@ -825,7 +853,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             com.dayzhud.mod.inventory.grid.Footprint fp =
                     com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(carried);
             if (!com.dayzhud.mod.inventory.grid.ItemGrid.fits(
-                    region.storage(), region.start(), region.cols(), region.rows(), col, row, fp)) {
+                    region.storage(), region.start(), region.cols(), region.rows(), col, row, fp, region.usable())) {
                 return; // wouldn't fit - bounce, same as the preview outline already showed
             }
             if (com.dayzhud.mod.inventory.grid.GridConfig.DEBUG_LOGGING.get()) {
@@ -902,9 +930,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         Slot sourceSlot = slots.get(index);
         if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;
         ItemStack maybeGridStack = sourceSlot.getItem();
-        if (com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(maybeGridStack)
-                || (com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(maybeGridStack)
-                        && regionFor(index) != null)) {
+        // (2.12.5: multi-cell items CAN be shift-clicked now - moveItemStackTo below is
+        // overridden to find a spot where the whole footprint fits, rotating if needed.)
+        if (com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(maybeGridStack)) {
             return ItemStack.EMPTY;
         }
 
@@ -955,10 +983,63 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             sourceSlot.setChanged();
         }
 
+        reconcileGrids();
         if (sourceStack.getCount() == original.getCount()) return ItemStack.EMPTY;
 
         sourceSlot.onTake(player, sourceStack);
         return original;
+    }
+
+    /**
+     * Vanilla's shift-click mover drops a stack into the first empty INDEX in a range. For a
+     * multi-cell item that ignores footprints entirely - the third way (with drag-placing and
+     * number keys) a gun could land where it didn't fit. For a multi-cell stack, every grid
+     * region inside [start, end) is searched for a spot where the whole footprint fits
+     * (reading order, current rotation first, then turned); non-grid stretches of the range
+     * (hotbar, loadout, equipment) still go through vanilla. 1x1 items are untouched vanilla.
+     */
+    @Override
+    protected boolean moveItemStackTo(ItemStack stack, int start, int end, boolean reverse) {
+        if (!com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(stack) || gridRegions == null) {
+            return super.moveItemStackTo(stack, start, end, reverse);
+        }
+        int i = start;
+        while (i < end && !stack.isEmpty()) {
+            GridRegion region = regionFor(i);
+            if (region != null) {
+                if (placeInRegion(region, stack)) return true;
+                i = region.menuStart() + region.size();
+            } else {
+                int runEnd = i;
+                while (runEnd < end && regionFor(runEnd) == null) runEnd++;
+                if (super.moveItemStackTo(stack, i, runEnd, reverse)) return true;
+                i = runEnd;
+            }
+        }
+        return false;
+    }
+
+    /** First spot in reading order where the whole footprint fits; tries the stack's current
+     *  rotation, then the other one. Places a copy there and empties {@code stack}. */
+    private boolean placeInRegion(GridRegion region, ItemStack stack) {
+        boolean rotated = com.dayzhud.mod.inventory.grid.ItemGrid.isRotated(stack);
+        for (boolean rot : new boolean[]{rotated, !rotated}) {
+            ItemStack candidate = stack.copy();
+            com.dayzhud.mod.inventory.grid.ItemGrid.setRotated(candidate, rot);
+            com.dayzhud.mod.inventory.grid.Footprint fp = com.dayzhud.mod.inventory.grid.ItemGrid.footprintOf(candidate);
+            for (int row = 0; row < region.rows(); row++) {
+                for (int col = 0; col < region.cols(); col++) {
+                    if (com.dayzhud.mod.inventory.grid.ItemGrid.fits(region.storage(), region.start(),
+                            region.cols(), region.rows(), col, row, fp, region.usable())) {
+                        slots.get(region.menuStart() + row * region.cols() + col).set(candidate);
+                        stack.setCount(0);
+                        reconcileGrids();
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** Backpack slot that switches itself off when the scrolled-to position has no real slot. */

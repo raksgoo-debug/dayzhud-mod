@@ -171,13 +171,17 @@ public final class TaczFlatGunRenderer {
      * depth {@code z}. Returns false (drawing nothing) if it can't; call {@link #canRender}
      * first so the caller can prepare the box only when this will succeed.
      */
-    public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z) {
+    public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z,
+                                 boolean rotated) {
         if (!canRender(stack)) return false;
         Bounds b = bounds(stack);
         // No padding here: the caller's box is already inset from its panel border. (2.12.x
         // padded twice - 2 px in the caller plus 2 px here - leaving a 2x1 pistol 10 of its
         // 18 px of height.)
-        float s = Math.min(w / b.length(), h / b.height());
+        // Rotated (R in the grid): the footprint is tall, so the gun's length fits the box's
+        // height. Before 2.12.5 the gun stayed horizontal and just shrank into the tall box.
+        float s = rotated ? Math.min(w / b.height(), h / b.length())
+                          : Math.min(w / b.length(), h / b.height());
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
@@ -186,6 +190,12 @@ public final class TaczFlatGunRenderer {
             if (m == null) return false;
 
             pose.translate(x + w / 2f, y + h / 2f, z);
+            if (rotated) {
+                // Screen-space quarter turn (y-down): screen-left goes to screen-up, so the
+                // barrel points up. Applied outside everything below, so it turns the finished
+                // side-on picture rather than the model.
+                pose.mulPose(Axis.ZP.rotationDegrees(90f));
+            }
             // View space from here on: +X screen-right, +Y screen-up (the Y flip, like
             // vanilla's own GUI item render, turns model-up into screen-up).
             pose.scale(s, -s, s);

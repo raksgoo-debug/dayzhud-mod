@@ -116,12 +116,26 @@ public final class ItemGrid {
      */
     public static boolean fits(GridStorage storage, int start, int cols, int rows,
                                 int col, int row, Footprint footprint) {
+        return fits(storage, start, cols, rows, col, row, footprint, i -> true);
+    }
+
+    /**
+     * {@code usable} takes a region-local cell index and says whether that cell really
+     * exists. A backpack or corpse bag shows a fixed window of rows, but the bag behind it can
+     * have fewer slots - and those missing cells read as EMPTY while silently dropping any
+     * write. Without this, a gun could be placed hanging off the end of a small bag (2.12.4
+     * bug report: "you can put it somewhere that doesn't have the right amount of space").
+     * A missing cell is treated as occupied.
+     */
+    public static boolean fits(GridStorage storage, int start, int cols, int rows,
+                                int col, int row, Footprint footprint, java.util.function.IntPredicate usable) {
         if (col < 0 || row < 0) return false;
         if (col + footprint.width() > cols || row + footprint.height() > rows) return false;
         for (int dr = 0; dr < footprint.height(); dr++) {
             for (int dc = 0; dc < footprint.width(); dc++) {
-                int idx = start + (row + dr) * cols + (col + dc);
-                if (!storage.get(idx).isEmpty()) return false;
+                int local = (row + dr) * cols + (col + dc);
+                if (!usable.test(local)) return false;
+                if (!storage.get(start + local).isEmpty()) return false;
             }
         }
         return true;
@@ -143,6 +157,13 @@ public final class ItemGrid {
      * cause it).
      */
     public static void reconcile(GridStorage storage, int start, int cols, int rows) {
+        reconcile(storage, start, cols, rows, i -> true);
+    }
+
+    /** As above; a cell failing {@code usable} (region-local index) is never claimed as a
+     *  shadow, so a footprint that would run off the end of a small bag isn't reserved. */
+    public static void reconcile(GridStorage storage, int start, int cols, int rows,
+                                 java.util.function.IntPredicate usable) {
         int size = cols * rows;
 
         for (int i = 0; i < size; i++) {
@@ -169,7 +190,8 @@ public final class ItemGrid {
             for (int dr = 0; dr < fp.height(); dr++) {
                 for (int dc = 0; dc < fp.width(); dc++) {
                     if (dc == 0 && dr == 0) continue;
-                    if (!storage.get(start + (row + dr) * cols + (col + dc)).isEmpty()) {
+                    if (!usable.test((row + dr) * cols + (col + dc))
+                            || !storage.get(start + (row + dr) * cols + (col + dc)).isEmpty()) {
                         clear = false;
                         break outer;
                     }
