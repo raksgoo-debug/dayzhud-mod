@@ -7,50 +7,55 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Draws a TACZ gun as its real 3D model, side-on, barrel pointing left, contained (never
  * stretched) inside a box - the look of a gun lying in a Tarkov-style grid.
  *
- * <h2>Why FIXED, and why TACZ is never called directly</h2>
- * Verified by disassembling TACZ 1.1.8's {@code GunItemRendererWrapper}: in the GUI context
- * TACZ deliberately draws only a small diagonal 64x64 "slot" sprite, never the model - which
- * is why stretching or tilting the normal inventory icon could never produce a side view. In
- * the {@code FIXED} context (item frames) it renders the real model, posed by the model's own
- * {@code fixed} bone (rotated 90 degrees about Y in the model files - i.e. side-on) and the
- * per-gun "fixed" scale from its display file. So this just asks Minecraft to draw the stack
- * in {@code FIXED} mode inside our own pose; TACZ does all the model work with its own code,
- * attachments included. No reflection into TACZ at all, so no TACZ-version coupling here.
+ * <h2>How it gets at the model (every call below verified against TACZ 1.1.8's bytecode)</h2>
+ * In GUI slots TACZ deliberately draws only a small diagonal 64x64 sprite, never the model,
+ * so the model has to be drawn directly: {@code TimelessAPI.getGunDisplay(stack)} ->
+ * {@code GunDisplayInstance.getGunModel()} / {@code getModelTexture()} ->
+ * {@code BedrockGunModel.render(PoseStack, ItemStack, ItemDisplayContext, RenderType, int, int)}.
+ * TACZ still does all the model work with its own code (attachments included); this only
+ * supplies the pose. All TACZ calls go through reflection, same as TaczMarketCompat, so TACZ
+ * stays an optional dependency.
  *
- * <h2>Fitting it into the box: measured, not guessed</h2>
- * Every gun model is a different size, so there is no correct constant scale. The first time
- * a given gun is drawn it is rendered once into {@link Recorder} - a VertexConsumer that
- * stores vertex positions instead of drawing - to get the model's real extent. That is
- * cached (keyed on gun id + NBT, since attachments change the silhouette) and used to scale
- * uniformly and centre every later draw.
+ * <h2>Why 2.12.0 silently drew nothing</h2>
+ * It asked the item renderer to draw in FIXED mode and measured the result by passing a
+ * recording MultiBufferSource. But TACZ's BedrockModel.render ignores any buffer you hand it:
+ * it takes Minecraft's global {@code renderBuffers().bufferSource()} itself and flushes it
+ * itself. The recorder never saw a vertex, the measurement came back empty, and every gun
+ * quietly fell back to the plain sprite. One level down, though,
+ * {@code BedrockPart.render(PoseStack, ItemDisplayContext, VertexConsumer, int, int)} DOES
+ * take a consumer, and {@code BedrockModel.getShouldRender()} is the exact list of top-level
+ * parts the model draws - so measuring now walks those parts into the recorder directly. An
+ * empty measurement also logs a warning now instead of failing silently.
  *
- * <h2>Which way the barrel points: also measured</h2>
- * Deriving the final facing from TACZ's bone-rotation sign conventions in bytecode would be a
- * guess stacked on a guess. Instead: a gun's muzzle end is thin and its stock/grip end is
- * tall, so the measured vertices at each end of the model's length are compared, and the gun
- * is turned 180 degrees about the vertical axis if the muzzle came out on the right. A turn,
- * not a mirror - so details like the ejection port stay on their real side. Can mis-guess on a
- * gun that is equally tall at both ends (a plain tube launcher); that only flips its facing.
+ * <h2>Orientation: read from the geometry, not from TACZ's conventions</h2>
+ * From the measured vertices: the gun's length axis is the longer of X and Z; the muzzle is
+ * the thinner end along it (barrels are thin, stocks and grips are tall); "up" is the side
+ * the muzzle sits on vertically (the bore runs along the top of a gun - grips, magazines and
+ * stock drops hang below it). Three rotations then put the muzzle left and the top up. All
+ * are proper rotations, never mirrors, so the gun's real side faces out. Can mis-guess on a
+ * gun equally thick at both ends (a plain launcher tube) - that only flips its facing.
  *
  * <h2>Failure mode</h2>
  * Any exception latches {@link #broken} and every caller falls back to the plain item render
- * for the rest of the session, with one warning in the log - a cosmetic feature must never be
- * what breaks the inventory screen.
+ * for the rest of the session, with one warning in the log.
  */
 public final class TaczFlatGunRenderer {
 
@@ -58,9 +63,10 @@ public final class TaczFlatGunRenderer {
     /** Fraction of the model's length, at each end, sampled to decide which end is the muzzle. */
     private static final float END_BAND = 0.15f;
 
+    /** Model-space extent plus the orientation decisions derived from it. */
     private record Bounds(float minX, float maxX, float minY, float maxY, float minZ, float maxZ,
-                          boolean muzzleRight) {
-        float width() { return maxX - minX; }
+                          boolean lengthAlongZ, boolean muzzleAtMax, boolean upIsNegativeY) {
+        float length() { return lengthAlongZ ? maxZ - minZ : maxX - minX; }
         float height() { return maxY - minY; }
     }
 
@@ -72,15 +78,62 @@ public final class TaczFlatGunRenderer {
     };
 
     private static boolean broken;
+    private static boolean reflectionReady;
+    private static Method getGunDisplay, getGunModel, getModelTexture, getShouldRender, partRender;
+    private static final Map<Class<?>, Method> MODEL_RENDER = new java.util.HashMap<>();
+    private static final java.util.Set<String> WARNED_EMPTY = new java.util.HashSet<>();
 
     private TaczFlatGunRenderer() {}
+
+    private static boolean initReflection() {
+        if (reflectionReady) return true;
+        try {
+            Class<?> api = Class.forName("com.tacz.guns.api.TimelessAPI");
+            getGunDisplay = api.getMethod("getGunDisplay", ItemStack.class);
+            Class<?> display = Class.forName("com.tacz.guns.client.resource.GunDisplayInstance");
+            getGunModel = display.getMethod("getGunModel");
+            getModelTexture = display.getMethod("getModelTexture");
+            Class<?> bedrockModel = Class.forName("com.tacz.guns.client.model.bedrock.BedrockModel");
+            getShouldRender = bedrockModel.getMethod("getShouldRender");
+            Class<?> part = Class.forName("com.tacz.guns.client.model.bedrock.BedrockPart");
+            partRender = part.getMethod("render", PoseStack.class, ItemDisplayContext.class,
+                    VertexConsumer.class, int.class, int.class);
+            reflectionReady = true;
+            return true;
+        } catch (Throwable t) {
+            fail(t);
+            return false;
+        }
+    }
+
+    private record Model(Object model, ResourceLocation texture) {}
+
+    private static Model modelFor(ItemStack stack) throws Exception {
+        Optional<?> display = (Optional<?>) getGunDisplay.invoke(null, stack);
+        if (display.isEmpty()) return null;
+        Object model = getGunModel.invoke(display.get());
+        Object texture = getModelTexture.invoke(display.get());
+        if (model == null || !(texture instanceof ResourceLocation tex)) return null;
+        return new Model(model, tex);
+    }
+
+    private static Method modelRender(Class<?> modelClass) throws NoSuchMethodException {
+        Method m = MODEL_RENDER.get(modelClass);
+        if (m == null) {
+            m = modelClass.getMethod("render", PoseStack.class, ItemStack.class,
+                    ItemDisplayContext.class, RenderType.class, int.class, int.class);
+            MODEL_RENDER.put(modelClass, m);
+        }
+        return m;
+    }
 
     /** Whether {@link #render} will draw this stack - measures it (once) if needed. */
     public static boolean canRender(ItemStack stack) {
         if (broken || !GridConfig.FLAT_GUN_RENDER.get()) return false;
         if (TaczMarketCompat.gunIdOf(stack).isEmpty()) return false;
+        if (!initReflection()) return false;
         Bounds b = bounds(stack);
-        return b != null && b.width() > 1e-4f && b.height() > 1e-4f;
+        return b != null && b.length() > 1e-4f && b.height() > 1e-4f;
     }
 
     /**
@@ -92,29 +145,40 @@ public final class TaczFlatGunRenderer {
         if (!canRender(stack)) return false;
         Bounds b = bounds(stack);
         int pad = 2;
-        float s = Math.min((w - pad * 2) / b.width(), (h - pad * 2) / b.height());
+        float s = Math.min((w - pad * 2) / b.length(), (h - pad * 2) / b.height());
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
         try {
+            Model m = modelFor(stack);
+            if (m == null) return false;
+
             pose.translate(x + w / 2f, y + h / 2f, z);
-            // Y flipped, like vanilla's own GUI item render: model space is y-up, the screen
-            // is y-down; the GUI projection makes the combined handedness come out right.
+            // View space from here on: +X screen-right, +Y screen-up (the Y flip, like
+            // vanilla's own GUI item render, turns model-up into screen-up).
             pose.scale(s, -s, s);
-            if (b.muzzleRight()) {
-                pose.mulPose(Axis.YP.rotationDegrees(180f));
+            // Rotations listed outermost first; each vertex sees them innermost first:
+            // (1) roll 180 about the length axis if the gun came out upside down,
+            // (2) turn a Z-length model so its length lies along X,
+            // (3) turn 180 about vertical if the muzzle is now on the right.
+            // (1) doesn't move the muzzle along the length axis and (2) maps +Z to +X, so
+            // "muzzle at the max end" is still the right test for (3).
+            if (b.muzzleAtMax()) pose.mulPose(Axis.YP.rotationDegrees(180f));
+            if (b.lengthAlongZ()) pose.mulPose(Axis.YP.rotationDegrees(90f));
+            if (b.upIsNegativeY()) {
+                pose.mulPose((b.lengthAlongZ() ? Axis.ZP : Axis.XP).rotationDegrees(180f));
             }
             pose.translate(-(b.minX() + b.maxX()) / 2f, -(b.minY() + b.maxY()) / 2f,
                     -(b.minZ() + b.maxZ()) / 2f);
 
             // Flat-item lighting lights faces pointing at the viewer - the gun's side, here.
-            // The default 3D-item lighting lights mostly from above and leaves a side-on
-            // model dark. Restored below either way, since that's what vanilla leaves set.
+            // The default 3D-item lighting comes mostly from above and leaves it dark.
             Lighting.setupForFlatItems();
-            Minecraft mc = Minecraft.getInstance();
-            mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY, pose, graphics.bufferSource(), mc.level, 0);
+            // TACZ draws into Minecraft's global buffer and flushes it itself, so make sure
+            // anything already queued in the GUI (the panel behind the gun) goes out first.
             graphics.flush();
+            modelRender(m.model().getClass()).invoke(m.model(), pose, stack, ItemDisplayContext.FIXED,
+                    RenderType.entityCutoutNoCull(m.texture()), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
             return true;
         } catch (Throwable t) {
             fail(t);
@@ -135,18 +199,27 @@ public final class TaczFlatGunRenderer {
         Bounds cached = CACHE.get(key);
         if (cached != null) return cached;
         try {
+            Model m = modelFor(stack);
+            if (m == null) return null;
             Recorder rec = new Recorder();
-            MultiBufferSource capture = renderType -> rec;
-            Minecraft mc = Minecraft.getInstance();
-            mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED, FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY, new PoseStack(), capture, mc.level, 0);
+            PoseStack ps = new PoseStack();
+            for (Object part : (List<?>) getShouldRender.invoke(m.model())) {
+                partRender.invoke(part, ps, ItemDisplayContext.FIXED, rec, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            }
             Bounds b = rec.toBounds();
-            if (b == null) return null;
+            if (b == null) {
+                if (WARNED_EMPTY.add(key)) {
+                    DayzHudMod.LOGGER.warn("dayzhud: measured no geometry for gun {}; drawing it "
+                            + "as a normal item instead.", key);
+                }
+                return null;
+            }
             CACHE.put(key, b);
             if (GridConfig.DEBUG_LOGGING.get()) {
-                DayzHudMod.LOGGER.info("flat gun: measured {} -> {}x{}x{} model units, muzzle {}",
-                        key, b.width(), b.height(), b.maxZ() - b.minZ(),
-                        b.muzzleRight() ? "right (turning 180)" : "left");
+                DayzHudMod.LOGGER.info("flat gun: {} -> {} verts, length {} along {}, height {}, "
+                                + "muzzle at {} end, up is {}Y",
+                        key, rec.n, b.length(), b.lengthAlongZ() ? "Z" : "X", b.height(),
+                        b.muzzleAtMax() ? "max" : "min", b.upIsNegativeY() ? "-" : "+");
             }
             return b;
         } catch (Throwable t) {
@@ -206,17 +279,23 @@ public final class TaczFlatGunRenderer {
                 minY = Math.min(minY, ys[i]); maxY = Math.max(maxY, ys[i]);
                 minZ = Math.min(minZ, zs[i]); maxZ = Math.max(maxZ, zs[i]);
             }
-            float band = (maxX - minX) * END_BAND;
-            float lMin = Float.MAX_VALUE, lMax = -Float.MAX_VALUE, rMin = Float.MAX_VALUE, rMax = -Float.MAX_VALUE;
+            boolean alongZ = (maxZ - minZ) > (maxX - minX);
+            float[] len = alongZ ? zs : xs;
+            float lo = alongZ ? minZ : minX, hi = alongZ ? maxZ : maxX;
+            float band = (hi - lo) * END_BAND;
+
+            float loMin = Float.MAX_VALUE, loMax = -Float.MAX_VALUE, hiMin = Float.MAX_VALUE, hiMax = -Float.MAX_VALUE;
             for (int i = 0; i < n; i++) {
-                if (xs[i] <= minX + band) { lMin = Math.min(lMin, ys[i]); lMax = Math.max(lMax, ys[i]); }
-                if (xs[i] >= maxX - band) { rMin = Math.min(rMin, ys[i]); rMax = Math.max(rMax, ys[i]); }
+                if (len[i] <= lo + band) { loMin = Math.min(loMin, ys[i]); loMax = Math.max(loMax, ys[i]); }
+                if (len[i] >= hi - band) { hiMin = Math.min(hiMin, ys[i]); hiMax = Math.max(hiMax, ys[i]); }
             }
-            float leftSpread = lMax - lMin, rightSpread = rMax - rMin;
-            // Muzzle = the thinner end. Screen x follows model x in render()'s pose, so a
-            // thin RIGHT end means the barrel would point right: turn it around.
-            boolean muzzleRight = rightSpread < leftSpread;
-            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, muzzleRight);
+            // Muzzle = the thinner end.
+            boolean muzzleAtMax = (hiMax - hiMin) < (loMax - loMin);
+            // The bore runs along the top: if the muzzle's vertical centre is below the
+            // model's middle, the model is upside down in this space.
+            float muzzleCentre = muzzleAtMax ? (hiMin + hiMax) / 2f : (loMin + loMax) / 2f;
+            boolean upNegative = muzzleCentre < (minY + maxY) / 2f;
+            return new Bounds(minX, maxX, minY, maxY, minZ, maxZ, alongZ, muzzleAtMax, upNegative);
         }
     }
 }
