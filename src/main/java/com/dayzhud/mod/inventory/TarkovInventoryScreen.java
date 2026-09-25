@@ -221,15 +221,17 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // Vanilla draws the carried item as its normal inventory icon - for a TACZ gun, the
         // small diagonal sprite - and that draw is private, so it can't be replaced. Instead
         // the carried stack is blanked for the length of vanilla's pass only (restored in
-        // finally, before anything reads it again - tooltips included) and drawn flat below.
+        // finally, before anything reads it again - tooltips included) and drawn below at its
+        // footprint size: flat if it has a model render, otherwise its own icon scaled up the
+        // way the grid draws it (CAPS armour used to stay a small 16x16 icon while carried).
         ItemStack carried = menu.getCarried();
-        boolean flatCarried = !carried.isEmpty() && ItemGrid.isMultiCell(carried)
-                && FlatItems.canRender(carried);
-        if (flatCarried) menu.setCarried(ItemStack.EMPTY);
+        boolean bigCarried = !carried.isEmpty()
+                && (ItemGrid.isMultiCell(carried) || FlatModelRenderer.canRender(carried));
+        if (bigCarried) menu.setCarried(ItemStack.EMPTY);
         try {
             super.render(graphics, mouseX, mouseY, partialTick);
         } finally {
-            if (flatCarried) menu.setCarried(carried);
+            if (bigCarried) menu.setCarried(carried);
         }
 
         drawSearchCover(graphics);
@@ -249,7 +251,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawStatBar(graphics);
         drawGridIcons(graphics);
         drawGridPlacementPreview(graphics, mouseX, mouseY);
-        if (flatCarried) drawCarriedFlatGun(graphics, carried, mouseX, mouseY);
+        if (bigCarried) drawCarriedBig(graphics, carried, mouseX, mouseY);
 
         renderTooltip(graphics, mouseX, mouseY);
         drawCurioHoverTooltip(graphics, mouseX, mouseY);
@@ -402,6 +404,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 int pad = 4;
                 drawFlatWeaponIcon(graphics, type, bx + pad, by + pad, bw - pad * 2, bh - pad * 2,
                         WEAPON_GHOST_COLOR);
+                // The whole box takes clicks (isHovering), so the whole box lights up.
+                if (mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + bh) {
+                    graphics.fill(bx + 1, by + 1, bx + bw - 1, by + bh - 1, FLAT_HOVER_COLOR);
+                }
             } else if (TaczFlatGunRenderer.canRender(stack)) {
                 // Equipped TACZ gun: its real model, side-on, filling the box - same as the
                 // grid. The box outline/background above stays; the panel covers vanilla's
@@ -530,7 +536,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         for (Slot slot : menu.slots) {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty() || ItemGrid.isReservation(stack)) continue;
-            if (!ItemGrid.isMultiCell(stack) || !menu.isGridSlot(slot.index)) continue;
+            // 1x1 items too when they have a model render (pistol magazines) - their tilted
+            // inventory icon is what that render replaces.
+            if ((!ItemGrid.isMultiCell(stack) && !FlatModelRenderer.canRender(stack))
+                    || !menu.isGridSlot(slot.index)) continue;
             Footprint fp = ItemGrid.footprintOf(stack);
             // A stack that lost its footprint contention (see GridStorage's class doc and
             // ItemGrid.hasReservedFootprint) - most commonly two same-type items that ended
@@ -573,15 +582,42 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final float CARRIED_Z = 385;
 
     /**
-     * The carried gun, flat, at its footprint size, with its top-left cell centred on the
-     * cursor - the same cell the placement preview outlines and a click would anchor to.
+     * The carried item at its footprint size, with its top-left cell centred on the cursor -
+     * the same cell the placement preview outlines and a click would anchor to. Its model
+     * render if it has one; otherwise (CAPS armour, ...) its own icon scaled into the
+     * footprint, as the grid draws it; then its count / durability bar.
      */
-    private void drawCarriedFlatGun(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY) {
+    private void drawCarriedBig(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY) {
         Footprint fp = ItemGrid.footprintOf(stack);
         int x = mouseX - 9, y = mouseY - 9, w = fp.width() * 18, h = fp.height() * 18;
         int in = TaczFlatGunRenderer.GRID_INSET;
-        FlatItems.render(graphics, stack, x + in, y + in, w - 2 * in, h - 2 * in, CARRIED_Z,
-                ItemGrid.isRotated(stack), -1f);
+        boolean drawn = FlatItems.canRender(stack) && FlatItems.render(graphics, stack, x + in, y + in,
+                w - 2 * in, h - 2 * in, CARRIED_Z, ItemGrid.isRotated(stack), -1f);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0, 0, CARRIED_Z - 150);   // renderItem adds its own 150
+        if (!drawn) renderTiltedItem(graphics, stack, x + 1, y + 1, w - 2, h - 2);
+        graphics.renderItemDecorations(font, stack, x + w - 17, y + h - 17);
+        graphics.pose().popPose();
+    }
+
+    /**
+     * A loadout slot's real Slot is a 16x16 square in the middle of its big box (vanilla has no
+     * variable-size Slot), so only that square used to take clicks. Vanilla routes every slot
+     * hover and click test through this method with the slot's position and 16x16, so a match
+     * on a weapon slot's position is answered for its whole box instead - click anywhere in it.
+     */
+    @Override
+    protected boolean isHovering(int x, int y, int w, int h, double mouseX, double mouseY) {
+        if (w == 16 && h == 16) {
+            for (int i = 0; i < menu.weaponSlots.length; i++) {
+                Slot ws = menu.weaponSlots[i];
+                if (ws != null && ws.x == x && ws.y == y) {
+                    return super.isHovering(TarkovInventoryMenu.WEAPON_BOX_X[i], TarkovInventoryMenu.WEAPON_BOX_Y[i],
+                            TarkovInventoryMenu.WEAPON_BOX_W[i], TarkovInventoryMenu.WEAPON_BOX_H[i], mouseX, mouseY);
+                }
+            }
+        }
+        return super.isHovering(x, y, w, h, mouseX, mouseY);
     }
 
     /** Set when a press was consumed as a placement click; swallows the matching release. */

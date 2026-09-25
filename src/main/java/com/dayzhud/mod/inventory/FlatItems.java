@@ -4,13 +4,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
 /** The grid's "real model, fitted and centred" draw, whichever renderer the item needs:
- *  TACZ guns (and LR items) or backpacks. */
+ *  TACZ guns (and LR items), or backpacks and magazines. */
 public final class FlatItems {
 
     private FlatItems() {}
 
     public static boolean canRender(ItemStack stack) {
-        return TaczFlatGunRenderer.canRender(stack) || FlatBackpackRenderer.canRender(stack);
+        return TaczFlatGunRenderer.canRender(stack) || FlatModelRenderer.canRender(stack);
     }
 
     /** Draws the item in the box; false (nothing drawn) if it can't. */
@@ -19,6 +19,6 @@ public final class FlatItems {
         if (TaczFlatGunRenderer.canRender(stack)) {
             return TaczFlatGunRenderer.render(graphics, stack, x, y, w, h, z, rotated, maxScale);
         }
-        return FlatBackpackRenderer.render(graphics, stack, x, y, w, h, z, rotated);
+        return FlatModelRenderer.render(graphics, stack, x, y, w, h, z, rotated);
     }
 }

@@ -19,7 +19,7 @@ import org.lwjgl.opengl.GL30;
  * came out opaque. Vertex counting can't do this - models carry geometry you never see (TACZ's
  * stencil-masked scope reticles, transparent cubes, ...) - see TaczFlatGunRenderer 2.13.4.
  *
- * Shared by TaczFlatGunRenderer and FlatBackpackRenderer since 2.13.6.
+ * Shared by TaczFlatGunRenderer and FlatModelRenderer since 2.13.6.
  */
 public final class PixelProbe {
 

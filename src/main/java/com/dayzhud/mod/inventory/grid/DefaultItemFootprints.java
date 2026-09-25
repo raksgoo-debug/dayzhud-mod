@@ -14,7 +14,7 @@ import java.util.Map;
  * with 0.25 slack - and melee weapons at least 2 wide so a knife isn't a single cell.
  *
  * <b>ITEMS</b> - plain items keyed by registry id. TaCZ: Magazines has two items; the regular
- * magazine is 2x1, the small (pistol) one stays 1x1.
+ * magazine is 1x2 (standing), the small (pistol) one stays 1x1. Plus the backpacks below.
  *
  * Config entries (gunIdFootprints / itemFootprints) override both tables.
  */
@@ -46,7 +46,8 @@ public final class DefaultItemFootprints {
     );
 
     public static final Map<String, Footprint> ITEMS = Map.ofEntries(
-            Map.entry("taczmagazines:magazine", new Footprint(2, 1)),
+            // Standing up, as FlatModelRenderer draws them (2.13.7; was 2x1 lying down).
+            Map.entry("taczmagazines:magazine", new Footprint(1, 2)),
             Map.entry("taczmagazines:magazine_small", new Footprint(1, 1)),
             // Backpacks (2.13.6) - see BACKPACKS below for how they were sized.
             Map.entry("fieldkit:assault_backpack", new Footprint(2, 2)),
@@ -72,7 +73,7 @@ public final class DefaultItemFootprints {
 
     /**
      * Backpacks drawn as their real 3D model, front-on, filling their footprint
-     * (FlatBackpackRenderer). Sized offline from each bag's worn model - fieldkit's item models
+     * (FlatModelRenderer). Sized offline from each bag's worn model - fieldkit's item models
      * and CAPS AWIM's entity models are both in player pixels, so one scale fits both: 2.9 GUI
      * px per player pixel, visible width/height rounded to the nearest cell after the 2 px
      * inset, at least 2x2 and at most 3x3 so any bag still fits the 9x3 inventory.

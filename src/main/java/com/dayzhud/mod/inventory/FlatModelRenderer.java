@@ -15,85 +15,107 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Draws a backpack in the grid as its real 3D model, front-on (pockets toward you), filling
- * and centred in its footprint - the backpack counterpart of TaczFlatGunRenderer (2.13.6).
- * Only the bags listed in DefaultItemFootprints.BACKPACKS; everything else keeps the normal
- * item render.
+ * Draws non-gun items in the grid as their real 3D model, filling and centred in their
+ * footprint - the counterpart of TaczFlatGunRenderer for:
  *
  * <ul>
- *   <li><b>fieldkit</b> bags' item models ARE the 3D model, built at worn scale with the
- *       pockets facing -z (see fieldkit's BackpackCurioRenderer). Drawn through the item
- *       renderer with no display transform, turned 180 about Y.</li>
- *   <li><b>CAPS AWIM</b> bags are a flat icon as an item; the 3D model only exists in their
- *       worn (Curios) renderer. Each bag {@code <id>} has a renderer class
- *       {@code ...client.renderer.<Id>Renderer} whose constructor bakes its model and which
- *       keeps it in a field, with its texture in a static field - both read reflectively
- *       (CAPS stays optional). Entity models are y-down with the bag on the wearer's back
- *       (+z), so turned 180 about Z. The renderer's own worn scale is left out: the bag is
- *       fitted to its box anyway.</li>
+ *   <li><b>Backpacks</b> (DefaultItemFootprints.BACKPACKS), front-on, pockets toward you.
+ *       fieldkit bags' item models ARE the 3D model, built at worn scale with the pockets at
+ *       -z (fieldkit's BackpackCurioRenderer): drawn through the item renderer with no display
+ *       transform, turned 180 about Y. CAPS AWIM bags are a flat icon as an item; the 3D model
+ *       only exists in their worn (Curios) renderer. Each bag {@code <id>} has a renderer class
+ *       {@code ...client.renderer.<Id>Renderer} whose constructor bakes its model and keeps it
+ *       in a field, with its texture in a static field - both read reflectively (CAPS stays
+ *       optional). Entity models are y-down with the bag on the wearer's back (+z), so turned
+ *       180 about Z. (2.13.6)</li>
+ *   <li><b>TaCZ: Magazines</b>, side-on like the gun they come from, standing up (2.13.7).
+ *       Its renderer draws each magazine from its gun's TACZ model; in the GUI it uses a tilted
+ *       3/4 view that turns into a thin diagonal sliver when the grid scales it up. In every
+ *       other context (verified in its applyDisplayTransform bytecode) it draws the magazine in
+ *       the gun model's own axes, y flipped up - so FIXED, turned 90 about Y, is exactly the
+ *       guns' side-on pose. Reached through Forge's IClientItemExtensions, no reflection.</li>
  * </ul>
  *
- * Sized and centred by what's visible, via PixelProbe, measured once per bag.
+ * Sized and centred by what's visible, via PixelProbe, measured once per item (per NBT for
+ * magazines - each gun's magazine is a different model).
  */
-public final class FlatBackpackRenderer {
+public final class FlatModelRenderer {
 
     private static final int FULL_BRIGHT = 15728880;
     private static final String CAPS = "caps_awim_tactical_gear_rework";
     private static final String CAPS_RENDERERS = "net.mcreator.capsawimtacticalgearrework.client.renderer.";
-    /** Probe px per block: frames +-4 x +-2 blocks, plenty for a bag of ~1.4 blocks. */
-    private static final float PROBE_SCALE = 128f;
+    public static final Set<String> MAGAZINES = Set.of("taczmagazines:magazine", "taczmagazines:magazine_small");
 
     private record CapsModel(Model model, ResourceLocation texture) {}
 
     private static final Map<String, CapsModel> CAPS_MODELS = new HashMap<>();
-    private static final Map<String, PixelProbe.Box> VISIBLE = new HashMap<>();
-    /** Bags that failed once - drawn as normal items for the rest of the session. */
+    private static final Map<String, PixelProbe.Box> VISIBLE = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, PixelProbe.Box> eldest) {
+            return size() > 256;
+        }
+    };
+    /** Items that failed once - drawn normally for the rest of the session. */
     private static final Set<String> BROKEN = new HashSet<>();
 
-    private FlatBackpackRenderer() {}
+    private FlatModelRenderer() {}
 
     private static String idOf(ItemStack stack) {
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
         return id == null ? null : id.toString();
     }
 
+    private static boolean handles(String id) {
+        return id != null && (DefaultItemFootprints.BACKPACKS.contains(id) || MAGAZINES.contains(id));
+    }
+
     public static boolean canRender(ItemStack stack) {
         if (stack.isEmpty() || !GridConfig.FLAT_GUN_RENDER.get()) return false;
         String id = idOf(stack);
-        return id != null && DefaultItemFootprints.BACKPACKS.contains(id) && !BROKEN.contains(id);
+        return handles(id) && !BROKEN.contains(id);
+    }
+
+    private static String cacheKey(ItemStack stack, String id) {
+        return MAGAZINES.contains(id) && stack.hasTag() ? id + "#" + stack.getTag().hashCode() : id;
     }
 
     /**
-     * Draws the bag inside the box ({@code x},{@code y},{@code w},{@code h}) at GUI depth
-     * {@code z}; rotated (R in the grid) turns it a quarter so it lies on its side. False if it
-     * couldn't, having drawn nothing (the caller falls back to the normal render).
+     * Draws the item inside the box ({@code x},{@code y},{@code w},{@code h}) at GUI depth
+     * {@code z}; rotated (R in the grid) turns it a quarter. False if it couldn't, having drawn
+     * nothing (the caller falls back to the normal render).
      */
     public static boolean render(GuiGraphics graphics, ItemStack stack, int x, int y, int w, int h, float z,
                                  boolean rotated) {
         if (!canRender(stack)) return false;
         String id = idOf(stack);
+        String key = cacheKey(stack, id);
         PoseStack pose = graphics.pose();
         pose.pushPose();
         try {
             Lighting.setupForFlatItems();
             graphics.flush();
-            PixelProbe.Box v = VISIBLE.get(id);
+            PixelProbe.Box v = VISIBLE.get(key);
             if (v == null) {
-                v = PixelProbe.measure(PROBE_SCALE, p -> draw(p, stack, id), id);
+                // Probe px per block: bags are ~1.4 blocks (frame +-4 x +-2), magazines are
+                // fitted to 0.5 by their own renderer (frame +-2 x +-1).
+                float sp = MAGAZINES.contains(id) ? 256f : 128f;
+                v = PixelProbe.measure(sp, p -> draw(p, stack, id), key);
                 if (v == null) throw new IllegalStateException("drew nothing");
-                VISIBLE.put(id, v);
+                VISIBLE.put(key, v);
                 if (GridConfig.DEBUG_LOGGING.get()) {
-                    DayzHudMod.LOGGER.info("flat backpack {}: visible {} x {} blocks, offset ({}, {})", id,
+                    DayzHudMod.LOGGER.info("flat model {}: visible {} x {} blocks, offset ({}, {})", key,
                             v.length(), v.height(), v.dx(), v.dy());
                 }
             }
@@ -107,8 +129,8 @@ public final class FlatBackpackRenderer {
             return true;
         } catch (Throwable t) {
             if (BROKEN.add(id)) {
-                DayzHudMod.LOGGER.warn("dayzhud: couldn't draw backpack {} as a model; showing its normal "
-                        + "icon instead.", id, t);
+                DayzHudMod.LOGGER.warn("dayzhud: couldn't draw {} as a model; showing its normal icon instead.",
+                        id, t);
             }
             return false;
         } finally {
@@ -117,13 +139,18 @@ public final class FlatBackpackRenderer {
         }
     }
 
-    /** The bag's model in view space (+y up, pockets toward +z), in block units. */
+    /** The item's model in view space (+y up, facing +z), in block units. */
     private static void draw(PoseStack pose, ItemStack stack, String id) throws Exception {
         Minecraft mc = Minecraft.getInstance();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         pose.pushPose();
         try {
-            if (id.startsWith(CAPS + ":")) {
+            if (MAGAZINES.contains(id)) {
+                // Gun-model axes (length along z, muzzle -z) -> +z to screen-right, as the guns.
+                pose.mulPose(Axis.YP.rotationDegrees(90f));
+                IClientItemExtensions.of(stack).getCustomRenderer().renderByItem(stack, ItemDisplayContext.FIXED,
+                        pose, buffers, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            } else if (id.startsWith(CAPS + ":")) {
                 CapsModel cm = capsModel(id);
                 pose.mulPose(Axis.ZP.rotationDegrees(180f));
                 cm.model().renderToBuffer(pose, buffers.getBuffer(RenderType.entityCutoutNoCull(cm.texture())),

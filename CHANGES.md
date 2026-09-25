@@ -1,3 +1,33 @@
+# dayzhud 2.13.7 - magazines stand up, carried armour stays big, whole weapon box clicks
+
+**4 changed files** (plus version bump; `FlatBackpackRenderer` from 2.13.6 is now
+`FlatModelRenderer`). On top of 2.13.6.
+
+## TaCZ: Magazines - real render, standing
+
+Its item renderer draws each magazine from its gun's TACZ model, but in the inventory it uses a
+tilted 3/4 view; scaled up across two cells that came out as a thin diagonal sliver with the
+count off to one side. In every other context it draws the magazine in the gun model's own
+axes (checked in its bytecode), so `FlatModelRenderer` now asks it for the FIXED render, turns
+it side-on exactly like the guns, and fits/centres it by its visible pixels (PixelProbe) -
+the magazine stands the way it sits in the gun. Rifle/SMG magazines are now **1x2** (were
+2x1); pistol magazines stay 1x1 and get the same render (1x1 grid items with a model render
+are drawn by the grid now). Reached through Forge's `IClientItemExtensions`, no reflection.
+
+## Carried CAPS armour (and any multi-cell item) stays big
+
+Only items with a model render used to be drawn at their footprint size while carried;
+everything else fell back to vanilla's small 16x16 cursor icon. Now every multi-cell item is:
+its model render if it has one, otherwise its own icon scaled into the footprint, exactly as
+the grid draws it, plus its count/durability bar.
+
+## Primary / secondary / holster / sheath: click anywhere in the box
+
+The loadout slots' real Slot is a 16x16 square in the middle of the drawn box, and only that
+square took clicks. The screen now overrides `isHovering(int, int, int, int, double, double)` -
+which vanilla routes every slot hover and click test through - to answer for the whole box when
+the position is a weapon slot's. An empty box now highlights as a whole on hover too.
+
 # dayzhud 2.13.6 - backpacks get grid sizes and real-model renders
 
 **4 changed files, 3 new** (plus version bump). On top of 2.13.5.
@@ -10,7 +40,7 @@ the same treatment as guns.
   every CAPS bag 2x2 except the sports bag; pilgrim and sports bag 2x3; raid, gunslinger and
   frame 3x3. Sized offline from each worn model at one shared scale (both mods model bags in
   player pixels), capped at 3x3 so any bag fits the 9x3 inventory.
-- New `FlatBackpackRenderer`: fieldkit bags through the item renderer (their item model is the
+- New `FlatModelRenderer`: fieldkit bags through the item renderer (their item model is the
   3D model, pockets at -z); CAPS bags through the model and texture of CAPS's own worn
   renderer for that bag, found by reflection (CAPS's item icon is a flat sprite). A bag that
   fails to draw logs once and falls back to its normal icon.
