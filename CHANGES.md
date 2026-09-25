@@ -1,3 +1,26 @@
+# dayzhud 2.13.6 - backpacks get grid sizes and real-model renders
+
+**4 changed files, 3 new** (plus version bump). On top of 2.13.5.
+
+The 12 fieldkit backpacks and the 7 CAPS AWIM ones now take several cells in the grid and are
+drawn as their real 3D model, front-on (pockets toward you), filling and centred in their box -
+the same treatment as guns.
+
+- Sizes (`DefaultItemFootprints.ITEMS`, config `itemFootprints` still overrides): assault and
+  every CAPS bag 2x2 except the sports bag; pilgrim and sports bag 2x3; raid, gunslinger and
+  frame 3x3. Sized offline from each worn model at one shared scale (both mods model bags in
+  player pixels), capped at 3x3 so any bag fits the 9x3 inventory.
+- New `FlatBackpackRenderer`: fieldkit bags through the item renderer (their item model is the
+  3D model, pockets at -z); CAPS bags through the model and texture of CAPS's own worn
+  renderer for that bag, found by reflection (CAPS's item icon is a flat sprite). A bag that
+  fails to draw logs once and falls back to its normal icon.
+- New `PixelProbe`: the off-screen visible-pixel measurement, moved out of
+  TaczFlatGunRenderer so guns and bags share it. New `FlatItems` picks the renderer; the grid,
+  the carried item and big-icon fallback go through it. Loadout (weapon) boxes stay guns-only.
+- Unequipped bags already in an inventory now need 4-9 cells; like any footprint change, one
+  without room shows as 1x1 until moved.
+- `flatGunRender = false` turns the bag renders off too.
+
 # dayzhud 2.13.5 - attachments make the box bigger, not the gun smaller
 
 **5 changed files, 2 new** (plus version bump). On top of 2.13.4.

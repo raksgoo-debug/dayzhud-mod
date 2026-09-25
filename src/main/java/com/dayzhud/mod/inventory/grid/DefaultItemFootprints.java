@@ -47,7 +47,49 @@ public final class DefaultItemFootprints {
 
     public static final Map<String, Footprint> ITEMS = Map.ofEntries(
             Map.entry("taczmagazines:magazine", new Footprint(2, 1)),
-            Map.entry("taczmagazines:magazine_small", new Footprint(1, 1))
+            Map.entry("taczmagazines:magazine_small", new Footprint(1, 1)),
+            // Backpacks (2.13.6) - see BACKPACKS below for how they were sized.
+            Map.entry("fieldkit:assault_backpack", new Footprint(2, 2)),
+            Map.entry("fieldkit:assault_backpack_black", new Footprint(2, 2)),
+            Map.entry("fieldkit:assault_backpack_coyote", new Footprint(2, 2)),
+            Map.entry("fieldkit:pilgrim_backpack", new Footprint(2, 3)),
+            Map.entry("fieldkit:pilgrim_backpack_coyote", new Footprint(2, 3)),
+            Map.entry("fieldkit:raid_backpack", new Footprint(3, 3)),
+            Map.entry("fieldkit:raid_backpack_black", new Footprint(3, 3)),
+            Map.entry("fieldkit:gunslinger_backpack", new Footprint(3, 3)),
+            Map.entry("fieldkit:gunslinger_backpack_multicam", new Footprint(3, 3)),
+            Map.entry("fieldkit:frame_backpack", new Footprint(3, 3)),
+            Map.entry("fieldkit:frame_backpack_multicam", new Footprint(3, 3)),
+            Map.entry("fieldkit:frame_backpack_coyote", new Footprint(3, 3)),
+            Map.entry("caps_awim_tactical_gear_rework:greentacticalbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:blacktacticalbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:greenhikingbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:multicamhikingbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:urbanahikingbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:blackhikingbackpack", new Footprint(2, 2)),
+            Map.entry("caps_awim_tactical_gear_rework:sportsbag", new Footprint(2, 3))
+    );
+
+    /**
+     * Backpacks drawn as their real 3D model, front-on, filling their footprint
+     * (FlatBackpackRenderer). Sized offline from each bag's worn model - fieldkit's item models
+     * and CAPS AWIM's entity models are both in player pixels, so one scale fits both: 2.9 GUI
+     * px per player pixel, visible width/height rounded to the nearest cell after the 2 px
+     * inset, at least 2x2 and at most 3x3 so any bag still fits the 9x3 inventory.
+     */
+    public static final java.util.Set<String> BACKPACKS = java.util.Set.of(
+            "fieldkit:assault_backpack", "fieldkit:assault_backpack_black", "fieldkit:assault_backpack_coyote",
+            "fieldkit:pilgrim_backpack", "fieldkit:pilgrim_backpack_coyote",
+            "fieldkit:raid_backpack", "fieldkit:raid_backpack_black",
+            "fieldkit:gunslinger_backpack", "fieldkit:gunslinger_backpack_multicam",
+            "fieldkit:frame_backpack", "fieldkit:frame_backpack_multicam", "fieldkit:frame_backpack_coyote",
+            "caps_awim_tactical_gear_rework:greentacticalbackpack",
+            "caps_awim_tactical_gear_rework:blacktacticalbackpack",
+            "caps_awim_tactical_gear_rework:greenhikingbackpack",
+            "caps_awim_tactical_gear_rework:multicamhikingbackpack",
+            "caps_awim_tactical_gear_rework:urbanahikingbackpack",
+            "caps_awim_tactical_gear_rework:blackhikingbackpack",
+            "caps_awim_tactical_gear_rework:sportsbag"
     );
 
     /** Each LR variant's length in model units - the shared-scale reference, as for guns. */

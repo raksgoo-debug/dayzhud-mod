@@ -3,15 +3,10 @@ package com.dayzhud.mod.inventory;
 import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.inventory.grid.GridConfig;
 import com.dayzhud.mod.market.TaczMarketCompat;
-import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,9 +17,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL30;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -136,26 +128,13 @@ public final class TaczFlatGunRenderer {
      *  breathing room so a gun that fills its box doesn't touch the outline. */
     public static final int GRID_INSET = com.dayzhud.mod.inventory.grid.GunSizes.INSET;
 
-    /**
-     * The item as it really shows on screen, read from pixels (see {@link #measureVisible}): its
-     * centre relative to the vertex-bounds centre, and its visible length/height - all in
-     * view-space model units (+x screen-right, +y screen-up).
-     */
-    private record Visible(float dx, float dy, float length, float height) {}
-
-    private static final Map<String, Visible> VISIBLE = new LinkedHashMap<>(64, 0.75f, true) {
+    private static final Map<String, PixelProbe.Box> VISIBLE = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Visible> eldest) {
+        protected boolean removeEldestEntry(Map.Entry<String, PixelProbe.Box> eldest) {
             return size() > 256;
         }
     };
 
-    /** Off-screen buffer the pixel measurement draws into; made on first use. The item is framed
-     *  at half the buffer's size, so geometry the vertex pass missed still lands inside it. */
-    private static TextureTarget probe;
-    private static final int PROBE_W = 1024, PROBE_H = 512;
-    /** A pixel counts as visible from this alpha up (cutout textures keep >= 0.1, i.e. 26). */
-    private static final int PROBE_ALPHA_MIN = 8;
 
     private static final Map<String, Bounds> CACHE = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
@@ -304,7 +283,7 @@ public final class TaczFlatGunRenderer {
         if (!canRender(stack)) return -1f;
         Bounds b = bounds(stack);
         // Visible size once the item has been drawn at least once; vertex size until then.
-        Visible v = VISIBLE.get(cacheKey(stack));
+        PixelProbe.Box v = VISIBLE.get(cacheKey(stack));
         float len = v != null ? v.length() : b.length(), hei = v != null ? v.height() : b.height();
         com.dayzhud.mod.inventory.grid.Footprint fp =
                 com.dayzhud.mod.inventory.grid.ItemFootprints.baseFootprintOf(stack);
@@ -334,7 +313,7 @@ public final class TaczFlatGunRenderer {
             // anything already queued in the GUI (the panel behind the item) goes out first.
             graphics.flush();
             hidden = hideHandParts(m.model());
-            Visible v = visible(m, stack, b);
+            PixelProbe.Box v = visible(m, stack, b);
 
             // No padding here: the caller's box is already inset from its panel border.
             // Rotated (R in the grid): the footprint is tall, so the length fits the box's height.
@@ -386,9 +365,9 @@ public final class TaczFlatGunRenderer {
     /** The item's visible box - measured from pixels the first time it is drawn, then cached.
      *  Falls back to the vertex box if the measurement can't run or sees nothing. Call with the
      *  hand markers already hidden and the GUI's pending draws already flushed. */
-    private static Visible visible(Model m, ItemStack stack, Bounds b) {
+    private static PixelProbe.Box visible(Model m, ItemStack stack, Bounds b) {
         String key = cacheKey(stack);
-        Visible v = VISIBLE.get(key);
+        PixelProbe.Box v = VISIBLE.get(key);
         if (v != null) return v;
         try {
             v = measureVisible(m, stack, b);
@@ -398,7 +377,7 @@ public final class TaczFlatGunRenderer {
                         + "instead.", key, t);
             }
         }
-        if (v == null) v = new Visible(0f, 0f, b.length(), b.height());
+        if (v == null) v = new PixelProbe.Box(0f, 0f, b.length(), b.height());
         VISIBLE.put(key, v);
         if (GridConfig.DEBUG_LOGGING.get()) {
             DayzHudMod.LOGGER.info("flat item {}: vertex box {} x {}, visible {} x {} offset ({}, {})", key,
@@ -408,83 +387,16 @@ public final class TaczFlatGunRenderer {
     }
 
     /**
-     * Draws the item once into {@link #probe} - same model, same stack, same orientation as the
-     * real draw, only scaled to frame its vertex box at half the buffer - reads the colour buffer
-     * back and returns the box of pixels with alpha, converted to view units. Null if nothing
-     * visible was drawn.
-     *
-     * Everything global it touches is put back in {@code finally}: the bound framebuffer and
-     * viewport (read from GL, so it restores whatever the GUI was drawing into, not assuming the
-     * main target), projection and vertex sorting, model-view matrix, and the scissor test (the
-     * scrolling backpack enables one, which would otherwise clip the probe).
+     * The item's visible box via PixelProbe - same model, same stack, same orientation as the
+     * real draw, only scaled to frame its vertex box at half the probe. Null if nothing visible
+     * was drawn.
      */
-    private static Visible measureVisible(Model m, ItemStack stack, Bounds b) throws Exception {
-        float sp = Math.min(PROBE_W / 2f / b.length(), PROBE_H / 2f / b.height());
-
-        // Saved before anything else - creating the probe binds framebuffer 0 as a side effect.
-        int prevFbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
-        int[] vp = new int[4];
-        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
-        boolean scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
-        Matrix4f prevProj = new Matrix4f(RenderSystem.getProjectionMatrix());
-        VertexSorting prevSorting = RenderSystem.getVertexSorting();
-        PoseStack modelView = RenderSystem.getModelViewStack();
-        modelView.pushPose();
-        int x0 = PROBE_W, x1 = -1, y0 = PROBE_H, y1 = -1;
-        try {
-            if (probe == null) {
-                probe = new TextureTarget(PROBE_W, PROBE_H, true, Minecraft.ON_OSX);
-                // TACZ masks scope reticles and lenses with the stencil; without one here they
-                // would all show and be measured.
-                probe.enableStencil();
-            }
-            if (scissor) GlStateManager._disableScissorTest();
-            probe.setClearColor(0f, 0f, 0f, 0f);
-            probe.clear(Minecraft.ON_OSX);                 // leaves framebuffer 0 bound
-            probe.bindWrite(true);
-            RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0f, PROBE_W, PROBE_H, 0f, -4000f, 4000f),
-                    VertexSorting.ORTHOGRAPHIC_Z);
-            modelView.setIdentity();
-            RenderSystem.applyModelViewMatrix();
-
-            PoseStack pose = new PoseStack();
-            pose.translate(PROBE_W / 2f, PROBE_H / 2f, 0f);
-            pose.scale(sp, -sp, sp);
+    private static PixelProbe.Box measureVisible(Model m, ItemStack stack, Bounds b) throws Exception {
+        float sp = Math.min(PixelProbe.W / 2f / b.length(), PixelProbe.H / 2f / b.height());
+        return PixelProbe.measure(sp, pose -> {
             orient(pose, b);
             drawModel(m, pose, stack);
-            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
-
-            try (NativeImage img = new NativeImage(PROBE_W, PROBE_H, false)) {
-                RenderSystem.bindTexture(probe.getColorTextureId());
-                img.downloadTexture(0, false);
-                for (int row = 0; row < PROBE_H; row++) {
-                    int y = PROBE_H - 1 - row;             // GL rows run bottom-up
-                    for (int x = 0; x < PROBE_W; x++) {
-                        if ((img.getPixelRGBA(x, row) >>> 24) < PROBE_ALPHA_MIN) continue;
-                        if (x < x0) x0 = x;
-                        if (x > x1) x1 = x;
-                        if (y < y0) y0 = y;
-                        if (y > y1) y1 = y;
-                    }
-                }
-            }
-        } finally {
-            modelView.popPose();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(prevProj, prevSorting);
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, prevFbo);
-            RenderSystem.viewport(vp[0], vp[1], vp[2], vp[3]);
-            if (scissor) GlStateManager._enableScissorTest();
-        }
-        if (x1 < 0) return null;
-        if (GridConfig.DEBUG_LOGGING.get() && (x0 == 0 || y0 == 0 || x1 == PROBE_W - 1 || y1 == PROBE_H - 1)) {
-            DayzHudMod.LOGGER.info("flat item {}: visible pixels reach the probe's edge; its size may be "
-                    + "under-measured", cacheKey(stack));
-        }
-        // Probe px -> view units: screen x = W/2 + sp*vx, screen y = H/2 - sp*vy.
-        float left = x0, right = x1 + 1, top = y0, bottom = y1 + 1;
-        return new Visible(((left + right) / 2f - PROBE_W / 2f) / sp, (PROBE_H / 2f - (top + bottom) / 2f) / sp,
-                (right - left) / sp, (bottom - top) / sp);
+        }, cacheKey(stack));
     }
 
     /**

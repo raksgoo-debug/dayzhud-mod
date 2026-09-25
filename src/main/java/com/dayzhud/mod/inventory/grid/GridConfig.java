@@ -86,6 +86,7 @@ public final class GridConfig {
         FLAT_GUN_RENDER = b.comment(
                         "Draw TACZ guns in the grid as their real 3D model, side-on with the",
                         "barrel pointing left, sized to fit their footprint without stretching.",
+                        "Also covers fieldkit and CAPS AWIM backpacks, drawn front-on.",
                         "Off falls back to the ordinary inventory icon, fitted the same way.",
                         "Also switches itself off for the session if it ever throws, with one",
                         "warning in the log.")

@@ -224,7 +224,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // finally, before anything reads it again - tooltips included) and drawn flat below.
         ItemStack carried = menu.getCarried();
         boolean flatCarried = !carried.isEmpty() && ItemGrid.isMultiCell(carried)
-                && TaczFlatGunRenderer.canRender(carried);
+                && FlatItems.canRender(carried);
         if (flatCarried) menu.setCarried(ItemStack.EMPTY);
         try {
             super.render(graphics, mouseX, mouseY, partialTick);
@@ -580,8 +580,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         Footprint fp = ItemGrid.footprintOf(stack);
         int x = mouseX - 9, y = mouseY - 9, w = fp.width() * 18, h = fp.height() * 18;
         int in = TaczFlatGunRenderer.GRID_INSET;
-        TaczFlatGunRenderer.render(graphics, stack, x + in, y + in, w - 2 * in, h - 2 * in, CARRIED_Z,
-                ItemGrid.isRotated(stack));
+        FlatItems.render(graphics, stack, x + in, y + in, w - 2 * in, h - 2 * in, CARRIED_Z,
+                ItemGrid.isRotated(stack), -1f);
     }
 
     /** Set when a press was consumed as a placement click; swallows the matching release. */
@@ -634,7 +634,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.renderOutline(x, y, w, h, SLOT_BORDER);
         graphics.pose().popPose();
 
-        if (!TaczFlatGunRenderer.render(graphics, stack, x + inset, y + inset, w - inset * 2, h - inset * 2, FLAT_GUN_Z,
+        if (!FlatItems.render(graphics, stack, x + inset, y + inset, w - inset * 2, h - inset * 2, FLAT_GUN_Z,
                 rotated, maxScale)) {
             return false;
         }
@@ -665,7 +665,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int w = footprint.width() * 18 - 2;
         int h = footprint.height() * 18 - 2;
 
-        if (TaczFlatGunRenderer.canRender(stack)
+        if (FlatItems.canRender(stack)
                 && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, TaczFlatGunRenderer.GRID_INSET,
                         ItemGrid.isRotated(stack), -1f)) {
             return;
