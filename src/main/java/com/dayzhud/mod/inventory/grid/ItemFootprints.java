@@ -85,8 +85,21 @@ public final class ItemFootprints {
                 + "(expected key=WxH)", line);
     }
 
-    /** The item's base footprint, unrotated. {@link ItemGrid#footprintOf} applies rotation. */
+    /**
+     * The item's base footprint, unrotated. {@link ItemGrid#footprintOf} applies rotation.
+     * For a TACZ gun this includes room for its fitted attachments (GunSizes).
+     */
     public static Footprint baseFootprintOf(ItemStack stack) {
+        Footprint plain = plainFootprintOf(stack);
+        if (stack.isEmpty() || !GridConfig.ENABLED.get()) return plain;
+        Optional<ResourceLocation> gunId = TaczMarketCompat.gunIdOf(stack);
+        if (gunId.isEmpty()) return plain;
+        return GunSizes.withAttachments(gunId.get(), TaczMarketCompat.attachmentIdsOf(stack), plain);
+    }
+
+    /** {@link #baseFootprintOf} without the room for a gun's attachments - the footprint a gun
+     *  is drawn to fill, whatever is fitted to it. */
+    public static Footprint plainFootprintOf(ItemStack stack) {
         if (stack.isEmpty() || !GridConfig.ENABLED.get()) return Footprint.SINGLE;
         ensureLoaded();
 

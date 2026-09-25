@@ -579,7 +579,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private void drawCarriedFlatGun(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY) {
         Footprint fp = ItemGrid.footprintOf(stack);
         int x = mouseX - 9, y = mouseY - 9, w = fp.width() * 18, h = fp.height() * 18;
-        TaczFlatGunRenderer.render(graphics, stack, x + 1, y + 1, w - 2, h - 2, CARRIED_Z, ItemGrid.isRotated(stack));
+        int in = TaczFlatGunRenderer.GRID_INSET;
+        TaczFlatGunRenderer.render(graphics, stack, x + in, y + in, w - 2 * in, h - 2 * in, CARRIED_Z,
+                ItemGrid.isRotated(stack));
     }
 
     /** Set when a press was consumed as a placement click; swallows the matching release. */
@@ -664,7 +666,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int h = footprint.height() * 18 - 2;
 
         if (TaczFlatGunRenderer.canRender(stack)
-                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, 1, ItemGrid.isRotated(stack), -1f)) {
+                && drawFlatGunBox(graphics, stack, x - 1, y - 1, w + 2, h + 2, TaczFlatGunRenderer.GRID_INSET,
+                        ItemGrid.isRotated(stack), -1f)) {
             return;
         }
         // Anything else multi-cell (CAPS armor, magazines, ...): same panel, then the item's

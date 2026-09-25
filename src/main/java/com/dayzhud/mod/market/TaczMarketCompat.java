@@ -60,6 +60,10 @@ public final class TaczMarketCompat {
 
     private static Method getIGunOrNull, iGunGetGunId;
     private static Method getIAmmoOrNull, iAmmoGetAmmoId;
+    /** IGun.getAttachmentId(ItemStack, AttachmentType) and every AttachmentType but NONE; null
+     *  if this TACZ doesn't have them (grid sizes then ignore attachments). */
+    private static Method iGunGetAttachmentId;
+    private static Object[] attachmentTypes;
 
     private TaczMarketCompat() {}
 
@@ -142,6 +146,16 @@ public final class TaczMarketCompat {
             Class<?> iGun = Class.forName("com.tacz.guns.api.item.IGun", false, cl);
             getIGunOrNull = iGun.getMethod("getIGunOrNull", ItemStack.class);
             iGunGetGunId = iGun.getMethod("getGunId", ItemStack.class);
+            // Grid-size extra, allowed to fail like the stat-card extras above.
+            try {
+                Class<?> attachType = Class.forName("com.tacz.guns.api.item.attachment.AttachmentType", false, cl);
+                iGunGetAttachmentId = iGun.getMethod("getAttachmentId", ItemStack.class, attachType);
+                attachmentTypes = java.util.Arrays.stream(attachType.getEnumConstants())
+                        .filter(e -> !"NONE".equals(((Enum<?>) e).name())).toArray();
+            } catch (Throwable missing) {
+                iGunGetAttachmentId = null;
+                DayzHudMod.LOGGER.debug("TACZ attachment lookup unavailable: {}", missing.toString());
+            }
 
             Class<?> iAmmo = Class.forName("com.tacz.guns.api.item.IAmmo", false, cl);
             getIAmmoOrNull = iAmmo.getMethod("getIAmmoOrNull", ItemStack.class);
@@ -165,6 +179,24 @@ public final class TaczMarketCompat {
             return Optional.ofNullable((ResourceLocation) id);
         } catch (Throwable t) {
             return Optional.empty();
+        }
+    }
+
+    /** Ids of the attachments fitted to a TACZ gun, empty slots left out; empty when this is
+     *  not a TACZ gun. Reads the stack's NBT only, so it works on a dedicated server. */
+    public static List<ResourceLocation> attachmentIdsOf(ItemStack stack) {
+        if (stack.isEmpty() || !isModLoaded() || !resolve() || iGunGetAttachmentId == null) return List.of();
+        try {
+            Object gun = getIGunOrNull.invoke(null, stack);
+            if (gun == null) return List.of();
+            List<ResourceLocation> out = new ArrayList<>(attachmentTypes.length);
+            for (Object type : attachmentTypes) {
+                Object id = iGunGetAttachmentId.invoke(gun, stack, type);
+                if (id instanceof ResourceLocation rl && !"empty".equals(rl.getPath())) out.add(rl);
+            }
+            return out;
+        } catch (Throwable t) {
+            return List.of();
         }
     }
 

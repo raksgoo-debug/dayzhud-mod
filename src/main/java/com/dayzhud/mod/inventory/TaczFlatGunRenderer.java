@@ -3,10 +3,15 @@ package com.dayzhud.mod.inventory;
 import com.dayzhud.mod.DayzHudMod;
 import com.dayzhud.mod.inventory.grid.GridConfig;
 import com.dayzhud.mod.market.TaczMarketCompat;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Lighting;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -17,6 +22,9 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -76,6 +84,25 @@ import java.util.Optional;
  * off-centre (which is what flipped the SCAR). They are now explicitly hidden, by bone name,
  * for both the measuring pass and the draw, and restored afterwards.
  *
+ * <h2>2.13.4: sized and centred from what is actually visible</h2>
+ * Every measurement before this counted vertices, and TACZ emits geometry you never see:
+ * scope reticle and lens planes that only show through a stencil mask, transparent cubes, and
+ * so on. That inflated box shrank guns well below their footprint (the AK drew at ~2/3 of its
+ * 5x2) and pulled them off-centre (the M4 sat high, the scoped AUG low). The first time an item
+ * is drawn, it is now also drawn once into a private off-screen buffer (with a stencil, like the
+ * main one) and its box is read back from the pixels that ended up opaque. That box - not the
+ * vertices - is what gets fitted and centred. It replaces the 2.13.1 per-frame vertex
+ * self-centring, which chased the same inflated box.
+ *
+ * TACZ guns now also FILL their footprint (2 px in from the border); relative sizes come from
+ * the footprint table, which was re-derived from the same visible bounds.
+ *
+ * <h2>2.13.5: attachments grow the box, not shrink the gun</h2>
+ * A gun is drawn at the scale that fills its footprint WITHOUT attachments, always; the
+ * footprint itself grows to hold what's fitted (GunSizes, decided on the server from the
+ * gun's attachment NBT). Fitting into the box is only a fallback now, for guns and
+ * attachments GunSizes has no data for.
+ *
  * <h2>Failure mode</h2>
  * Any exception latches {@link #broken} and every caller falls back to the plain item render
  * for the rest of the session, with one warning in the log.
@@ -101,9 +128,34 @@ public final class TaczFlatGunRenderer {
         }
     }
 
-    /** Shared render scale: 2 px per model unit = 9 units per 18-px cell, the same scale the
-     *  footprint tables were sized at. */
+    /** Shared render scale for LR Tactical items: 2 px per model unit = 9 units per 18-px cell,
+     *  the scale their footprint table was sized at. */
     private static final float PX_PER_UNIT = 2f;
+
+    /** GUI px between a grid item's box edge and the gun: 1 for the panel's own border, 1 of
+     *  breathing room so a gun that fills its box doesn't touch the outline. */
+    public static final int GRID_INSET = com.dayzhud.mod.inventory.grid.GunSizes.INSET;
+
+    /**
+     * The item as it really shows on screen, read from pixels (see {@link #measureVisible}): its
+     * centre relative to the vertex-bounds centre, and its visible length/height - all in
+     * view-space model units (+x screen-right, +y screen-up).
+     */
+    private record Visible(float dx, float dy, float length, float height) {}
+
+    private static final Map<String, Visible> VISIBLE = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Visible> eldest) {
+            return size() > 256;
+        }
+    };
+
+    /** Off-screen buffer the pixel measurement draws into; made on first use. The item is framed
+     *  at half the buffer's size, so geometry the vertex pass missed still lands inside it. */
+    private static TextureTarget probe;
+    private static final int PROBE_W = 1024, PROBE_H = 512;
+    /** A pixel counts as visible from this alpha up (cutout textures keep >= 0.1, i.e. 26). */
+    private static final int PROBE_ALPHA_MIN = 8;
 
     private static final Map<String, Bounds> CACHE = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
@@ -251,10 +303,13 @@ public final class TaczFlatGunRenderer {
     public static float gridScale(ItemStack stack) {
         if (!canRender(stack)) return -1f;
         Bounds b = bounds(stack);
+        // Visible size once the item has been drawn at least once; vertex size until then.
+        Visible v = VISIBLE.get(cacheKey(stack));
+        float len = v != null ? v.length() : b.length(), hei = v != null ? v.height() : b.height();
         com.dayzhud.mod.inventory.grid.Footprint fp =
                 com.dayzhud.mod.inventory.grid.ItemFootprints.baseFootprintOf(stack);
-        // Same area drawFlatGunBox gives a grid item: the footprint minus its 1 px inset.
-        float fill = Math.min((fp.width() * 18 - 2) / b.length(), (fp.height() * 18 - 2) / b.height());
+        // Same area drawFlatGunBox gives a grid item: the footprint minus its GRID_INSET.
+        float fill = Math.min((fp.width() * 18 - 2 * GRID_INSET) / len, (fp.height() * 18 - 2 * GRID_INSET) / hei);
         return b.unitScale() > 0 ? Math.min(fill, b.unitScale()) : fill;
     }
 
@@ -266,18 +321,27 @@ public final class TaczFlatGunRenderer {
                                  boolean rotated, float maxScale) {
         if (!canRender(stack)) return false;
         Bounds b = bounds(stack);
-        // No padding here: the caller's box is already inset from its panel border.
-        // Rotated (R in the grid): the footprint is tall, so the length fits the box's height.
-        float s = rotated ? Math.min(w / b.height(), h / b.length())
-                          : Math.min(w / b.length(), h / b.height());
-        if (maxScale > 0) s = Math.min(s, maxScale);
-        if (b.unitScale() > 0) s = Math.min(s, b.unitScale());   // shared scale; only ever shrinks to fit
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
+        List<Object> hidden = List.of();
         try {
             Model m = modelFor(stack);
             if (m == null) return false;
+
+            Lighting.setupForFlatItems();
+            // TACZ draws into Minecraft's global buffer and flushes it itself, so make sure
+            // anything already queued in the GUI (the panel behind the item) goes out first.
+            graphics.flush();
+            hidden = hideHandParts(m.model());
+            Visible v = visible(m, stack, b);
+
+            // No padding here: the caller's box is already inset from its panel border.
+            // Rotated (R in the grid): the footprint is tall, so the length fits the box's height.
+            float s = rotated ? Math.min(w / v.height(), h / v.length())
+                              : Math.min(w / v.length(), h / v.height());
+            if (maxScale > 0) s = Math.min(s, maxScale);
+            if (b.unitScale() > 0) s = Math.min(s, b.unitScale());   // shared scale; only ever shrinks to fit
 
             pose.translate(x + w / 2f, y + h / 2f, z);
             if (rotated) {
@@ -287,157 +351,166 @@ public final class TaczFlatGunRenderer {
             }
             // View space from here on: +X screen-right, +Y screen-up.
             pose.scale(s, -s, s);
-            // Self-centering: the offset measured on earlier frames between where the item was
-            // actually drawn and the box centre (see drawTee), in view-space model units.
-            float[] corr = CORRECTION.get(cacheKey(stack));
-            if (corr != null) pose.translate(-corr[0], -corr[1], 0f);
-            if (b.rot() == null) {
-                // TACZ guns: constant pose (see class doc) - roll 180 about Z, then turn +Z
-                // onto +X. Proper rotations, never mirrors.
-                pose.mulPose(Axis.YP.rotationDegrees(90f));
-                pose.mulPose(Axis.ZP.rotationDegrees(180f));
-            } else {
-                // LR items: the rotation read from the model's own geometry.
-                float[] r = b.rot();
-                // JOML's Matrix3f constructor is column-major: column j = (r[j], r[3+j], r[6+j]).
-                pose.mulPose(new org.joml.Quaternionf().setFromNormalized(new org.joml.Matrix3f(
-                        r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8])));
-            }
-            pose.translate(-b.cx(), -b.cy(), -b.cz());
-
-            Lighting.setupForFlatItems();
-            // TACZ draws into Minecraft's global buffer and flushes it itself, so make sure
-            // anything already queued in the GUI (the panel behind the item) goes out first.
-            graphics.flush();
-            List<Object> hidden = hideHandParts(m.model());
-            try {
-                drawTee(m, pose, stack, cacheKey(stack), x + w / 2f, y + h / 2f, s, rotated);
-            } finally {
-                restoreVisible(hidden);
-            }
+            // Centre what is visible, not the vertex box (see class doc, 2.13.4).
+            pose.translate(-v.dx(), -v.dy(), 0f);
+            orient(pose, b);
+            drawModel(m, pose, stack);
             return true;
         } catch (Throwable t) {
             fail(t);
             return false;
         } finally {
+            restoreVisible(hidden);
             Lighting.setupFor3DItems();
             pose.popPose();
         }
     }
 
-    /** Per item (cache key): accumulated centring correction, view-space model units. */
-    private static final Map<String, float[]> CORRECTION = new java.util.HashMap<>();
-
-    /**
-     * Draws the model with Minecraft's global buffer wrapped in a pass-through that forwards
-     * every vertex unchanged AND records where it landed on screen. Afterwards the drawn centre
-     * (geometry only - render types under MIN_GEOMETRY_VERTS are effects) is compared with
-     * the box centre and the difference is added to CORRECTION, which the next frame applies.
-     *
-     * Why: 2.12.x-2.13.0 centred on a separate measuring pass, and some guns still came out
-     * off-centre - something TACZ draws differently at runtime than in that pass, which could
-     * not be reproduced offline. Correcting from the real draw removes the dependency on
-     * knowing the cause: whatever is drawn ends up centred, one frame after first appearing.
-     */
-    private static void drawTee(Model m, PoseStack pose, ItemStack stack, String key, float boxCx, float boxCy,
-                                float s, boolean rotated) throws Exception {
-        RenderBuffers buffers = Minecraft.getInstance().renderBuffers();
-        MultiBufferSource.BufferSource real = buffers.bufferSource();
-        Field f = globalBufferField(buffers, real);
-        if (f == null) {
-            drawModel(m, pose, stack);
-            return;
+    /** Model space -> view space, vertex-bounds centre at the origin. */
+    private static void orient(PoseStack pose, Bounds b) {
+        if (b.rot() == null) {
+            // TACZ guns: constant pose (see class doc) - roll 180 about Z, then turn +Z
+            // onto +X. Proper rotations, never mirrors.
+            pose.mulPose(Axis.YP.rotationDegrees(90f));
+            pose.mulPose(Axis.ZP.rotationDegrees(180f));
+        } else {
+            // LR items: the rotation read from the model's own geometry.
+            float[] r = b.rot();
+            // JOML's Matrix3f constructor is column-major: column j = (r[j], r[3+j], r[6+j]).
+            pose.mulPose(new org.joml.Quaternionf().setFromNormalized(new org.joml.Matrix3f(
+                    r[0], r[3], r[6], r[1], r[4], r[7], r[2], r[5], r[8])));
         }
-        Map<RenderType, Recorder> perType = new LinkedHashMap<>();
-        MultiBufferSource.BufferSource tee = new MultiBufferSource.BufferSource(new BufferBuilder(256), Map.of()) {
-            @Override
-            public VertexConsumer getBuffer(RenderType type) {
-                return new Tee(real.getBuffer(type), perType.computeIfAbsent(type, t -> new Recorder()));
-            }
-
-            @Override
-            public void endBatch() {
-                real.endBatch();
-            }
-
-            @Override
-            public void endBatch(RenderType type) {
-                real.endBatch(type);
-            }
-        };
-        try {
-            f.set(buffers, tee);
-            drawModel(m, pose, stack);
-        } finally {
-            f.set(buffers, real);
-        }
-        boolean anyGeometry = perType.values().stream().anyMatch(r -> r.n >= MIN_GEOMETRY_VERTS);
-        float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-        for (Recorder r : perType.values()) {
-            if (anyGeometry && r.n < MIN_GEOMETRY_VERTS) continue;
-            for (int i = 0; i < r.n; i++) {
-                minX = Math.min(minX, r.xs[i]); maxX = Math.max(maxX, r.xs[i]);
-                minY = Math.min(minY, r.ys[i]); maxY = Math.max(maxY, r.ys[i]);
-            }
-        }
-        if (minX > maxX || s <= 0) return;
-        float ox = (minX + maxX) / 2f - boxCx, oy = (minY + maxY) / 2f - boxCy;   // screen px, y down
-        if (Math.abs(ox) < 0.25f && Math.abs(oy) < 0.25f) return;
-        // Screen offset -> view units. Unrotated: screen = (vx*s, -vy*s). Rotated adds a screen
-        // quarter turn (x,y)->(-y,x), giving screen = (vy*s, vx*s).
-        float vx = rotated ? oy / s : ox / s;
-        float vy = rotated ? ox / s : -oy / s;
-        float[] c = CORRECTION.computeIfAbsent(key, k -> new float[2]);
-        c[0] += vx;
-        c[1] += vy;
-        if (GridConfig.DEBUG_LOGGING.get()) {
-            DayzHudMod.LOGGER.info("flat item {}: drawn {} px off-centre ({}, {}); correcting by ({}, {}) units",
-                    key, Math.hypot(ox, oy), ox, oy, vx, vy);
-        }
+        pose.translate(-b.cx(), -b.cy(), -b.cz());
     }
 
-    /** Forwards every call to the real consumer; records positions on the side. Same method
-     *  set as Recorder, deliberately without @Override (see Recorder's doc). */
-    private static final class Tee implements VertexConsumer {
-        private final VertexConsumer d;
-        private final Recorder r;
-
-        Tee(VertexConsumer d, Recorder r) {
-            this.d = d;
-            this.r = r;
+    /** The item's visible box - measured from pixels the first time it is drawn, then cached.
+     *  Falls back to the vertex box if the measurement can't run or sees nothing. Call with the
+     *  hand markers already hidden and the GUI's pending draws already flushed. */
+    private static Visible visible(Model m, ItemStack stack, Bounds b) {
+        String key = cacheKey(stack);
+        Visible v = VISIBLE.get(key);
+        if (v != null) return v;
+        try {
+            v = measureVisible(m, stack, b);
+        } catch (Throwable t) {
+            if (WARNED_EMPTY.add(key + "#probe")) {
+                DayzHudMod.LOGGER.warn("dayzhud: couldn't measure {} from pixels; fitting its vertex bounds "
+                        + "instead.", key, t);
+            }
         }
+        if (v == null) v = new Visible(0f, 0f, b.length(), b.height());
+        VISIBLE.put(key, v);
+        if (GridConfig.DEBUG_LOGGING.get()) {
+            DayzHudMod.LOGGER.info("flat item {}: vertex box {} x {}, visible {} x {} offset ({}, {})", key,
+                    b.length(), b.height(), v.length(), v.height(), v.dx(), v.dy());
+        }
+        return v;
+    }
 
-        public VertexConsumer vertex(double x, double y, double z) { r.vertex(x, y, z); d.vertex(x, y, z); return this; }
-        public VertexConsumer color(int red, int g, int b, int a) { d.color(red, g, b, a); return this; }
-        public VertexConsumer uv(float u, float v) { d.uv(u, v); return this; }
-        public VertexConsumer overlayCoords(int u, int v) { d.overlayCoords(u, v); return this; }
-        public VertexConsumer uv2(int u, int v) { d.uv2(u, v); return this; }
-        public VertexConsumer normal(float x, float y, float z) { d.normal(x, y, z); return this; }
-        public void endVertex() { d.endVertex(); }
-        public void defaultColor(int red, int g, int b, int a) { d.defaultColor(red, g, b, a); }
-        public void unsetDefaultColor() { d.unsetDefaultColor(); }
+    /**
+     * Draws the item once into {@link #probe} - same model, same stack, same orientation as the
+     * real draw, only scaled to frame its vertex box at half the buffer - reads the colour buffer
+     * back and returns the box of pixels with alpha, converted to view units. Null if nothing
+     * visible was drawn.
+     *
+     * Everything global it touches is put back in {@code finally}: the bound framebuffer and
+     * viewport (read from GL, so it restores whatever the GUI was drawing into, not assuming the
+     * main target), projection and vertex sorting, model-view matrix, and the scissor test (the
+     * scrolling backpack enables one, which would otherwise clip the probe).
+     */
+    private static Visible measureVisible(Model m, ItemStack stack, Bounds b) throws Exception {
+        float sp = Math.min(PROBE_W / 2f / b.length(), PROBE_H / 2f / b.height());
+
+        // Saved before anything else - creating the probe binds framebuffer 0 as a side effect.
+        int prevFbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+        int[] vp = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, vp);
+        boolean scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        Matrix4f prevProj = new Matrix4f(RenderSystem.getProjectionMatrix());
+        VertexSorting prevSorting = RenderSystem.getVertexSorting();
+        PoseStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushPose();
+        int x0 = PROBE_W, x1 = -1, y0 = PROBE_H, y1 = -1;
+        try {
+            if (probe == null) {
+                probe = new TextureTarget(PROBE_W, PROBE_H, true, Minecraft.ON_OSX);
+                // TACZ masks scope reticles and lenses with the stencil; without one here they
+                // would all show and be measured.
+                probe.enableStencil();
+            }
+            if (scissor) GlStateManager._disableScissorTest();
+            probe.setClearColor(0f, 0f, 0f, 0f);
+            probe.clear(Minecraft.ON_OSX);                 // leaves framebuffer 0 bound
+            probe.bindWrite(true);
+            RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0f, PROBE_W, PROBE_H, 0f, -4000f, 4000f),
+                    VertexSorting.ORTHOGRAPHIC_Z);
+            modelView.setIdentity();
+            RenderSystem.applyModelViewMatrix();
+
+            PoseStack pose = new PoseStack();
+            pose.translate(PROBE_W / 2f, PROBE_H / 2f, 0f);
+            pose.scale(sp, -sp, sp);
+            orient(pose, b);
+            drawModel(m, pose, stack);
+            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+
+            try (NativeImage img = new NativeImage(PROBE_W, PROBE_H, false)) {
+                RenderSystem.bindTexture(probe.getColorTextureId());
+                img.downloadTexture(0, false);
+                for (int row = 0; row < PROBE_H; row++) {
+                    int y = PROBE_H - 1 - row;             // GL rows run bottom-up
+                    for (int x = 0; x < PROBE_W; x++) {
+                        if ((img.getPixelRGBA(x, row) >>> 24) < PROBE_ALPHA_MIN) continue;
+                        if (x < x0) x0 = x;
+                        if (x > x1) x1 = x;
+                        if (y < y0) y0 = y;
+                        if (y > y1) y1 = y;
+                    }
+                }
+            }
+        } finally {
+            modelView.popPose();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(prevProj, prevSorting);
+            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, prevFbo);
+            RenderSystem.viewport(vp[0], vp[1], vp[2], vp[3]);
+            if (scissor) GlStateManager._enableScissorTest();
+        }
+        if (x1 < 0) return null;
+        if (GridConfig.DEBUG_LOGGING.get() && (x0 == 0 || y0 == 0 || x1 == PROBE_W - 1 || y1 == PROBE_H - 1)) {
+            DayzHudMod.LOGGER.info("flat item {}: visible pixels reach the probe's edge; its size may be "
+                    + "under-measured", cacheKey(stack));
+        }
+        // Probe px -> view units: screen x = W/2 + sp*vx, screen y = H/2 - sp*vy.
+        float left = x0, right = x1 + 1, top = y0, bottom = y1 + 1;
+        return new Visible(((left + right) / 2f - PROBE_W / 2f) / sp, (PROBE_H / 2f - (top + bottom) / 2f) / sp,
+                (right - left) / sp, (bottom - top) / sp);
     }
 
     /**
      * px per in-game unit at the shared scale, or -1 (fill the box). The reference length is
      * the default model's length in the built-in tables; TACZ's in-game model units are a
      * fixed multiple of those (16 if parts are in block units, 1 if in pixels), so the ratio is
-     * snapped to one of those two - a fitted suppressor makes the in-game gun longer, and that
+     * snapped to one of those two - a fitted suppressor makes the in-game item longer, and that
      * must make it LONGER on screen, not shrink it to the reference length.
+     *
+     * TACZ guns in GunSizes: the scale that fills their footprint without attachments
+     * (2.13.5); the footprint grows for attachments instead. Other packs' guns: -1, fill.
      */
     private static float unitScaleFor(ItemStack stack, Bounds b) {
-        Float ref = null;
         Optional<ResourceLocation> gunId = TaczMarketCompat.gunIdOf(stack);
         if (gunId.isPresent()) {
-            // Pistols fill their 2x1 (kept that way on request); everything else is to scale.
-            if (TaczMarketCompat.gunTypeOf(stack).map("pistol"::equals).orElse(false)) return -1f;
-            ref = com.dayzhud.mod.inventory.grid.DefaultGunFootprints.LENGTH.get(gunId.get().toString());
-        } else {
-            String tag = lrTag(stack);
-            if (tag != null) {
-                ref = com.dayzhud.mod.inventory.grid.DefaultItemFootprints.LR_LENGTH.get(stack.getTag().getString(tag));
-            }
+            // The scale that fills the gun's footprint without attachments; the footprint grows
+            // for what's fitted (GunSizes), so attachments never shrink the gun.
+            float s = com.dayzhud.mod.inventory.grid.GunSizes.baseScale(gunId.get(),
+                    com.dayzhud.mod.inventory.grid.ItemFootprints.plainFootprintOf(stack));
+            float ref = com.dayzhud.mod.inventory.grid.GunSizes.length(gunId.get());
+            if (s <= 0 || ref <= 0 || b.length() <= 0) return -1f;
+            return s * (ref / b.length() > 4f ? 16f : 1f);
         }
+        String tag = lrTag(stack);
+        Float ref = tag == null ? null
+                : com.dayzhud.mod.inventory.grid.DefaultItemFootprints.LR_LENGTH.get(stack.getTag().getString(tag));
         if (ref == null || b.length() <= 0) return -1f;
         return PX_PER_UNIT * (ref / b.length() > 4f ? 16f : 1f);
     }

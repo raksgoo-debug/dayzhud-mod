@@ -1,3 +1,66 @@
+# dayzhud 2.13.5 - attachments make the box bigger, not the gun smaller
+
+**5 changed files, 2 new** (plus version bump). On top of 2.13.4.
+
+In 2.13.4 a gun with attachments was squeezed into its plain footprint - a suppressed MP5
+drew at 58% of its normal size. Now a gun is always drawn at the size that fills its footprint
+with nothing fitted, and the footprint grows to make room: a suppressor adds width, a big scope
+plus a grip or extended mag can add a row.
+
+- New `GunSizes` + `/dayzhud/gun_sizes.txt` (in the jar): each default gun's visible size and,
+  for each of the 1155 gun/attachment pairs that reach past the plain gun, how far on each side
+  (measured offline from the TACZ jar, same method as the footprint table). Several
+  attachments combine per side by the furthest reach.
+- The server reads the fitted attachments from the gun's NBT (`IGun.getAttachmentId`, new
+  `TaczMarketCompat.attachmentIdsOf`) - no models needed, so it works on a dedicated server.
+- `ItemFootprints.baseFootprintOf` includes the growth; `plainFootprintOf` is the old value.
+- Limits: 9 wide, 3 tall. With the default pack the biggest full loadout is 9x2 (M95, AWP) and
+  rifles only reach 3 tall with a tall scope plus a grip or extended mag. Pistols grow to 2x2
+  with a sight or extended mag, since they fill their one row exactly.
+- Other packs' guns/attachments have no data: they don't grow, and fall back to fitting the box.
+- A gun that already carries attachments in someone's inventory may now need more room than it
+  has; like any footprint change it shows as 1x1 until moved.
+
+# dayzhud 2.13.4 - guns fill their grid and sit in the middle of it
+
+**3 changed files** (plus version bump). On top of 2.13.3.
+
+## Why guns were small and off-centre
+
+Every measurement so far counted vertices, and TACZ draws geometry you never see - scope
+reticle and lens planes that only show through a stencil mask, transparent cubes and the like.
+That made the measured box bigger than the gun: the AK drew at about two thirds of its 5x2, the
+M4 sat high and the scoped AUG sat low. The 2.13.1 self-centring chased the same inflated box,
+so it couldn't fix this.
+
+## Measured from pixels now
+
+The first time a gun (or LR item) is drawn, it is also drawn once into a small off-screen buffer
+with a stencil, just like the screen, and its box is read from the pixels that came out opaque.
+That box is what gets fitted and centred, cached per gun and attachment setup. The per-frame
+vertex correction is gone. Everything the measurement changes in GL (framebuffer, viewport,
+projection, model-view, scissor) is restored straight after.
+
+## Sizes
+
+- Guns now fill their footprint, 2 px in from the border, instead of being drawn at a shared
+  scale that could leave up to a cell empty.
+- Every non-pistol gun is 2 tall. Width is the gun's visible length at the old shared scale
+  (9 model units per cell), rounded to the nearest cell. Pistols stay 1 tall and fill it.
+- Changed footprints: M4A1 5x2 -> 4x2, SCAR-H 4x2 -> 5x2, RPK 6x2 -> 4x2, M1014, SKS and SPAS-12
+  6x2 -> 5x2, M320 2x2 -> 3x2, M107 7x3 -> 6x2, minigun 6x3 -> 6x2. The rest are unchanged.
+  A gun already in an inventory whose new footprint collides with a neighbour shows as 1x1
+  until you move it, as with any footprint change.
+- `DefaultGunFootprints.LENGTH` is removed; nothing reads it any more.
+
+## What the build has to confirm
+
+New calls (all checked against the 1.20.1 mappings / Forge 47 jar): `TextureTarget`,
+`RenderTarget.enableStencil` (Forge), `NativeImage.downloadTexture`, `RenderSystem`
+projection/model-view getters and setters, `GlStateManager._glBindFramebuffer` and the scissor
+toggles, LWJGL `GL11`/`GL30` state queries. With `debugLogging = true` each gun logs its vertex
+box vs visible box once.
+
 # dayzhud 2.13.3 - the whole backpack on screen
 
 **2 changed files** (plus version bump). On top of 2.13.2.
