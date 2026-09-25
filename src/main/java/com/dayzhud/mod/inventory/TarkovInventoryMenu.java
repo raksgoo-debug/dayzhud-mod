@@ -615,8 +615,14 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         // how many backpack slots exist is always up to date - including the moment a bag
         // is equipped or removed.
         if (!player.level().isClientSide) {
+            // Counted over the bag's REAL size, not BACKPACK_MAX_SLOTS. That constant is the
+            // visible window (4 rows); the window scrolls over the bag. Counting only up to it
+            // capped every bag at 36 - a 63-slot pack synced as 36, so the scrollbar never
+            // appeared and the rest of the bag was unreachable. Capped at the client mirror,
+            // since slots past it could exist on the server and never be drawn.
+            int total = Math.min(backpackHandler.getSlots(), BackCurioItemHandler.MIRROR_SIZE);
             int count = 0;
-            for (int i = 0; i < BACKPACK_MAX_SLOTS; i++) {
+            for (int i = 0; i < total; i++) {
                 if (backpackHandler.isSlotUsable(i)) count = i + 1;
             }
             backpackSlotCount.set(count);

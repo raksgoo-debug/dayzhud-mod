@@ -72,8 +72,12 @@ public class BackCurioItemHandler implements IItemHandlerModifiable {
     private static Method warbornGetVisibleRowsForTier;
     private static Class<?> warbornBackpackItemClass;
 
-    /** Upper bound on displayable slots; must match the menu's allocation. */
-    private static final int MIRROR_SIZE = 64;
+    /**
+     * Upper bound on displayable slots: the client holds this many in its mirror. The menu
+     * caps the synced slot count at it (TarkovInventoryMenu.broadcastChanges), so a bag can
+     * scroll up to this size and no further.
+     */
+    static final int MIRROR_SIZE = 64;
 
     private final Player player;
     private final IItemHandlerModifiable saHandler; // null unless SA Survival is installed

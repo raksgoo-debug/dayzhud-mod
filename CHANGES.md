@@ -1,3 +1,24 @@
+# dayzhud 2.13.2 - backpacks bigger than 36 slots scroll
+
+**2 changed files** (plus version bump).
+
+## Big bags showed as 36 slots
+
+The inventory shows the worn bag through a 4-row window (36 slots) that scrolls over the
+bag - but the server counted the bag's usable slots only up to that window size before
+syncing the count to the client. Every bag therefore reported at most 36 slots: the
+scrollbar never appeared and anything past slot 36 was unreachable from this screen (it
+was still there - opening the bag another way showed it).
+
+The count now runs to the bag's real size, capped at the client's 64-slot mirror
+(`BackCurioItemHandler.MIRROR_SIZE`, now package-visible for that). The window, the
+scrollbar, the scroll packet and the visible-slot logic were all already built for this
+and are unchanged; they simply never had more than four rows to scroll.
+
+Worth a look in game: this is the first time the scrolling path runs. A multi-cell item
+whose footprint runs past the bottom of the visible rows shows as 1x1 until you scroll so
+it fits - the grid only reconciles the rows on screen, which is the existing degrade
+behaviour, not data loss.
 # dayzhud 2.13.1 - true-to-scale guns, self-centring renders, knives point left
 
 **4 changed files** (plus version bump). Unzip over the repo root, on top of 2.13.0.
