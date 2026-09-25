@@ -178,8 +178,12 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         graphics.fill(x + 8, y + 236, x + 172, y + 294, SECTION_BG);    // gear grid
         graphics.fill(x + 8, y + 296, x + 172, y + 342, SECTION_BG);    // hotbar
         graphics.fill(x + 180, y + 20, x + 352, y + 84, SECTION_BG);    // inventory
-        if (menu.getActiveBackpackSlots() > 0) {
-            graphics.fill(x + 180, y + 94, x + 352, y + 176, SECTION_BG);  // backpack
+        int bagSlots = menu.getActiveBackpackSlots();
+        if (bagSlots > 0) {
+            // Sized to the rows the worn bag actually has: the window is 7 rows now, and a
+            // fixed backing that tall left a small bag sitting in a big empty box.
+            int bagRows = Math.min(TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS, (bagSlots + 8) / 9);
+            graphics.fill(x + 180, y + 94, x + 352, y + 100 + bagRows * 18 + 4, SECTION_BG); // backpack
         }
 
         if (menu.isCorpse()) {

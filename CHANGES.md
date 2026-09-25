@@ -1,3 +1,19 @@
+# dayzhud 2.13.3 - the whole backpack on screen
+
+**2 changed files** (plus version bump). On top of 2.13.2.
+
+## Seven rows instead of four
+
+2.13.2 made big bags reachable by scrolling a 4-row window. There was room for the whole bag
+all along: the backpack column has space down to the divider at y 234, and 7 rows end at
+y 226. `BACKPACK_VISIBLE_ROWS` is now 7, so every bag up to 63 slots is shown whole - no
+scrolling. The slot count, grid region and shift-click range all follow the constant.
+
+The dark backing behind the bag used to be a fixed 4 rows tall; it is now sized to the rows
+the worn bag actually has, so a small bag doesn't sit in a big empty box.
+
+Scrolling stays as the fallback for a bag bigger than 63 (only a 64th slot from another
+mod can trigger it), and the 2.13.2 count fix is what lets 7 rows show at all.
 # dayzhud 2.13.2 - backpacks bigger than 36 slots scroll
 
 **2 changed files** (plus version bump).

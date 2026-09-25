@@ -144,8 +144,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int BACKPACK_X = 186;
     private static final int BACKPACK_Y = 100;   // 2.12.6: 138 -> 100, closes the gap the old hotbar row left
     private static final int BACKPACK_COLS = 9;
-    /** Rows shown at once; anything larger scrolls rather than spilling over the stat strip. */
-    public static final int BACKPACK_VISIBLE_ROWS = 4;
+    /**
+     * Rows shown at once. 7 (2.13.3, was 4): the column has room for them - slots end at
+     * y 226, above the divider at 234 and well clear of the stat strip at 298 - so a
+     * 63-slot bag is shown whole instead of scrolled. Only a bag bigger than 63 (the 64th
+     * slot, from another mod) still scrolls.
+     */
+    public static final int BACKPACK_VISIBLE_ROWS = 7;
     public static final int BACKPACK_MAX_SLOTS = BACKPACK_COLS * BACKPACK_VISIBLE_ROWS;
 
     public final Player player;
