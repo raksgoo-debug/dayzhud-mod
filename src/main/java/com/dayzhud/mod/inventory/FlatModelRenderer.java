@@ -54,6 +54,7 @@ import java.util.Set;
 public final class FlatModelRenderer {
 
     private static final int FULL_BRIGHT = 15728880;
+    private static final float DEPTH_SCALE = 0.25f;
     private static final String CAPS = "caps_awim_tactical_gear_rework";
     private static final String CAPS_RENDERERS = "net.mcreator.capsawimtacticalgearrework.client.renderer.";
     public static final Set<String> MAGAZINES = Set.of("taczmagazines:magazine", "taczmagazines:magazine_small");
@@ -122,7 +123,11 @@ public final class FlatModelRenderer {
             float s = rotated ? Math.min(w / v.height(), h / v.length()) : Math.min(w / v.length(), h / v.height());
             pose.translate(x + w / 2f, y + h / 2f, z);
             if (rotated) pose.mulPose(Axis.ZP.rotationDegrees(90f));
-            pose.scale(s, -s, s);                    // view space: +x right, +y up, +z toward you
+            // View space: +x right, +y up, +z toward you. Depth squashed to a quarter: the
+            // probe centres x/y only, so a model sitting off-centre in depth (CAPS bags sit on
+            // the wearer's back) would otherwise reach through the grid's hover/placement
+            // layers, which are only a few units apart (2.13.8).
+            pose.scale(s, -s, s * DEPTH_SCALE);
             pose.translate(-v.dx(), -v.dy(), 0f);
             draw(pose, stack, id);
             graphics.flush();
@@ -148,6 +153,11 @@ public final class FlatModelRenderer {
             if (MAGAZINES.contains(id)) {
                 // Gun-model axes (length along z, muzzle -z) -> +z to screen-right, as the guns.
                 pose.mulPose(Axis.YP.rotationDegrees(90f));
+                // Its FIXED transform starts with translate(0.5, 0.5, 0.5) (checked in its
+                // applyDisplayTransform bytecode) - a half-block DEPTH offset once turned
+                // side-on, which put a carried magazine ~30 units behind the grid's placement
+                // preview, so it vanished over the grid (2.13.8). Cancelled exactly here.
+                pose.translate(-0.5f, -0.5f, -0.5f);
                 IClientItemExtensions.of(stack).getCustomRenderer().renderByItem(stack, ItemDisplayContext.FIXED,
                         pose, buffers, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
             } else if (id.startsWith(CAPS + ":")) {

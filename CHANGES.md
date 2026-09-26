@@ -1,3 +1,39 @@
+# dayzhud 2.13.9 - CAPS AWIM pants and boots are 2x2
+
+**3 changed files** (plus version bump). On top of 2.13.8.
+
+CAPS AWIM leggings and boots now take 2x2, like its helmets, and get the same big render in
+the grid and while carried (their own icon scaled into the footprint - CAPS's items are flat
+icons, the grid draws helmets and chest rigs the same way).
+
+The sizes come from `armorTypeFootprints`, whose default now lists `leggings=2x2` and
+`boots=2x2`. A config file keeps its old list, though, so types it doesn't mention now fall
+back to built-in sizes (`DefaultItemFootprints.ARMOR_TYPES`, same values as the default) -
+existing configs get pants and boots at 2x2 without editing. To keep one a single cell, list
+it as `=1x1`.
+
+# dayzhud 2.13.8 - carried magazines stay visible, pistol magazines are 1x1
+
+**6 changed files, 1 new** (plus version bump). On top of 2.13.7.
+
+## A carried magazine vanished over the grid
+
+TaCZ: Magazines' FIXED render starts with `translate(0.5, 0.5, 0.5)`. Turned side-on, that
+half block became DEPTH: a carried magazine drew about 30 units behind where it should (at
+~353 instead of 385), so the grid's placement preview (at 360) covered it - visible over empty
+background, gone over the slots. `FlatModelRenderer` now cancels that translate exactly, and
+squashes every flat model's depth to a quarter so nothing drawn off-centre in depth (CAPS
+bags sit on the wearer's back) can reach through the grid's hover/preview layers again.
+
+## Pistol magazines back to 1x1
+
+TaCZ: Magazines uses one item, `taczmagazines:magazine`, for every gun's magazine, so 2.13.7
+made a Glock's magazine 1x2 like an M4's. New `MagazineFootprints`: the stack's
+`MagazineFamily` NBT -> TaCZ: Magazines' `MagazineFamilySystem.getRepresentativeGun` -> that
+gun's TACZ type. A pistol's standard magazine is 1x1; rifles, SMGs and extended pistol
+magazines stand 1x2. Both sides read the same data, so they agree; anything unresolvable stays
+1x2. (`TaczMarketCompat.gunTypeOfId` added for this, not gated by the market's TACZ switch.)
+
 # dayzhud 2.13.7 - magazines stand up, carried armour stays big, whole weapon box clicks
 
 **4 changed files** (plus version bump; `FlatBackpackRenderer` from 2.13.6 is now

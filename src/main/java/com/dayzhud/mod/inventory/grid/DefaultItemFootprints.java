@@ -14,7 +14,7 @@ import java.util.Map;
  * with 0.25 slack - and melee weapons at least 2 wide so a knife isn't a single cell.
  *
  * <b>ITEMS</b> - plain items keyed by registry id. TaCZ: Magazines has two items; the regular
- * magazine is 1x2 (standing), the small (pistol) one stays 1x1. Plus the backpacks below.
+ * magazine is sized per gun (MagazineFootprints), the small one stays 1x1. Plus the backpacks below.
  *
  * Config entries (gunIdFootprints / itemFootprints) override both tables.
  */
@@ -46,8 +46,8 @@ public final class DefaultItemFootprints {
     );
 
     public static final Map<String, Footprint> ITEMS = Map.ofEntries(
-            // Standing up, as FlatModelRenderer draws them (2.13.7; was 2x1 lying down).
-            Map.entry("taczmagazines:magazine", new Footprint(1, 2)),
+            // taczmagazines:magazine is sized per gun by MagazineFootprints (2.13.8): pistol 1x1,
+            // anything else 1x2 standing.
             Map.entry("taczmagazines:magazine_small", new Footprint(1, 1)),
             // Backpacks (2.13.6) - see BACKPACKS below for how they were sized.
             Map.entry("fieldkit:assault_backpack", new Footprint(2, 2)),
@@ -91,6 +91,18 @@ public final class DefaultItemFootprints {
             "caps_awim_tactical_gear_rework:urbanahikingbackpack",
             "caps_awim_tactical_gear_rework:blackhikingbackpack",
             "caps_awim_tactical_gear_rework:sportsbag"
+    );
+
+    /**
+     * Armor sizes by type for the armorFootprintMods (CAPS AWIM), used for any type the config's
+     * armorTypeFootprints doesn't list - so leggings and boots (2.13.9) reach configs written
+     * before they had a size. Same values as that option's default.
+     */
+    public static final Map<String, Footprint> ARMOR_TYPES = Map.of(
+            "helmet", new Footprint(2, 2),
+            "chestplate", new Footprint(3, 3),
+            "leggings", new Footprint(2, 2),
+            "boots", new Footprint(2, 2)
     );
 
     /** Each LR variant's length in model units - the shared-scale reference, as for guns. */

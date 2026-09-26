@@ -80,8 +80,10 @@ public final class GridConfig {
                         o -> o instanceof String);
         ARMOR_TYPE_FOOTPRINTS = b.comment(
                         "Footprint per armor type for those mods, as \"type=WxH\" with type one of",
-                        "helmet, chestplate, leggings, boots. Types not listed stay 1x1.")
-                .defineList("armorTypeFootprints", List.of("helmet=2x2", "chestplate=3x3"),
+                        "helmet, chestplate, leggings, boots. A type not listed uses the built-in",
+                        "size (the defaults below); list it as =1x1 to keep it a single cell.")
+                .defineList("armorTypeFootprints",
+                        List.of("helmet=2x2", "chestplate=3x3", "leggings=2x2", "boots=2x2"),
                         o -> o instanceof String);
         FLAT_GUN_RENDER = b.comment(
                         "Draw TACZ guns in the grid as their real 3D model, side-on with the",

@@ -135,6 +135,8 @@ public final class ItemFootprints {
         if (itemId != null) {
             Footprint byItem = itemIdMap.get(itemId);
             if (byItem != null) return byItem;
+            // One item for every gun's magazine - sized by the gun it belongs to.
+            if (MagazineFootprints.MAGAZINE.equals(itemId.toString())) return MagazineFootprints.of(stack);
             Footprint builtin = DefaultItemFootprints.ITEMS.get(itemId.toString());
             if (builtin != null) return builtin;
             // Armor by type, for the listed mods (CAPS: 61 of its items are real ArmorItems).
@@ -151,6 +153,10 @@ public final class ItemFootprints {
                 };
                 Footprint byType = armorTypeMap.get(typeName);
                 if (byType != null) return byType;
+                // A type the config doesn't list: the built-in size. Keeps existing configs
+                // (written when only helmet/chestplate were sized) getting leggings/boots too.
+                Footprint builtinType = DefaultItemFootprints.ARMOR_TYPES.get(typeName);
+                if (builtinType != null) return builtinType;
             }
         }
         return Footprint.SINGLE;

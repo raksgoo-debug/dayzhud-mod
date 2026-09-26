@@ -324,8 +324,13 @@ public final class TaczMarketCompat {
      */
     public static Optional<String> gunTypeOf(ItemStack stack) {
         if (!isActive()) return Optional.empty();
-        ResourceLocation id = gunIdOf(stack).orElse(null);
-        if (id == null) return Optional.empty();
+        return gunIdOf(stack).flatMap(TaczMarketCompat::gunTypeOfId);
+    }
+
+    /** A gun id's TACZ type ("pistol", "rifle", ...) from its index; empty when unknown. Not
+     *  gated by the market's TACZ switch - grid sizes use it too. */
+    public static Optional<String> gunTypeOfId(ResourceLocation id) {
+        if (id == null || !isModLoaded() || !resolve()) return Optional.empty();
         try {
             @SuppressWarnings("unchecked")
             Set<Map.Entry<ResourceLocation, Object>> all =
