@@ -1,3 +1,14 @@
+# dayzhud 2.13.10 - one count per multi-cell stack
+
+**1 changed file** (plus version bump). On top of 2.13.9.
+
+A stack of a multi-cell item (e.g. several magazines) showed its count twice: once in the top
+cell, once at the bottom corner of its box. The top one was vanilla's own slot decoration -
+count and durability bar - which it draws at GUI depth ~300 (slot 100 + decorations 200). The
+panel that covers the anchor slot's vanilla render sat at 280, under it. The panel is now at
+310: above vanilla's whole slot render, still below the model (330) and our own count/bar
+(350).
+
 # dayzhud 2.13.9 - CAPS AWIM pants and boots are 2x2
 
 **3 changed files** (plus version bump). On top of 2.13.8.

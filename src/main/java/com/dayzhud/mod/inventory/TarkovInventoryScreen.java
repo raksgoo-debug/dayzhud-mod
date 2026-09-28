@@ -58,10 +58,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      * GUI depths for the flat-gun layer. Vanilla draws a slot's item at z 100 (renderSlot's
      * own push) + 150 (renderItem's) = ~250, so anything meant to cover it - the panel that
      * hides TACZ's little diagonal icon - must sit above that. 2.12.1 put the panel at 190,
-     * UNDER the icon, which is why the icon still showed. Carried item (~382) and tooltips
-     * (400) stay above all of this.
+     * UNDER the icon, which is why the icon still showed. Its count and durability bar go
+     * higher still - renderItemDecorations adds 200, so ~300 - and with the panel at 280 a
+     * stacked multi-cell item (magazines) showed vanilla's count and bar in its anchor cell as
+     * well as ours at the bottom of the box: two numbers. The panel sits above that since
+     * 2.13.10; our own decorations are at FLAT_DECOR_Z + 200 = 350, over the model. Carried
+     * item (~382) and tooltips (400) stay above all of this.
      */
-    private static final float FLAT_PANEL_Z = 280, FLAT_GUN_Z = 330, FLAT_HOVER_Z = 345,
+    private static final float FLAT_PANEL_Z = 310, FLAT_GUN_Z = 330, FLAT_HOVER_Z = 345,
             FLAT_DECOR_Z = 150, FLAT_PREVIEW_Z = 360;
     private static final int FLAT_HOVER_COLOR = 0x30FFFFFF;
 
