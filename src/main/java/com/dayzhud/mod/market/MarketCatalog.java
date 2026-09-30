@@ -74,9 +74,27 @@ public final class MarketCatalog {
     }
 
     public static synchronized List<MarketOffer> offers() {
+        if (cached != null && magazinesLate()) invalidate();
         if (cached == null) cached = build();
         return cached;
     }
+
+    /**
+     * TaCZ Magazines fills its family list from gun data, which can arrive after this
+     * catalogue was first built (world join races it) - and a catalogue built then had no
+     * magazines and kept none until the world was reopened. So a build that stocked magazines
+     * remembers how many families there were; once more exist, the next request rebuilds.
+     * Keyed on the count, not on "zero magazines", so a family that can't be stocked for
+     * some other reason can't make every request rebuild - each rebuild bumps the revision,
+     * and buy packets from an older revision are refused.
+     */
+    private static boolean magazinesLate() {
+        if (magazineFamiliesAtBuild < 0 || !MagazineCompat.isActive()) return false;
+        return MagazineCompat.families().size() > magazineFamiliesAtBuild;
+    }
+
+    /** Families TaCZ Magazines listed at the last build; -1 when magazines aren't stocked. */
+    private static int magazineFamiliesAtBuild = -1;
 
     /** Categories present in the current catalogue, in {@link #CATEGORY_ORDER}. */
     public static List<String> categories() {
@@ -174,6 +192,7 @@ public final class MarketCatalog {
         }
 
         int magazines = 0;
+        magazineFamiliesAtBuild = MarketConfig.MAGAZINES_STOCK.get() && MagazineCompat.isModLoaded() ? 0 : -1;
         if (MarketConfig.MAGAZINES_STOCK.get()) {
             if (!MagazineCompat.isActive()) {
                 // Says WHY there are none. "No MAGAZINES tab" on its own is indistinguishable
@@ -183,10 +202,10 @@ public final class MarketCatalog {
                         + "api resolved={}", MagazineCompat.isModLoaded(), false);
             } else {
                 List<String> families = MagazineCompat.families();
+                magazineFamiliesAtBuild = families.size();
                 if (families.isEmpty()) {
-                    DayzHudMod.LOGGER.warn("TaCZ Magazines resolved but reported no magazine "
-                            + "families - its list is filled on datapack sync, so the catalogue "
-                            + "was probably built too early.");
+                    DayzHudMod.LOGGER.info("TaCZ Magazines has no magazine families yet - its "
+                            + "list fills once gun data loads; the catalogue rebuilds then.");
                 }
                 for (String family : families) {
                     ItemStack stack = MagazineCompat.makeEmpty(family);

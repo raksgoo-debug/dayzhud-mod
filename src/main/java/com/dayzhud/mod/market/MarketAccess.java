@@ -24,10 +24,11 @@ import java.util.Set;
  * How you reach a trader: a terminal block you built a hideout around, or a laptop used
  * inside a registered safe zone.
  *
- * Neither is a block this mod registers. The terminal is whatever the pack already has -
- * tarkovdayz's desktop PC by default - which means no new model or texture, and no broken
- * model if the pack that owns it is not installed. It also lets a server point the config
- * at any block it likes without a code change.
+ * The configured terminal is whatever the pack already has - tarkovdayz's desktop PC by
+ * default - which means no broken model if the pack that owns it is not installed, and lets
+ * a server point the config at any block it likes without a code change. Since 2.13.12 this
+ * mod also has a terminal of its own, the laptop block (LaptopBlock), which works whatever
+ * the config lists.
  */
 @Mod.EventBusSubscriber(modid = DayzHudMod.MOD_ID)
 public final class MarketAccess {
@@ -65,15 +66,23 @@ public final class MarketAccess {
         // Sneaking is how you place a block against the terminal instead of using it.
         if (player.isShiftKeyDown() && !player.getMainHandItem().isEmpty()) return;
 
+        useTerminalBlock(player);
+        event.setCanceled(true);
+        event.setCancellationResult(InteractionResult.SUCCESS);
+    }
+
+    /**
+     * A terminal block was used: open the market, or say why not. Shared by the configured
+     * terminal blocks above and this mod's own laptop block (LaptopBlock), so both follow the
+     * same rules - blockRequiresSafeZone included.
+     */
+    public static void useTerminalBlock(ServerPlayer player) {
+        if (!MarketConfig.ENABLED.get()) return;
         if (MarketConfig.BLOCK_REQUIRES_SAFE_ZONE.get() && !inSafeZone(player)) {
             refuse(player);
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.SUCCESS);
             return;
         }
         open(player);
-        event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.SUCCESS);
     }
 
     @SubscribeEvent

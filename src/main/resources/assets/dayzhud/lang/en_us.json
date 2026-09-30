@@ -24,5 +24,6 @@
   "message.dayzhud.market.zone_enter": "§aSafe zone — you cannot be harmed here.",
   "message.dayzhud.market.zone_leave": "§cLeaving the safe zone.",
   "subtitles.dayzhud.corpse_search": "Searching body",
-  "item.dayzhud.grid_reserved": ""
+  "item.dayzhud.grid_reserved": "",
+  "block.dayzhud.laptop": "Laptop"
 }

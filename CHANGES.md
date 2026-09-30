@@ -1,3 +1,44 @@
+# dayzhud 2.13.12 - a laptop that opens the trader
+
+**3 changed files, 2 new classes, 7 new resources** (plus version bump). On top of 2.13.11.
+
+New block `dayzhud:laptop`: place it (the screen turns to face you) and right-click it to open
+the trader. It's this mod's own block, so it works whatever `terminalBlocks` lists, and it
+follows the same rules as those blocks - `blockRequiresSafeZone` (off by default) included;
+`MarketAccess.useTerminalBlock` is now the one place both go through. Sneak-right-click with
+an item places against it instead, as usual.
+
+- Model: an open laptop, lid tilted back 22.5 degrees; 64x64 texture with a keyboard, trackpad
+  and a trader-style screen. Hitbox 14x9x14 px, `noOcclusion` so neighbours render.
+- Metal sound, breaks quickly by hand and drops itself (loot table).
+- Recipe: glass panes over iron + redstone + iron, iron row below. Delete
+  `data/dayzhud/recipes/laptop.json` (or override it in a datapack) if traders should only be
+  placed by an admin.
+- In the creative Functional Blocks tab.
+
+# dayzhud 2.13.11 - pickups respect footprints, magazines tab shows up
+
+**2 changed files, 1 new** (plus version bump). On top of 2.13.10.
+
+## Picking up an item with no room for it
+
+Vanilla auto-pickup drops a stack into the first empty slot. Shadow cells are real items, so
+it never landed on another item's footprint - but it did land in any single free cell, even
+one the new item's own footprint doesn't fit, and it then showed as 1x1. New `GridPickup`
+places multi-cell pickups itself: an empty loadout slot that takes it (guns still go to
+their weapon slots), else wherever the whole footprint fits in the inventory grid (turned if
+only that fits), else a free ordinary hotbar slot - else it stays on the ground. 1x1 items,
+and stacks that just top up ones you already carry, are left to vanilla.
+
+## Magazines tab sometimes missing until the world was reopened
+
+The shop catalogue is built once and cached. TaCZ Magazines fills its magazine list from gun
+data, which can arrive after the first build on world join - and that build, with no
+magazines, stayed cached until the next world load. The catalogue now remembers how many
+magazine families there were when it was built and rebuilds on the next shop open once there
+are more. (Keyed on that count, so it rebuilds once, not on every open - each rebuild changes
+the catalogue revision, and a purchase from an older revision is refused.)
+
 # dayzhud 2.13.10 - one count per multi-cell stack
 
 **1 changed file** (plus version bump). On top of 2.13.9.

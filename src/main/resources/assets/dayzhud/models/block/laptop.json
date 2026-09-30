@@ -1,0 +1,36 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "0": "dayzhud:block/laptop",
+    "particle": "dayzhud:block/laptop"
+  },
+  "elements": [
+    {
+      "name": "deck",
+      "from": [2, 0, 4],
+      "to": [14, 1, 12],
+      "faces": {
+        "up":    {"uv": [0, 0, 12, 8], "rotation": 180, "texture": "#0"},
+        "down":  {"uv": [12, 0, 16, 8], "texture": "#0"},
+        "north": {"uv": [12, 0, 16, 1], "texture": "#0"},
+        "south": {"uv": [12, 1, 16, 2], "texture": "#0"},
+        "east":  {"uv": [12, 2, 16, 3], "texture": "#0"},
+        "west":  {"uv": [12, 2, 16, 3], "texture": "#0"}
+      }
+    },
+    {
+      "name": "lid",
+      "from": [2, 1, 11],
+      "to": [14, 9, 12],
+      "rotation": {"angle": 22.5, "axis": "x", "origin": [8, 1, 12]},
+      "faces": {
+        "north": {"uv": [0, 8, 12, 16], "texture": "#0"},
+        "south": {"uv": [12, 0, 16, 8], "texture": "#0"},
+        "up":    {"uv": [12, 8, 16, 9], "texture": "#0"},
+        "down":  {"uv": [12, 9, 16, 10], "texture": "#0"},
+        "east":  {"uv": [12, 10, 13, 16], "texture": "#0"},
+        "west":  {"uv": [12, 10, 13, 16], "texture": "#0"}
+      }
+    }
+  ]
+}
