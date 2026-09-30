@@ -108,5 +108,31 @@ public class NetworkHandler {
                 com.dayzhud.mod.inventory.grid.RotateCarriedPacket::encode,
                 com.dayzhud.mod.inventory.grid.RotateCarriedPacket::decode,
                 com.dayzhud.mod.inventory.grid.RotateCarriedPacket::handle);
+
+        // Weight (2.15.0). Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.weight.WeightSyncPacket.class,
+                com.dayzhud.mod.weight.WeightSyncPacket::encode,
+                com.dayzhud.mod.weight.WeightSyncPacket::decode,
+                com.dayzhud.mod.weight.WeightSyncPacket::handle);
+
+        // Injuries (2.15.0). Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.injury.InjurySyncPacket.class,
+                com.dayzhud.mod.injury.InjurySyncPacket::encode,
+                com.dayzhud.mod.injury.InjurySyncPacket::decode,
+                com.dayzhud.mod.injury.InjurySyncPacket::handle);
+
+        // Quests (2.15.0). Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.quest.QuestPackets.Sync.class,
+                com.dayzhud.mod.quest.QuestPackets.Sync::encode,
+                com.dayzhud.mod.quest.QuestPackets.Sync::decode,
+                com.dayzhud.mod.quest.QuestPackets.Sync::handle);
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.quest.QuestPackets.Action.class,
+                com.dayzhud.mod.quest.QuestPackets.Action::encode,
+                com.dayzhud.mod.quest.QuestPackets.Action::decode,
+                com.dayzhud.mod.quest.QuestPackets.Action::handle);
     }
 }

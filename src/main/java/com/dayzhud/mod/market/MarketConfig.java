@@ -51,6 +51,10 @@ public final class MarketConfig {
     public static final ForgeConfigSpec.BooleanValue STOCK_ARMOR;
     public static final ForgeConfigSpec.IntValue MAX_DERIVED_LISTINGS;
 
+    public static final ForgeConfigSpec.BooleanValue EXTRACTION_ENABLED;
+    public static final ForgeConfigSpec.IntValue EXTRACTION_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue EXTRACTION_PARTICLES;
+
     public static final ForgeConfigSpec.BooleanValue TACZ_STOCK_ATTACHMENTS;
     public static final ForgeConfigSpec.IntValue TACZ_ATTACHMENT_PRICE;
 
@@ -216,6 +220,21 @@ public final class MarketConfig {
                         "Ceiling on automatically stocked items, as a safety net against a pack",
                         "with an enormous item registry.")
                 .defineInRange("maxListings", 600, 0, 5000);
+        b.pop();
+
+        b.push("extraction");
+        EXTRACTION_ENABLED = b.comment(
+                        "Extraction points: stand inside one for extractSeconds and you are taken",
+                        "to your hideout - your bed or respawn anchor if you have one, else the",
+                        "nearest safe zone, else world spawn - with everything you carry. Points are",
+                        "placed with /market extract add <name> <radius>.")
+                .define("enabled", true);
+        EXTRACTION_SECONDS = b.comment(
+                        "How long you must stay inside an extraction point. Leaving resets it.")
+                .defineInRange("extractSeconds", 10, 3, 120);
+        EXTRACTION_PARTICLES = b.comment(
+                        "Mark each extraction point's edge with green particles for nearby players.")
+                .define("particles", true);
         b.pop();
 
         SPEC = b.build();

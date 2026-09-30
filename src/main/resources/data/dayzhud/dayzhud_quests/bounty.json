@@ -1,0 +1,19 @@
+{
+  "title": "Bounty (repeatable)",
+  "description": "Standing offer: twenty-five of the dead, paid on delivery. Come back whenever you like.",
+  "order": 200,
+  "requires": [
+    "dayzhud:clean_streets"
+  ],
+  "repeatable": true,
+  "objectives": [
+    {
+      "type": "kill",
+      "target": "undead",
+      "count": 25
+    }
+  ],
+  "rewards": {
+    "roubles": 8000
+  }
+}

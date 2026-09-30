@@ -1,0 +1,15 @@
+{
+  "title": "Clean Streets",
+  "description": "The dead are thick around the market road. Thin them out - ten will do for a start.",
+  "order": 20,
+  "objectives": [
+    {
+      "type": "kill",
+      "target": "undead",
+      "count": 10
+    }
+  ],
+  "rewards": {
+    "roubles": 9000
+  }
+}

@@ -53,6 +53,42 @@ public final class GridPickup {
         Inventory inv = player.getInventory();
         if (mergeRoom(inv, stack) >= stack.getCount()) return;
 
+        // Handled here either way: placed below, or refused (stays on the ground).
+        event.setCanceled(true);
+        if (!placeMultiCell(player, stack)) return;
+
+        // What vanilla's own pickup does after a successful add.
+        int count = stack.getCount();
+        ForgeEventFactory.firePlayerItemPickupEvent(player, entity, stack.copy());
+        player.take(entity, count);
+        player.awardStat(Stats.ITEM_PICKED_UP.get(stack.getItem()), count);
+        player.onItemPickup(entity);
+        entity.discard();
+    }
+
+    /**
+     * Gives {@code stack} to the player the way a pickup lands (2.15.0): a multi-cell item
+     * where its footprint fits, anything else through vanilla's add; whatever doesn't fit is
+     * dropped at their feet. Used for purchases and quest rewards, which used vanilla's add
+     * and so squeezed a bought gun into any single free cell.
+     */
+    public static void give(ServerPlayer player, ItemStack stack) {
+        if (stack.isEmpty()) return;
+        Inventory inv = player.getInventory();
+        boolean placed;
+        if (GridConfig.ENABLED.get() && ItemFootprints.baseFootprintOf(stack).isMultiCell()) {
+            // Topping up stacks already carried needs no new cell; otherwise find a footprint.
+            placed = (mergeRoom(inv, stack) >= stack.getCount() && inv.add(stack)) || placeMultiCell(player, stack);
+        } else {
+            placed = inv.add(stack);
+        }
+        if (!placed && !stack.isEmpty()) player.drop(stack, false);
+    }
+
+    /** Places a whole multi-cell stack (see the class doc for the order); false if nowhere. */
+    private static boolean placeMultiCell(ServerPlayer player, ItemStack stack) {
+        Inventory inv = player.getInventory();
+        Footprint fp = ItemFootprints.baseFootprintOf(stack);
         int slot = -1;
         boolean rotated = false;
         for (int i = 0; i < WeaponSlots.ORDER.length && slot < 0; i++) {
@@ -69,25 +105,15 @@ public final class GridPickup {
         for (int i = WeaponSlots.ORDER.length; i < HOTBAR && slot < 0; i++) {
             if (inv.getItem(i).isEmpty()) slot = i;
         }
-
-        // Handled here either way: placed below, or refused (stays on the ground).
-        event.setCanceled(true);
-        if (slot < 0) return;
+        if (slot < 0) return false;
 
         ItemStack placed = stack.copy();
         ItemGrid.setRotated(placed, rotated);
         inv.setItem(slot, placed);
-        // Claim its footprint now, not at the next reconcile - two items picked up in the same
+        // Claim its footprint now, not at the next reconcile - two items placed in the same
         // tick must not both be given the same free rectangle.
         if (slot >= MAIN_START) ItemGrid.reconcile(grid, MAIN_START, COLS, ROWS);
-
-        // What vanilla's own pickup does after a successful add.
-        int count = stack.getCount();
-        ForgeEventFactory.firePlayerItemPickupEvent(player, entity, placed.copy());
-        player.take(entity, count);
-        player.awardStat(Stats.ITEM_PICKED_UP.get(stack.getItem()), count);
-        player.onItemPickup(entity);
-        entity.discard();
+        return true;
     }
 
     /** Container index of the first anchor where {@code fp} fits in the grid, or -1. */

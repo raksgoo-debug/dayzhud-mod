@@ -59,6 +59,10 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     // ---- state -------------------------------------------------------------
     private EditBox search;
     private boolean sellTab;
+    /** Quests tab (2.15.0) - see drawQuestList / drawQuestDetails. */
+    private boolean questTab;
+    private int questScroll;
+    private int questSelected;
     private String category = "";
     private String sub = "";
     private int scroll;
@@ -212,7 +216,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         StyledTheme.panel(g, panelX, panelY, panelW, panelH);
-        if (!sellTab) {
+        if (questTab) {
+            StyledTheme.zone(g, sidebarX, contentY, scrollbarX - 4, contentY + contentH);
+        } else if (!sellTab) {
             StyledTheme.zone(g, sidebarX, contentY, sidebarX + sidebarW, contentY + contentH);
             StyledTheme.zone(g, listX, contentY, listX + listW, contentY + contentH);
         } else {
@@ -259,11 +265,15 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         menu.sellTabActive = sellTab;
+        if (search != null) search.visible = !sellTab && !questTab;
         super.render(g, mouseX, mouseY, partialTick);
 
         drawHeader(g);
         drawTabs(g, mouseX, mouseY);
-        if (sellTab) {
+        if (questTab) {
+            drawQuestList(g, mouseX, mouseY);
+            drawQuestDetails(g, mouseX, mouseY);
+        } else if (sellTab) {
             drawSellList(g);
             drawSellDetails(g, mouseX, mouseY);
         } else {
@@ -302,7 +312,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         g.drawString(font, text, -font.width(text), 0, 0xFFC9A227, false);
         g.pose().popPose();
 
-        if (!sellTab && search.getValue().isEmpty() && !search.isFocused()) {
+        if (!sellTab && !questTab && search.getValue().isEmpty() && !search.isFocused()) {
             StyledTheme.caption(g, font, "SEARCH ITEMS", sidebarX + 6, contentY + 8);
         }
     }
@@ -317,8 +327,9 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     }
 
     private void drawTabs(GuiGraphics g, int mouseX, int mouseY) {
-        drawTab(g, mouseX, mouseY, 0, "BUY", !sellTab);
+        drawTab(g, mouseX, mouseY, 0, "BUY", !sellTab && !questTab);
         drawTab(g, mouseX, mouseY, 1, "SELL", sellTab);
+        drawTab(g, mouseX, mouseY, 2, "QUESTS", questTab);
         int y = tabY + TAB_H;
         g.fill(panelX + 10, y, panelX + panelW - 10, y + 1, StyledTheme.HEADER_ACCENT);
     }
@@ -649,6 +660,175 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         g.drawString(font, shown, x + (w - font.width(shown)) / 2, y + 4, colour, false);
     }
 
+    // ---- quests (2.15.0) ---------------------------------------------------
+
+    private static List<com.dayzhud.mod.quest.QuestPackets.View> quests() {
+        return com.dayzhud.mod.quest.ClientQuestState.views();
+    }
+
+    private com.dayzhud.mod.quest.QuestPackets.View selectedQuest() {
+        List<com.dayzhud.mod.quest.QuestPackets.View> q = quests();
+        if (q.isEmpty()) return null;
+        questSelected = Math.max(0, Math.min(questSelected, q.size() - 1));
+        return q.get(questSelected);
+    }
+
+    /** Deliver objectives count what's in your inventory right now; the rest, the server's count. */
+    private int haveFor(com.dayzhud.mod.quest.QuestPackets.ObjectiveView o) {
+        if (o.type() == com.dayzhud.mod.quest.QuestDef.Type.DELIVER.ordinal() && minecraft != null
+                && minecraft.player != null) {
+            return com.dayzhud.mod.quest.QuestItems.countIn(minecraft.player, o.target());
+        }
+        return o.progress();
+    }
+
+    private boolean questReady(com.dayzhud.mod.quest.QuestPackets.View v) {
+        if (v.status() != com.dayzhud.mod.quest.QuestSystem.ACTIVE) return false;
+        for (var o : v.objectives()) if (haveFor(o) < o.count()) return false;
+        return true;
+    }
+
+    private String statusLabel(com.dayzhud.mod.quest.QuestPackets.View v) {
+        if (v.status() == com.dayzhud.mod.quest.QuestSystem.DONE) return "COMPLETED";
+        if (v.status() == com.dayzhud.mod.quest.QuestSystem.AVAILABLE) return "AVAILABLE";
+        return questReady(v) ? "READY TO HAND IN" : "IN PROGRESS";
+    }
+
+    private void drawQuestList(GuiGraphics g, int mouseX, int mouseY) {
+        List<com.dayzhud.mod.quest.QuestPackets.View> list = quests();
+        int left = sidebarX, right = scrollbarX - 4;
+        questScroll = Math.max(0, Math.min(questScroll, Math.max(0, list.size() - visibleRows)));
+        g.enableScissor(left, contentY, right, contentY + visibleRows * ROW_H);
+        for (int row = 0; row < visibleRows; row++) {
+            int idx = questScroll + row;
+            if (idx >= list.size()) break;
+            var v = list.get(idx);
+            int y = contentY + row * ROW_H;
+            boolean hovered = inBox(mouseX, mouseY, left, y, right - left, ROW_H);
+            if (idx == questSelected) {
+                g.fill(left, y, right, y + ROW_H, StyledTheme.BUTTON_BG_HOVER);
+                g.fill(left, y, left + 2, y + ROW_H, StyledTheme.ACCENT);
+            } else if (hovered) {
+                g.fill(left, y, right, y + ROW_H, StyledTheme.BUTTON_BG);
+            }
+            g.fill(left, y + ROW_H - 1, right, y + ROW_H, StyledTheme.HEADER_ACCENT);
+            int titleColour = v.status() == com.dayzhud.mod.quest.QuestSystem.DONE
+                    ? StyledTheme.LABEL_DIM : StyledTheme.TEXT_COLOR;
+            g.drawString(font, trim(v.title(), right - left - 16), left + 8, y + 5, titleColour, false);
+            String status = statusLabel(v);
+            int statusColour = "READY TO HAND IN".equals(status) ? StyledTheme.ACCENT
+                    : "AVAILABLE".equals(status) ? 0xFFC9A227 : StyledTheme.LABEL_DIM;
+            g.pose().pushPose();
+            g.pose().translate(left + 8, y + 15, 0);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            g.drawString(font, status, 0, 0, statusColour, false);
+            g.pose().popPose();
+        }
+        g.disableScissor();
+        if (list.isEmpty()) {
+            g.drawString(font, "NO QUESTS RIGHT NOW", left + 10, contentY + 10, StyledTheme.LABEL_DIM, false);
+        }
+        int trackH = visibleRows * ROW_H;
+        g.fill(scrollbarX, contentY, scrollbarX + 5, contentY + trackH, StyledTheme.SLOT_BG);
+        if (list.size() > visibleRows) {
+            int thumb = Math.max(12, trackH * visibleRows / list.size());
+            int y = contentY + (trackH - thumb) * questScroll / Math.max(1, list.size() - visibleRows);
+            g.fill(scrollbarX, y, scrollbarX + 5, y + thumb, StyledTheme.SLOT_BORDER);
+        }
+    }
+
+    private void drawQuestDetails(GuiGraphics g, int mouseX, int mouseY) {
+        var v = selectedQuest();
+        if (v == null) return;
+        int x = detailX + 8, w = detailW - 16;
+        StyledTheme.header(g, font, trim(v.title().toUpperCase(Locale.ROOT), detailW - 12), detailX + 6,
+                contentY + 5, detailW - 12);
+        int y = contentY + 22;
+        int textBottom = qtyRowY() - 6;
+        // Description, then objectives and rewards, in small text so a long brief still fits.
+        for (var line : font.split(Component.literal(v.description()), (int) (w / 0.75f))) {
+            if (y > textBottom - 8) break;
+            g.pose().pushPose();
+            g.pose().translate(x, y, 0);
+            g.pose().scale(0.75f, 0.75f, 1f);
+            g.drawString(font, line, 0, 0, StyledTheme.HEADER_COLOR, false);
+            g.pose().popPose();
+            y += 8;
+        }
+        y += 4;
+        StyledTheme.caption(g, font, "OBJECTIVES", x, y);
+        y += 10;
+        for (var o : v.objectives()) {
+            if (y > textBottom - 8) break;
+            int have = Math.min(haveFor(o), o.count());
+            boolean met = have >= o.count();
+            String count = have + "/" + o.count();
+            small(g, count, x + w, y, met ? StyledTheme.ACCENT : StyledTheme.LABEL_DIM, true);
+            String label = trim(o.label().getString(), (int) ((w - font.width(count) * 0.75f - 4) / 0.75f));
+            small(g, label, x, y, met ? StyledTheme.ACCENT : StyledTheme.TEXT_COLOR, false);
+            y += 10;
+        }
+        y += 4;
+        if (y < textBottom - 8) {
+            StyledTheme.caption(g, font, "REWARD", x, y);
+            y += 10;
+            if (v.roubles() > 0) {
+                small(g, Money.withSymbol(v.roubles()), x, y, 0xFFC9A227, false);
+                y += 10;
+            }
+            int ix = x;
+            for (ItemStack reward : v.rewards()) {
+                if (y + 16 > textBottom || ix + 16 > x + w) break;
+                g.renderItem(reward, ix, y);
+                g.renderItemDecorations(font, reward, ix, y);
+                ix += 18;
+            }
+        }
+
+        if (v.status() == com.dayzhud.mod.quest.QuestSystem.AVAILABLE) {
+            drawWideButton(g, mouseX, mouseY, x, buyButtonY(), w, "ACCEPT", true);
+        } else if (v.status() == com.dayzhud.mod.quest.QuestSystem.ACTIVE) {
+            drawWideButton(g, mouseX, mouseY, x, qtyRowY(), w, "HAND IN", questReady(v));
+            drawWideButton(g, mouseX, mouseY, x, buyButtonY(), w, "ABANDON", true);
+        } else {
+            drawWideButton(g, mouseX, mouseY, x, buyButtonY(), w, "COMPLETED", false);
+        }
+    }
+
+    private boolean questClick(double mouseX, double mouseY) {
+        int left = sidebarX, right = scrollbarX - 4;
+        if (mouseX >= left && mouseX < right && mouseY >= contentY && mouseY < contentY + visibleRows * ROW_H) {
+            int idx = questScroll + (int) (mouseY - contentY) / ROW_H;
+            if (idx < quests().size()) questSelected = idx;
+            return true;
+        }
+        var v = selectedQuest();
+        if (v == null) return false;
+        int x = detailX + 8, w = detailW - 16;
+        if (v.status() == com.dayzhud.mod.quest.QuestSystem.AVAILABLE
+                && inBox(mouseX, mouseY, x, buyButtonY(), w, 16)) {
+            NetworkHandler.CHANNEL.sendToServer(new com.dayzhud.mod.quest.QuestPackets.Action(
+                    com.dayzhud.mod.quest.QuestPackets.Action.ACCEPT, v.id()));
+            return true;
+        }
+        if (v.status() == com.dayzhud.mod.quest.QuestSystem.ACTIVE) {
+            if (inBox(mouseX, mouseY, x, qtyRowY(), w, 16) && questReady(v)) {
+                confirm = new Confirm("HAND IN QUEST?", v.title(),
+                        v.roubles() > 0 ? "Reward " + Money.withSymbol(v.roubles()) : "Hand over the items",
+                        () -> NetworkHandler.CHANNEL.sendToServer(new com.dayzhud.mod.quest.QuestPackets.Action(
+                                com.dayzhud.mod.quest.QuestPackets.Action.TURN_IN, v.id())));
+                return true;
+            }
+            if (inBox(mouseX, mouseY, x, buyButtonY(), w, 16)) {
+                confirm = new Confirm("ABANDON QUEST?", v.title(), "Progress will be lost",
+                        () -> NetworkHandler.CHANNEL.sendToServer(new com.dayzhud.mod.quest.QuestPackets.Action(
+                                com.dayzhud.mod.quest.QuestPackets.Action.ABANDON, v.id())));
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- confirmation ------------------------------------------------------
 
     private static final int CONFIRM_W = 230;
@@ -713,14 +893,19 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (confirm != null) return confirmClick(mouseX, mouseY);
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             if (inBox(mouseX, mouseY, tabX(i), tabY, TAB_W, TAB_H)) {
                 sellTab = i == 1;
+                questTab = i == 2;
                 menu.sellTabActive = sellTab;
                 layout();
                 if (search != null) search.setPosition(sidebarX + 4, contentY + 4);
                 return true;
             }
+        }
+
+        if (questTab) {
+            return questClick(mouseX, mouseY) || super.mouseClicked(mouseX, mouseY, button);
         }
 
         if (sellTab) {
@@ -799,6 +984,11 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
         if (confirm != null) return true;
+        if (questTab && inBox(mouseX, mouseY, sidebarX, contentY, scrollbarX - sidebarX, contentH)) {
+            int max = Math.max(0, quests().size() - visibleRows);
+            questScroll = Math.max(0, Math.min(max, questScroll - (int) Math.signum(delta)));
+            return true;
+        }
         if (!sellTab && inBox(mouseX, mouseY, sidebarX, contentY, sidebarW, contentH)) {
             int max = Math.max(0, sidebarRows().size() - sidebarRowsVisible);
             sidebarScroll = Math.max(0, Math.min(max, sidebarScroll - (int) Math.signum(delta)));
@@ -865,7 +1055,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
 
     /** Index into {@link #filtered}, or -1. */
     private int rowAt(double mouseX, double mouseY) {
-        if (sellTab) return -1;
+        if (sellTab || questTab) return -1;
         if (mouseX < listX || mouseX >= listX + listW) return -1;
         int rel = (int) (mouseY - contentY);
         if (rel < 0 || rel >= visibleRows * ROW_H) return -1;

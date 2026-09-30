@@ -1,0 +1,29 @@
+{
+  "title": "Supply Run",
+  "description": "Food and clean water, that's what keeps people here alive. Canned meat and bottled water, as much as you can carry.",
+  "order": 30,
+  "requires": [
+    "dayzhud:a_small_favour"
+  ],
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "fieldkit:canned_meat",
+      "count": 3
+    },
+    {
+      "type": "deliver",
+      "item": "fieldkit:water_bottle",
+      "count": 2
+    }
+  ],
+  "rewards": {
+    "roubles": 12000,
+    "items": [
+      {
+        "item": "fieldkit:army_ration",
+        "count": 1
+      }
+    ]
+  }
+}

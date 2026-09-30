@@ -1,0 +1,24 @@
+{
+  "title": "Gunpowder",
+  "description": "I reload my own rounds. Three packs of green gunpowder and I'll pay you in ammunition.",
+  "order": 110,
+  "requires": [
+    "dayzhud:marksman"
+  ],
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:gunpowdergreen",
+      "count": 3
+    }
+  ],
+  "rewards": {
+    "roubles": 24000,
+    "items": [
+      {
+        "item": "tarkovdayz:ammobox_545",
+        "count": 2
+      }
+    ]
+  }
+}

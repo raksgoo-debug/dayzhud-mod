@@ -79,7 +79,20 @@ public final class MarketCommand {
                                         .executes(ctx -> removeZone(ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "name")))))
                         .then(Commands.literal("list")
-                                .executes(ctx -> listZones(ctx.getSource())))));
+                                .executes(ctx -> listZones(ctx.getSource()))))
+                .then(Commands.literal("extract").requires(s -> s.hasPermission(2))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("name", StringArgumentType.word())
+                                        .then(Commands.argument("radius", IntegerArgumentType.integer(1, 64))
+                                                .executes(ctx -> addExtract(ctx.getSource(),
+                                                        StringArgumentType.getString(ctx, "name"),
+                                                        IntegerArgumentType.getInteger(ctx, "radius"))))))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("name", StringArgumentType.word())
+                                        .executes(ctx -> removeExtract(ctx.getSource(),
+                                                StringArgumentType.getString(ctx, "name")))))
+                        .then(Commands.literal("list")
+                                .executes(ctx -> listExtracts(ctx.getSource())))));
     }
 
     /** Reports what the catalogue actually contains, rather than what it looks like. */
@@ -173,5 +186,37 @@ public final class MarketCommand {
                     " - " + z.name() + " @ " + z.x() + ", " + z.z() + " r=" + z.radius()), false);
         }
         return zones.size();
+    }
+
+    /** Extraction points (2.14.0) - centred on the player running the command, like zones. */
+    private static int addExtract(CommandSourceStack source, String name, int radius) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        BlockPos pos = player.blockPosition();
+        ExtractionData.get(player.serverLevel()).add(
+                new SafeZoneData.Zone(name, pos.getX(), pos.getY(), pos.getZ(), radius));
+        source.sendSuccess(() -> Component.translatable("command.dayzhud.extract.added", name, radius), true);
+        return 1;
+    }
+
+    private static int removeExtract(CommandSourceStack source, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        if (ExtractionData.get(source.getPlayerOrException().serverLevel()).remove(name)) {
+            source.sendSuccess(() -> Component.translatable("command.dayzhud.extract.removed", name), true);
+            return 1;
+        }
+        source.sendFailure(Component.translatable("command.dayzhud.extract.missing", name));
+        return 0;
+    }
+
+    private static int listExtracts(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var points = ExtractionData.get(source.getPlayerOrException().serverLevel()).points();
+        if (points.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.dayzhud.extract.none"), false);
+            return 0;
+        }
+        for (SafeZoneData.Zone z : points) {
+            source.sendSuccess(() -> Component.literal(
+                    " - " + z.name() + " @ " + z.x() + ", " + z.y() + ", " + z.z() + " r=" + z.radius()), false);
+        }
+        return points.size();
     }
 }

@@ -1,0 +1,23 @@
+{
+  "title": "Field Medic",
+  "description": "Our medic is out on her feet. A proper first aid kit and some painkillers for her bag.",
+  "order": 70,
+  "requires": [
+    "dayzhud:getting_out_alive"
+  ],
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:salewafirstaidkit",
+      "count": 1
+    },
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:painkillers",
+      "count": 2
+    }
+  ],
+  "rewards": {
+    "roubles": 30000
+  }
+}

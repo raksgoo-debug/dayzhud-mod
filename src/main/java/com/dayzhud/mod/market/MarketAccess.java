@@ -124,5 +124,6 @@ public final class MarketAccess {
         MarketNetwork.sendPrices(player);
         MarketNetwork.sendCatalogue(player);
         MarketNetwork.syncWallet(player);
+        com.dayzhud.mod.quest.QuestSystem.sync(player);
     }
 }

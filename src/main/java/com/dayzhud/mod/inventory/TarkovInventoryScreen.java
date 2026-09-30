@@ -202,6 +202,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             graphics.fill(x + cx - 6, y + cy - 6, x + cx + cw + 6, y + cy + ch + 6, SECTION_BG);
         }
 
+        // Secure container (2.14.0): under the backpack's divider, vitals to its right.
+        graphics.fill(x + 180, y + 248, x + 352, y + 312, SECTION_BG);
+
         graphics.fill(x + 176, y + 16, x + 177, y + 262, PANEL_BORDER); // vertical divider
         graphics.fill(x + 8, y + 234, x + 352, y + 235, PANEL_BORDER);  // below the loadout cluster
 
@@ -342,6 +345,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                     topPos + TarkovInventoryMenu.CONTAINER_Y - 18, rule);
         }
         drawHeader(graphics, "HOTBAR", leftPos + 12, topPos + 298, 40);
+        drawHeader(graphics, "SECURE", leftPos + 184, topPos + 238, 40);
         if (menu.getActiveBackpackSlots() > 0) {
             drawHeader(graphics, "BACKPACK", leftPos + 184, topPos + 86, 50);
         }
@@ -782,13 +786,36 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        int y = topPos + 298;
-        int x = leftPos + 192;
-        int spacing = 56;
+        // A column right of the secure container (2.14.0; was a row across the column at
+        // y 298, where the secure container now sits).
+        int x = leftPos + TarkovInventoryMenu.SECURE_X + 3 * 18 + 22;
+        int y = topPos + TarkovInventoryMenu.SECURE_Y + 1;
+        int spacing = 14;
 
         drawStatEntry(graphics, ICON_HEART, health01, x, y);
-        drawStatEntry(graphics, ICON_FOOD, food01, x + spacing, y);
-        drawStatEntry(graphics, ICON_WATER, water01, x + spacing * 2, y);
+        drawStatEntry(graphics, ICON_FOOD, food01, x, y + spacing);
+        drawStatEntry(graphics, ICON_WATER, water01, x, y + spacing * 2);
+        drawWeightEntry(graphics, x, y + spacing * 3);
+    }
+
+    /** Carried weight against the next limit (2.15.0), coloured by how far over it is. */
+    private void drawWeightEntry(GuiGraphics graphics, int x, int y) {
+        if (!com.dayzhud.mod.weight.ClientWeight.known()) return;
+        float kg = com.dayzhud.mod.weight.ClientWeight.kg();
+        int level = com.dayzhud.mod.weight.ClientWeight.level();
+        float limit = switch (level) {
+            case 0 -> com.dayzhud.mod.weight.ClientWeight.overweight();
+            case 1 -> com.dayzhud.mod.weight.ClientWeight.heavy();
+            default -> com.dayzhud.mod.weight.ClientWeight.critical();
+        };
+        int color = switch (level) {
+            case 0 -> TEXT_COLOR;
+            case 1 -> 0xE2D22E;
+            case 2 -> 0xE2A62E;
+            default -> 0xE23A2E;
+        };
+        graphics.drawString(font, "KG", x + 1, y + 2, LABEL_DIM, false);
+        graphics.drawString(font, String.format(Locale.ROOT, "%.1f/%.0f", kg, limit), x + 16, y + 2, color, false);
     }
 
     private void drawStatEntry(GuiGraphics graphics, ResourceLocation icon, float value01, int x, int y) {

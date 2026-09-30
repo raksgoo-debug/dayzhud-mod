@@ -92,6 +92,8 @@ public class DayzHudOverlay implements IGuiOverlay {
         float stamina01 = VitalsTracker.getStamina01();
         float temperature01 = VitalsTracker.getTemperature01();
 
+        drawPainVignette(graphics, screenWidth, screenHeight);
+
         int rowY = screenHeight - MARGIN_Y - ICON_SIZE;
         int rightX = screenWidth - MARGIN_X;
 
@@ -109,6 +111,7 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawGaugeStat(graphics, col2Icon, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
 
+        drawConditions(graphics, col0Icon - 10, rowY);
         drawBalance(graphics, rowY, rightX);
         drawStaminaBar(graphics, stamina01, screenWidth, screenHeight);
         drawXpBar(graphics, player, screenWidth, screenHeight);
@@ -131,6 +134,86 @@ public class DayzHudOverlay implements IGuiOverlay {
         var font = Minecraft.getInstance().font;
         graphics.drawString(font, text, rightX - font.width(text),
                 rowY - MARGIN_Y - font.lineHeight, 0xC9A227, true);
+    }
+
+    private static final ResourceLocation ICON_BOLT = rl("icon_bolt");
+    private static final int COLOR_BLEED = 0xE23A2E;
+    private static final int COLOR_HEAVY_BLEED = 0x9E0F0F;
+    private static final int COLOR_RELIEVED = 0x8FB08F;
+
+    /**
+     * Conditions (2.15.0), right-to-left from {@code rightEdge}, level with the status row:
+     * heavy bleeding, light bleeding (each with its wound count), pain (bolt; muted green with
+     * the painkiller's seconds left while suppressed), and carried weight when over the limit.
+     * Nothing is drawn when all is well, so the corner stays as it was.
+     */
+    private void drawConditions(GuiGraphics graphics, int rightEdge, int y) {
+        var font = Minecraft.getInstance().font;
+        int x = rightEdge;
+
+        int weightLevel = com.dayzhud.mod.weight.ClientWeight.level();
+        if (weightLevel > 0) {
+            String text = String.format(java.util.Locale.ROOT, "%.0fkg", com.dayzhud.mod.weight.ClientWeight.kg());
+            int color = weightLevel == 1 ? 0xE2D22E : weightLevel == 2 ? COLOR_LOW : COLOR_CRITICAL;
+            x -= font.width(text);
+            graphics.drawString(font, text, x, y + 2, color, true);
+            x -= 8;
+        }
+        int pain = com.dayzhud.mod.injury.ClientInjuries.pain();
+        int relief = com.dayzhud.mod.injury.ClientInjuries.reliefSeconds();
+        if (pain >= com.dayzhud.mod.injury.InjurySystem.PAIN_MILD) {
+            String text = relief > 0 ? relief + "s" : "";
+            x -= font.width(text);
+            if (!text.isEmpty()) graphics.drawString(font, text, x, y + 2, COLOR_RELIEVED, true);
+            x -= ICON_SIZE + (text.isEmpty() ? 0 : 1);
+            int color = relief > 0 ? COLOR_RELIEVED
+                    : pain >= com.dayzhud.mod.injury.InjurySystem.PAIN_SEVERE ? COLOR_CRITICAL : COLOR_LOW;
+            drawIcon(graphics, ICON_BOLT, x, y, color);
+            x -= 8;
+        }
+        x = drawWound(graphics, font, x, y, com.dayzhud.mod.injury.ClientInjuries.light(), COLOR_BLEED);
+        drawWound(graphics, font, x, y, com.dayzhud.mod.injury.ClientInjuries.heavy(), COLOR_HEAVY_BLEED);
+    }
+
+    private int drawWound(GuiGraphics graphics, net.minecraft.client.gui.Font font, int x, int y, int count, int color) {
+        if (count <= 0) return x;
+        String text = count > 1 ? "x" + count : "";
+        x -= font.width(text);
+        if (!text.isEmpty()) graphics.drawString(font, text, x, y + 2, color, true);
+        x -= ICON_SIZE + (text.isEmpty() ? 0 : 1);
+        drawIcon(graphics, ICON_DROPLET_SOLID, x, y, color);
+        return x - 8;
+    }
+
+    private void drawIcon(GuiGraphics graphics, ResourceLocation icon, int x, int y, int color) {
+        RenderSystem.enableBlend();
+        setTint(color);
+        graphics.blit(icon, x, y, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
+    }
+
+    /**
+     * Pain (2.15.0): the screen's edges darken to red, pulsing like a heartbeat, stronger with
+     * more pain. Nothing below 30 pain or while a painkiller is working.
+     */
+    private void drawPainVignette(GuiGraphics graphics, int w, int h) {
+        if (!com.dayzhud.mod.injury.ClientInjuries.inPain()) return;
+        float strength = Math.min(1f, (com.dayzhud.mod.injury.ClientInjuries.pain()
+                - com.dayzhud.mod.injury.InjurySystem.PAIN_MILD) / 70f);
+        float beat = 0.75f + 0.25f * (float) Math.sin(System.currentTimeMillis() / 1000.0 * Math.PI * 2 * 1.1);
+        int maxAlpha = Math.round((60 + 110 * strength) * beat);
+        int band = Math.max(8, Math.round(Math.min(w, h) * (0.10f + 0.10f * strength)));
+        int steps = 12;
+        for (int i = 0; i < steps; i++) {
+            int a = Math.round(maxAlpha * (1f - i / (float) steps));
+            int color = (a << 24) | 0x3A0000;
+            int inset = band * i / steps, next = band * (i + 1) / steps;
+            graphics.fill(0, inset, w, next, color);                      // top
+            graphics.fill(0, h - next, w, h - inset, color);              // bottom
+            graphics.fill(inset, next, next, h - next, color);            // left
+            graphics.fill(w - next, next, w - inset, h - next, color);    // right
+        }
     }
 
     private void drawStaminaBar(GuiGraphics graphics, float stamina01, int screenWidth, int screenHeight) {

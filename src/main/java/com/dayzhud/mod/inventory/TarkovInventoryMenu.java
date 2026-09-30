@@ -153,6 +153,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int BACKPACK_VISIBLE_ROWS = 7;
     public static final int BACKPACK_MAX_SLOTS = BACKPACK_COLS * BACKPACK_VISIBLE_ROWS;
 
+    /** Secure container (2.14.0): 3x3, under the backpack's divider, left of the vitals. */
+    public static final int SECURE_X = 192;
+    public static final int SECURE_Y = 252;
+
     public final Player player;
     public final List<CurioSlotInfo> curioSlotInfos = new ArrayList<>();
     public final int offhandX, offhandY;
@@ -195,6 +199,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
     private final int containerStartIndex;
+    /** End of the opened container's slots - the secure container's come after them, so
+     *  "container = everything from containerStartIndex on" no longer holds (2.14.0). */
+    private final int containerEndIndex;
+    private final int secureStartIndex;
+    /** The player's secure container (SecureContainerCapability), always present. */
+    public final com.dayzhud.mod.inventory.secure.SecureContainer secureContainer;
     /** Menu indices of the corpse's own inventory/hotbar/bag sections - -1 when not
      *  applicable (no corpse open). Captured in addCorpseSlots(), since the curio column
      *  ahead of them is variable-length. */
@@ -357,6 +367,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                             CONTAINER_Y + (i / CONTAINER_COLS) * 18));
                 }
             }
+        }
+        this.containerEndIndex = slots.size();
+
+        // --- Secure container: last, so every index range above is unchanged ---
+        this.secureContainer = com.dayzhud.mod.inventory.secure.SecureContainerCapability.of(player);
+        this.secureStartIndex = slots.size();
+        for (int i = 0; i < com.dayzhud.mod.inventory.secure.SecureContainer.SIZE; i++) {
+            addSlot(new SecureSlot(secureContainer, i,
+                    SECURE_X + (i % com.dayzhud.mod.inventory.secure.SecureContainer.COLS) * 18,
+                    SECURE_Y + (i / com.dayzhud.mod.inventory.secure.SecureContainer.COLS) * 18));
         }
 
         // So the very first frame already shows correct footprint claims rather than
@@ -705,6 +725,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseLootView),
                     0, CORPSE_LOOT_COLS, CORPSE_BAG_VISIBLE_ROWS, corpseBagStartIndex, corpseLootView::isVisibleSlotUsable));
         }
+        regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(secureContainer), 0,
+                com.dayzhud.mod.inventory.secure.SecureContainer.COLS,
+                com.dayzhud.mod.inventory.secure.SecureContainer.ROWS, secureStartIndex, all));
         this.gridRegions = List.copyOf(regions);
     }
 
@@ -858,6 +881,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
         if (com.dayzhud.mod.inventory.grid.ItemGrid.isMultiCell(carried)) {
             if (!there.isEmpty()) return; // something real is already here - bounce
+            // The slot's own rule (secure container: no bags) - placing below sets the slot
+            // directly, which would otherwise skip it (2.14.0).
+            if (!clickedSlot.mayPlace(carried)) return;
             int local = slotId - region.menuStart();
             int col = local % region.cols();
             int row = local / region.cols();
@@ -957,11 +983,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         int bagStart = backpackStartIndex;
         int bagEnd = bagStart + BACKPACK_MAX_SLOTS;
         int containerStart = containerStartIndex;
-        int containerEnd = slots.size();
+        int containerEnd = containerEndIndex;
         boolean hasContainer = containerEnd > containerStart;
 
         boolean moved;
-        if (index < equipEnd) {
+        if (index >= secureStartIndex) {
+            // Secure container -> inventory, then backpack. Nothing is shift-clicked INTO it:
+            // what goes in the secure container is a deliberate choice, so it's dragged.
+            moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
+            if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
+        } else if (index < equipEnd) {
             moved = moveItemStackTo(sourceStack, invStart, invEnd, false);
             if (!moved) moved = moveItemStackTo(sourceStack, bagStart, bagEnd, false);
         } else if (hasContainer && index >= containerStart && index < containerEnd) {
@@ -1041,7 +1072,8 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             for (int row = 0; row < region.rows(); row++) {
                 for (int col = 0; col < region.cols(); col++) {
                     if (com.dayzhud.mod.inventory.grid.ItemGrid.fits(region.storage(), region.start(),
-                            region.cols(), region.rows(), col, row, fp, region.usable())) {
+                            region.cols(), region.rows(), col, row, fp, region.usable())
+                            && slots.get(region.menuStart() + row * region.cols() + col).mayPlace(candidate)) {
                         slots.get(region.menuStart() + row * region.cols() + col).set(candidate);
                         stack.setCount(0);
                         reconcileGrids();
@@ -1069,6 +1101,18 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             // Accounts for both the worn bag's real capacity (each mod reports it
             // differently) and the current scroll position.
             return view.isVisibleSlotUsable(visibleIndex);
+        }
+    }
+
+    /** A secure-container cell: the container's own rule (no bags) decides what goes in. */
+    private static class SecureSlot extends SlotItemHandler {
+        SecureSlot(com.dayzhud.mod.inventory.secure.SecureContainer handler, int index, int x, int y) {
+            super(handler, index, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return com.dayzhud.mod.inventory.secure.SecureContainer.allowed(stack) && super.mayPlace(stack);
         }
     }
 

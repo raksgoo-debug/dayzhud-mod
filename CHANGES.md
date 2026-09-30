@@ -1,3 +1,84 @@
+# dayzhud 2.15.0 - weight, bleeding and pain, trader quests
+
+On top of 2.14.0.
+
+## Carried weight (`weight/`, config `dayzhud-weight.toml`)
+
+Everything you carry weighs something: inventory, hotbar, armour, worn gear, the worn bag's
+contents, the secure container and the cursor. TACZ guns and attachments use their own data
+weights in kg (an AK is 3.5, a suppressor 0.35); armour goes by its protection; a backpack is
+1.5 kg; other unstackable items 0.4 kg per grid cell; a full stack of anything 1 kg. Per-item
+overrides in the config. Tarkov-style limits, each raised 1.5 kg per Endurance level:
+- over 25 kg: walking slows to 85% and sprint/jump stamina cost rises to 1.6x;
+- over 45 kg: no sprinting (the key is released client-side too), walking down to 60%;
+- over 60 kg: down to a 35% crawl.
+Shown in the inventory (under the vitals) and on the HUD when over the limit.
+
+## Bleeding and pain (`injury/`, config `dayzhud-injuries.toml`)
+
+On top of First Aid's limb health. Hits from mobs, players, projectiles and explosions can
+open a wound (chance scales with damage; big hits open heavy wounds). Wounds drain health each
+second through a new `dayzhud:bleeding` damage type (bypasses armour, no knockback, "bled
+out" death message; First Aid spreads it over the body). Light wounds clot after ~3 minutes;
+heavy ones need a proper kit. Damage and heavy bleeding cause pain: 30+ slows stamina
+recovery and darkens the screen edges; 60+ adds Weakness and Mining Fatigue. Treatment
+happens when a listed med finishes being used - its own effect still happens:
+bandages stop light bleeding, Salewa/Grizzly/CAR/CMS/Surv12 stop all bleeding; painkillers,
+ibuprofen, morphine, Golden Star, Vaseline, Propital and adrenaline suppress pain for a while.
+Lists are in the config. HUD icons left of the status row: blood drops with wound counts, a
+bolt for pain (green with the seconds left while a painkiller works).
+
+## Trader quests (`quest/`)
+
+A QUESTS tab in the trader: accept, track, hand in, abandon. Objectives: deliver items (handed
+over at turn-in, counted from your inventory), kill (entity id, #tag, undead, hostile, player,
+optionally with a gun only), extract. Rewards: roubles and items. Quest progress survives
+death. 13 starter quests in `data/dayzhud/dayzhud_quests/` - a chain from "A Small Favour" to
+"Veteran", plus a repeatable bounty; add or replace quests with a datapack (format in QuestDef).
+
+## Also
+
+- The 12 fieldkit backpacks are in the market (gear > backpacks), priced by capacity:
+  assault 18k, pilgrim 36k, raid 52k, gunslinger 56-59k, frame 68-71k.
+- Purchases and quest rewards now land where their grid footprint fits (`GridPickup.give`),
+  like pickups - vanilla's add squeezed a bought gun into any free cell.
+
+# dayzhud 2.14.0 - stash, secure container, extraction
+
+On top of 2.13.12. The raid loop: extract with what you found, keep it in your stash, and
+the few things in your secure container survive when you don't make it out.
+
+## Stash (`dayzhud:stash`)
+
+A footlocker block. Right-click opens YOUR stash: one 9x10 grid per player, the same contents
+from any stash block, nobody else's to open - so one in a shared hideout serves everyone.
+The block holds nothing itself; breaking it loses nothing. Opens in the normal
+inventory-plus-container screen, so footprints, rotation and shift-click placement all work;
+all 10 rows fit without scrolling. Saved with the overworld (`StashData`), slot positions
+included. Recipe: iron around a chest (delete `data/dayzhud/recipes/stash.json` to make it
+admin-only). Creative Functional Blocks tab.
+
+## Secure container
+
+A 3x3 grid in the inventory screen, under the backpack. Its contents survive death: it lives
+in a player capability (`SecureContainerCapability`), not the inventory, so death drops and
+corpses never see it, and it's copied onto the respawned player. No bags or other containers
+in it (a backpack in there would carry everything in it through death). Shift-click takes
+things out; putting things in is a deliberate drag. The health/food/water readout moved into
+a column to its right to make room.
+
+Grid placement now also checks the target slot's own `mayPlace` rule (it set slots directly
+before), which the secure container relies on.
+
+## Extraction points
+
+`/market extract add <name> <radius>` (op) places one centred on you; `remove`, `list`. Stand
+inside for `extractSeconds` (10) - the action bar counts down, leaving resets it - and you're
+teleported to your hideout: your bed or respawn anchor (an anchor's charge isn't spent), else
+the nearest safe zone in your dimension, else world spawn. Green particles mark each point's
+edge for players within 48 blocks. Config section `[extraction]` in dayzhud-common.toml:
+`enabled`, `extractSeconds`, `particles`.
+
 # dayzhud 2.13.12 - a laptop that opens the trader
 
 **3 changed files, 2 new classes, 7 new resources** (plus version bump). On top of 2.13.11.

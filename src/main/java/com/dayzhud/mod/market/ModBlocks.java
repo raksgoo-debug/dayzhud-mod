@@ -15,7 +15,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/** This mod's blocks: the laptop trader terminal (2.13.12). */
+/** This mod's blocks: the laptop trader terminal (2.13.12) and the stash footlocker (2.14.0). */
 @Mod.EventBusSubscriber(modid = DayzHudMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ModBlocks {
 
@@ -33,11 +33,23 @@ public final class ModBlocks {
     public static final RegistryObject<Item> LAPTOP_ITEM = ITEMS.register("laptop",
             () -> new BlockItem(LAPTOP.get(), new Item.Properties()));
 
+    public static final RegistryObject<Block> STASH = BLOCKS.register("stash",
+            () -> new com.dayzhud.mod.inventory.stash.StashBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_GREEN)
+                    .strength(2.5f)
+                    .sound(SoundType.METAL)
+                    .noOcclusion()));
+    public static final RegistryObject<Item> STASH_ITEM = ITEMS.register("stash",
+            () -> new BlockItem(STASH.get(), new Item.Properties()));
+
     private ModBlocks() {}
 
-    /** No tab of our own - it goes with vanilla's other usable blocks. */
+    /** No tab of our own - they go with vanilla's other usable blocks. */
     @SubscribeEvent
     public static void onCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) event.accept(LAPTOP_ITEM);
+        if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
+            event.accept(LAPTOP_ITEM);
+            event.accept(STASH_ITEM);
+        }
     }
 }

@@ -1,0 +1,23 @@
+{
+  "title": "Tech Salvage",
+  "description": "A buyer wants a graphics card and a hard drive, working or not. Don't ask what for.",
+  "order": 100,
+  "requires": [
+    "dayzhud:scavenger"
+  ],
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:gpu",
+      "count": 1
+    },
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:hdd",
+      "count": 1
+    }
+  ],
+  "rewards": {
+    "roubles": 70000
+  }
+}

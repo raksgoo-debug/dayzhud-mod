@@ -1,0 +1,25 @@
+{
+  "title": "Marksman",
+  "description": "Knives are for amateurs. Put twenty of the dead down with a firearm.",
+  "order": 50,
+  "requires": [
+    "dayzhud:clean_streets"
+  ],
+  "objectives": [
+    {
+      "type": "kill",
+      "target": "undead",
+      "count": 20,
+      "weapon": "gun"
+    }
+  ],
+  "rewards": {
+    "roubles": 18000,
+    "items": [
+      {
+        "item": "tarkovdayz:ammobox_556",
+        "count": 1
+      }
+    ]
+  }
+}

@@ -319,7 +319,7 @@ public final class MarketCatalog {
         };
     }
 
-    static ItemStack stackFor(String key, int count) {
+    public static ItemStack stackFor(String key, int count) {
         if (key.startsWith(MagazineCompat.KEY_PREFIX)) return MagazineCompat.makeFor(key);
         if (key.startsWith("tacz:gun/")) {
             ResourceLocation id = ResourceLocation.tryParse(key.substring("tacz:gun/".length()));

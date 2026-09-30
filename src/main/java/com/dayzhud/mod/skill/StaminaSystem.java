@@ -159,7 +159,9 @@ public final class StaminaSystem {
 
     private static float drainMultiplier(Player player) {
         int endurance = SkillCapability.levelOf(player, Skill.ENDURANCE);
-        return Math.max(MIN_DRAIN_MULTIPLIER, 1f - endurance * ENDURANCE_DRAIN_RELIEF);
+        // Carrying too much makes every sprint and jump cost more (2.15.0, WeightSystem).
+        return Math.max(MIN_DRAIN_MULTIPLIER, 1f - endurance * ENDURANCE_DRAIN_RELIEF)
+                * com.dayzhud.mod.weight.WeightSystem.staminaFactor(player);
     }
 
     /**
@@ -173,10 +175,12 @@ public final class StaminaSystem {
      * Acclimation widens the band, so a trained player stops feeling this at all.
      */
     private static float regenMultiplier(Player player) {
-        return switch (TemperatureSystem.discomfortLevel(player)) {
+        float temperature = switch (TemperatureSystem.discomfortLevel(player)) {
             case 2 -> SEVERE_REGEN_PENALTY;
             case 1 -> MILD_REGEN_PENALTY;
             default -> 1f;
         };
+        // Pain slows recovery too (2.15.0, InjurySystem) - unless a painkiller is working.
+        return temperature * com.dayzhud.mod.injury.InjurySystem.staminaRegenFactor(player);
     }
 }

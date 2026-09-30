@@ -475,6 +475,78 @@
       "buy": true,
       "sub": "backpacks"
     },
+    "fieldkit:assault_backpack": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:assault_backpack_black": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:assault_backpack_coyote": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:pilgrim_backpack": {
+      "value": 36000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:pilgrim_backpack_coyote": {
+      "value": 36000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:raid_backpack": {
+      "value": 52000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:raid_backpack_black": {
+      "value": 52000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:gunslinger_backpack": {
+      "value": 56000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:gunslinger_backpack_multicam": {
+      "value": 59000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack": {
+      "value": 68000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack_multicam": {
+      "value": 71000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack_coyote": {
+      "value": 68000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
     "caps_awim_tactical_gear_rework:rps_smiersh": {
       "value": 28000,
       "category": "gear",

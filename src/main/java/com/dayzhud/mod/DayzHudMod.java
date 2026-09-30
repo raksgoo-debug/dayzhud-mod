@@ -44,6 +44,10 @@ public class DayzHudMod {
                 com.dayzhud.mod.inventory.WeaponSlotConfig.SPEC, "dayzhud-weaponslots.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
                 com.dayzhud.mod.inventory.grid.GridConfig.SPEC, "dayzhud-grid.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.weight.WeightConfig.SPEC, "dayzhud-weight.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.injury.InjuryConfig.SPEC, "dayzhud-injuries.toml");
         modEventBus.addListener(this::commonSetup);
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature

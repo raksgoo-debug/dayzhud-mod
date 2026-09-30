@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": {"model": "dayzhud:block/stash"},
+    "facing=east":  {"model": "dayzhud:block/stash", "y": 90},
+    "facing=south": {"model": "dayzhud:block/stash", "y": 180},
+    "facing=west":  {"model": "dayzhud:block/stash", "y": 270}
+  }
+}

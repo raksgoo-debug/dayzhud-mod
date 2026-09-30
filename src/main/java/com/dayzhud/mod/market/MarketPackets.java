@@ -155,12 +155,10 @@ public final class MarketPackets {
                 }
 
                 for (int i = 0; i < batches; i++) {
-                    ItemStack give = offer.prototype().copy();
-                    if (!player.getInventory().add(give)) {
-                        // Full inventory: drop at the player's feet rather than voiding
-                        // something they have already paid for.
-                        player.drop(give, false);
-                    }
+                    // Placed where its grid footprint fits (2.15.0 - vanilla's add squeezed a
+                    // bought gun into any free cell); dropped at the player's feet if there's
+                    // no room, rather than voiding something already paid for.
+                    com.dayzhud.mod.inventory.grid.GridPickup.give(player, offer.prototype().copy());
                 }
                 MarketNetwork.syncWallet(player);
             });

@@ -64,6 +64,13 @@ public final class TaczMarketCompat {
      *  if this TACZ doesn't have them (grid sizes then ignore attachments). */
     private static Method iGunGetAttachmentId;
     private static Object[] attachmentTypes;
+    /** Weight lookups (2.15.0): TimelessAPI.getCommonGunIndex / getCommonAttachmentIndex,
+     *  AttachmentData.getWeight, IAttachment.getIAttachmentOrNull / getAttachmentId. Null
+     *  when this TACZ lacks them - weights then fall back to the generic rules. */
+    private static Method getCommonGunIndex, getCommonAttachmentIndex, attachDataGetWeight;
+    private static Method getIAttachmentOrNull, iAttachmentGetId;
+    private static final Map<ResourceLocation, Float> GUN_WEIGHT = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, Float> ATTACHMENT_WEIGHT = new java.util.concurrent.ConcurrentHashMap<>();
 
     private TaczMarketCompat() {}
 
@@ -156,6 +163,18 @@ public final class TaczMarketCompat {
                 iGunGetAttachmentId = null;
                 DayzHudMod.LOGGER.debug("TACZ attachment lookup unavailable: {}", missing.toString());
             }
+            // Weight extras, allowed to fail the same way.
+            try {
+                getCommonGunIndex = api.getMethod("getCommonGunIndex", ResourceLocation.class);
+                getCommonAttachmentIndex = api.getMethod("getCommonAttachmentIndex", ResourceLocation.class);
+                attachDataGetWeight = attachData.getMethod("getWeight");
+                Class<?> iAttachment = Class.forName("com.tacz.guns.api.item.IAttachment", false, cl);
+                getIAttachmentOrNull = iAttachment.getMethod("getIAttachmentOrNull", ItemStack.class);
+                iAttachmentGetId = iAttachment.getMethod("getAttachmentId", ItemStack.class);
+            } catch (Throwable missing) {
+                getCommonGunIndex = null;
+                DayzHudMod.LOGGER.debug("TACZ weight lookup unavailable: {}", missing.toString());
+            }
 
             Class<?> iAmmo = Class.forName("com.tacz.guns.api.item.IAmmo", false, cl);
             getIAmmoOrNull = iAmmo.getMethod("getIAmmoOrNull", ItemStack.class);
@@ -198,6 +217,61 @@ public final class TaczMarketCompat {
         } catch (Throwable t) {
             return List.of();
         }
+    }
+
+    /**
+     * Weight in kg of a TACZ gun stack - the gun's own data weight plus every fitted
+     * attachment's - or -1 when this is not a TACZ gun or the data can't be read. Per-id
+     * values are cached; TACZ's data only changes on a pack reload.
+     */
+    public static float gunWeightOf(ItemStack stack) {
+        Optional<ResourceLocation> gunId = gunIdOf(stack);
+        if (gunId.isEmpty() || getCommonGunIndex == null) return -1f;
+        float gun = GUN_WEIGHT.computeIfAbsent(gunId.get(), id -> {
+            try {
+                Optional<?> index = (Optional<?>) getCommonGunIndex.invoke(null, id);
+                if (index.isEmpty()) return -1f;
+                return ((Number) gunDataGetWeight.invoke(gunIndexGetGunData.invoke(index.get()))).floatValue();
+            } catch (Throwable t) {
+                return -1f;
+            }
+        });
+        if (gun < 0) return -1f;
+        float total = gun;
+        for (ResourceLocation a : attachmentIdsOf(stack)) total += Math.max(0f, attachmentWeight(a));
+        return total;
+    }
+
+    /** Weight in kg of a TACZ attachment ITEM (a scope in your bag), or -1 if not one. */
+    public static float attachmentItemWeightOf(ItemStack stack) {
+        if (stack.isEmpty() || getIAttachmentOrNull == null || !isModLoaded() || !resolve()) return -1f;
+        try {
+            Object attachment = getIAttachmentOrNull.invoke(null, stack);
+            if (attachment == null) return -1f;
+            Object id = iAttachmentGetId.invoke(attachment, stack);
+            return id instanceof ResourceLocation rl ? attachmentWeight(rl) : -1f;
+        } catch (Throwable t) {
+            return -1f;
+        }
+    }
+
+    private static float attachmentWeight(ResourceLocation id) {
+        if (getCommonAttachmentIndex == null) return -1f;
+        return ATTACHMENT_WEIGHT.computeIfAbsent(id, key -> {
+            try {
+                Optional<?> index = (Optional<?>) getCommonAttachmentIndex.invoke(null, key);
+                if (index.isEmpty()) return -1f;
+                return ((Number) attachDataGetWeight.invoke(attachIndexGetData.invoke(index.get()))).floatValue();
+            } catch (Throwable t) {
+                return -1f;
+            }
+        });
+    }
+
+    /** Forget cached weights - TACZ's data was reloaded. */
+    public static void invalidateWeights() {
+        GUN_WEIGHT.clear();
+        ATTACHMENT_WEIGHT.clear();
     }
 
     public static Optional<ResourceLocation> ammoIdOf(ItemStack stack) {

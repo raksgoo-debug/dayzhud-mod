@@ -102,6 +102,7 @@ public final class WalletEvents {
         AmmoBoxes.invalidate();
         MarketAccess.invalidate();
         MarketCatalog.invalidate();
+        TaczMarketCompat.invalidateWeights();
         if (event.getPlayer() != null) {
             MarketNetwork.sendPrices(event.getPlayer());
         } else {
