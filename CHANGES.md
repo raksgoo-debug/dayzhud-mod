@@ -1,6 +1,38 @@
-# dayzhud 2.15.0 - weight, bleeding and pain, trader quests
+# dayzhud 2.16.0 - inventory redesign, HEALTH tab
 
-On top of 2.14.0.
+On top of 2.15.0.
+
+## Inventory layout
+
+Every section is now a card with a header: EQUIPMENT, WEAPONS, GEAR, HOTBAR on the left;
+POCKETS, BACKPACK and SECURE on the right.
+- **Title bar:** "LOADOUT" and the vitals, as thin bars: health, hydration, energy, and
+  weight. The weight bar has marks at the overweight and heavy limits.
+- **Equipment:** the armour and side slots are labelled (HEAD / BODY / LEGS / FEET,
+  FACE / BAG / OFF).
+- **Weapons:** each box shows its hotbar key ("1  PRIMARY").
+- **Hotbar:** the slots show their keys 5-9.
+- **Backpack:** the header shows the worn bag's name and how many cells are used. Rows the
+  bag doesn't have are drawn faint, with a note.
+- **Secure card:** now has a CONDITION list covering bleeding, pain (with the painkiller's
+  seconds left), First Aid morphine, and load.
+- An opened container gets a card level with the pockets, with its slot count.
+- The corpse side is unchanged.
+
+Slot positions moved (TarkovInventoryMenu constants). Gear fits two rows of up to 9, which is
+18 Curios slots.
+
+## HEALTH tab (with First Aid)
+
+The equipment card's header becomes two tabs, EQUIPMENT | HEALTH.
+- HEALTH shows First Aid's eight limbs as a body diagram, coloured green, amber, red or dark
+  red when a limb is at 0. It shows a "+" and a progress line on any limb being healed, and
+  a blood drop while you bleed.
+- Each limb's HP and bar are listed on either side.
+- To treat a limb, pick up a First Aid bandage or plaster and hold it on the limb for the
+  item's apply time, on the diagram or on its row. This is the same as First Aid's own
+  screen, and the server applies it the same way (ApplyHealingPacket).
+- The tab you were on is remembered until you quit. Without First Aid there is no tab.
 
 ## Carried weight (`weight/`, config `dayzhud-weight.toml`)
 

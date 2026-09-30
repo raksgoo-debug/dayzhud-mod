@@ -134,5 +134,12 @@ public class NetworkHandler {
                 com.dayzhud.mod.quest.QuestPackets.Action::encode,
                 com.dayzhud.mod.quest.QuestPackets.Action::decode,
                 com.dayzhud.mod.quest.QuestPackets.Action::handle);
+
+        // Inventory HEALTH tab (2.16.0). Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                ApplyHealingPacket.class,
+                ApplyHealingPacket::encode,
+                ApplyHealingPacket::decode,
+                ApplyHealingPacket::handle);
     }
 }
