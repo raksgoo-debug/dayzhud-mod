@@ -1,3 +1,53 @@
+# dayzhud 2.17.0 - Arena Breakout-style UI
+
+Every screen the mod draws now uses one look:
+- **No panel, no dim backdrop:** the world stays visible behind the UI.
+- **Sections:** translucent dark boxes and cells, each with a small grey label strip on top.
+- **Colours:** orange marks the active tab; green, amber, blue and red are only for values.
+
+All of it is defined in `StyledTheme`.
+
+## Inventory (TarkovInventoryScreen / TarkovInventoryMenu)
+
+The inventory uses the full screen in three columns, with a thin rule along the top
+(balance above it, right) and a nav bar along the bottom.
+- **Column A:**
+  - **EQUIPMENT / HEALTH tabs.**
+  - **Gear boxes:** headgear, face cover and legs on the left of the paperdoll; body armor,
+    footwear and offhand on the right. Each box is 38x38 under a label strip.
+  - **Weapon boxes:** primary and secondary (130 wide), holster and sheath. Each shows its key
+    number in the top-right corner.
+  - **Vitals:** two rows of icon + value. Health (First Aid limb total), energy, hydration and
+    weight; then stamina, temperature, bleeding and pain. Morphine shows in the pain slot.
+- **Column B:**
+  - **Pockets.**
+  - **Gear:** the curios, one row of up to 11.
+  - **Backpack:** the worn bag in its own box beside the grid, with its name and cells used.
+  - **Quick bar:** hotbar 5-9.
+  - **Secure.**
+- **Column C:** the opened chest or stash (name and slot count on its strip), or the corpse,
+  whose sections are now strips.
+- **Boxed slots** (equipment, weapons, the bag):
+  - They take clicks anywhere in the box.
+  - Each shows the item big, with its name top-left.
+  - Bottom-right shows rounds loaded / magazine size for TACZ guns, durability for armour,
+    or the stack size.
+  - Weapons also show their calibre under the name.
+- **Grid items** two or more cells wide show their name top-left; guns show their rounds
+  bottom-right.
+- The crafting and skills buttons became the nav bar: INVENTORY / CRAFTING / SKILLS.
+- The HEALTH tab body diagram is larger and fills the gear-box area, in its own box.
+- The layout is 408 x 356 GUI units on its own, or 608 wide with something open. That fits a
+  1080p screen at GUI scale 3. With a chest open, JEI has little room left on the right.
+
+## Other screens
+
+- **Generic container screens** (crafting table, furnaces, other mods' simple containers):
+  no backdrop, strips for their headings, the new cells.
+- **Market:** BUY / SELL / QUESTS use the new tabs, the INVENTORY heading is a strip, and the
+  purchase confirmation is a solid dialog.
+- **Skills screen:** no backdrop; uses the new boxes and strips.
+
 # dayzhud 2.16.2 - smaller inventory text
 
 - Card headers and the EQUIPMENT / HEALTH tabs are drawn at 0.75 size (were full size).

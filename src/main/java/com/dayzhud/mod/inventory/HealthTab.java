@@ -28,11 +28,13 @@ final class HealthTab {
 
     private static final int COLOR_GOOD = 0xFF5E8C3A, COLOR_HURT = 0xFFC9A227, COLOR_BAD = 0xFFB0302A,
             COLOR_GONE = 0xFF3A1A1A, COLOR_GONE_TEXT = 0xFF7A3A3A, OUTLINE = 0xFF0E0E0E,
-            TEXT = 0xFFCCCCCC, HEADER = 0xFF9A9A9A, DIM = 0xFF6A6A6A, TRACK = 0xFF2A2A2A,
+            TEXT = StyledTheme.TEXT_COLOR, HEADER = StyledTheme.HEADER_COLOR, DIM = StyledTheme.LABEL_DIM,
+            TRACK = 0xC0131415,
             ACCENT = StyledTheme.ACCENT, BLOOD = 0xFFE23A2E;
 
     /** Diagram origin (top of the head, centre line) in panel coordinates, and GUI px per skin px. */
-    private static final float ORIGIN_X = 98, ORIGIN_Y = 54, K = 2.7f;
+    /** 2.17.0: fills column A between the tabs and the weapon strips, where the gear boxes are. */
+    private static final float ORIGIN_X = 96, ORIGIN_Y = 46, K = 4.2f;
 
     /** x, y, w, h in skin pixels from the origin. Front view, so the right side is on the left. */
     private static final Map<String, int[]> SHAPES = Map.of(
@@ -47,8 +49,8 @@ final class HealthTab {
 
     private static final String[] LEFT_ROWS = {"HEAD", "RIGHT_ARM", "RIGHT_LEG", "RIGHT_FOOT"};
     private static final String[] RIGHT_ROWS = {"BODY", "LEFT_ARM", "LEFT_LEG", "LEFT_FOOT"};
-    private static final int ROW_LEFT_X = 16, ROW_RIGHT_X = 180, ROW_Y = 56, ROW_SPACING = 21, ROW_W = 44;
-    private static final int BAR_W = 30;
+    private static final int ROW_LEFT_X = 5, ROW_RIGHT_X = 187, ROW_Y = 50, ROW_SPACING = 33, ROW_W = 50;
+    private static final int BAR_W = 40;
 
     private final TarkovInventoryScreen screen;
 
@@ -75,6 +77,8 @@ final class HealthTab {
         Player player = Minecraft.getInstance().player;
         List<Limb> limbs = FirstAidCompat.limbs(player).orElse(null);
         if (limbs == null) return;
+        // Its own box over the gear boxes' area: there's no panel behind it to read against.
+        StyledTheme.zone(g, screen.left(), screen.top() + 38, screen.left() + 192, screen.top() + 193);
         String hovered = limbAt(mouseX, mouseY);
         ItemStack carried = screen.menu().getCarried();
         boolean treating = FirstAidCompat.isHealingItem(carried);
@@ -128,7 +132,7 @@ final class HealthTab {
             hintColor = DIM;
         }
         float hx = screen.left() + ORIGIN_X - screen.font().width(hint) / 4f;
-        screen.caption(g, hint, Math.max(screen.left() + 14, hx), screen.top() + 143, hintColor);
+        screen.caption(g, hint, Math.max(screen.left(), hx), screen.top() + 187, hintColor);
     }
 
     private void drawRow(GuiGraphics g, Limb limb, int x, int y, boolean rightAligned) {

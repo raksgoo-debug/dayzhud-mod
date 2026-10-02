@@ -158,8 +158,7 @@ public class SkillsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
-
+        // No renderBackground (2.17.0): the world stays visible behind the boxes.
         StyledTheme.panel(graphics, leftPos, topPos, PANEL_W, panelH);
         StyledTheme.header(graphics, font, "SKILLS", leftPos + PAD, topPos + 12, 40);
 

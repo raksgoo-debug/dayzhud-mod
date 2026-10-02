@@ -123,7 +123,7 @@ public class StyledContainerScreen<T extends AbstractContainerMenu> extends Abst
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        // No renderBackground (2.17.0): the world stays visible behind the boxes.
         super.render(graphics, mouseX, mouseY, partialTick);
 
         renderTooltip(graphics, mouseX, mouseY);

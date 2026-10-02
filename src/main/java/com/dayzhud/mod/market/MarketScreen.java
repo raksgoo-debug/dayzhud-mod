@@ -318,8 +318,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     }
 
     private void drawSlotLabels(GuiGraphics g) {
-        g.drawString(font, "INVENTORY", groupX, groupY + MarketMenu.INV_Y - 11,
-                StyledTheme.HEADER_COLOR, false);
+        StyledTheme.header(g, font, "INVENTORY", groupX, groupY + MarketMenu.INV_Y - 10, MarketMenu.GROUP_W);
         if (sellTab) {
             StyledTheme.header(g, font, "SELL TRAY - DROP ITEMS HERE", groupX,
                     groupY + MarketMenu.TRAY_Y - 12, MarketMenu.GROUP_W);
@@ -340,11 +339,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         int x = tabX(index);
         int y = tabY;
         boolean hovered = inBox(mouseX, mouseY, x, y, TAB_W, TAB_H);
-        g.fill(x, y, x + TAB_W, y + TAB_H,
-                active || hovered ? StyledTheme.BUTTON_BG_HOVER : StyledTheme.BUTTON_BG);
-        if (active) g.fill(x, y + TAB_H - 1, x + TAB_W, y + TAB_H, StyledTheme.ACCENT);
-        g.drawString(font, label, x + (TAB_W - font.width(label)) / 2, y + 5,
-                active ? StyledTheme.TEXT_COLOR : StyledTheme.LABEL_DIM, false);
+        StyledTheme.tab(g, font, label, x, y, TAB_W, TAB_H, active, hovered);
     }
 
     private int tabX(int index) {
@@ -847,7 +842,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xC0000000);
         int x = confirmX();
         int y = confirmY();
-        StyledTheme.panel(g, x, y, CONFIRM_W, CONFIRM_H);
+        StyledTheme.dialog(g, x, y, CONFIRM_W, CONFIRM_H);
         g.drawString(font, confirm.title(), x + 10, y + 10, StyledTheme.TEXT_COLOR, false);
         g.drawString(font, trim(confirm.line(), CONFIRM_W - 20), x + 10, y + 28,
                 StyledTheme.HEADER_COLOR, false);

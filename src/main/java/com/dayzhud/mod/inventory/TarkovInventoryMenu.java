@@ -34,9 +34,8 @@ import java.util.Set;
 /**
  * Container behind the extraction-shooter style inventory screen.
  *
- * LAYOUT: the armor column uses even {@link #EQUIP_SPACING} spacing, and the paperdoll in
- * TarkovInventoryScreen is positioned/scaled to line its body parts up with those rows.
- * Move one and the other needs retuning - the alignment is hand-matched, not derived.
+ * LAYOUT: see the "Layout" constants below. Equipment, weapons and the worn bag are big
+ * labelled boxes ({@link #slotBoxes}) around a normal 16x16 Slot in their middle.
  *
  * BACKPACK: contents of the bag worn in the "back" Curios slot appear as a grid on the
  * right. These slots always exist (a container's slot list is fixed at open time) but
@@ -64,49 +63,55 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final String MASK_ID = "mask";
     private static final String BACK_ID = "back";
 
-    // 2.16.0 card layout: every section is a card with a header; the vitals moved up into
-    // the title bar. TarkovInventoryScreen draws the cards around these positions.
-    // 2.16.1: spaced out - the player side is 384 wide (was 360), two 180-wide columns.
+    // ---- Layout (2.17.0, Arena Breakout style) ------------------------------------------
+    //
+    // Full screen, three columns, in GUI units from the layout's top-left:
+    //   A    0..192  EQUIPMENT / HEALTH tabs, gear boxes round the paperdoll, weapons, vitals
+    //   B  206..408  pockets, gear (curios), backpack (bag box + grid), quick bar, secure
+    //   C  426..608  the opened chest / stash / corpse
+    // Top rule at y 16 (balance above it), bottom nav bar at 338..356. Every section has a
+    // 9 px label strip on top. TarkovInventoryScreen draws around these positions.
 
-    /** Width of the player side; an opened container or corpse sits to the right of it. */
-    public static final int PLAYER_WIDTH = 384;
+    /** Width of columns A and B; an opened container or corpse fills column C to the right. */
+    public static final int PLAYER_WIDTH = 408;
+    public static final int COL_C_X = 426;
+    public static final int FULL_WIDTH = 608;
+    public static final int LAYOUT_HEIGHT = 356;
+    /** Bottom of the content area; the nav bar's rule sits below it. */
+    public static final int CONTENT_BOTTOM = 336;
 
-    // Equipment card (8..188 x 30..150): armour column left of the paperdoll, face / bag /
-    // offhand right of it.
-    public static final int EQUIP_COL_X = 18;
-    public static final int SIDE_COL_X = 162;
-    public static final int EQUIP_START_Y = 54;
-    public static final int EQUIP_SPACING = 23;
+    /** Equipment boxes, 38x38 under a strip, either side of the paperdoll; the slot sits in the middle. */
+    public static final int GEAR_BOX = 38;
+    public static final int LEFT_BOX_X = 0, RIGHT_BOX_X = 154;
+    /** Box tops (below their strips) for the three rows. */
+    public static final int[] BOX_ROW_Y = {49, 101, 153};
 
-    // Gear card (8..188 x 280..346): two rows of Curios slots.
-    private static final int GEAR_X = 17;
-    private static final int GEAR_Y = 302;
-    private static final int GEAR_ROWS = 2;
-    private static final int GEAR_ROW_SPACING = 18;
+    // Column B.
+    private static final int GEAR_X = 207;
+    private static final int GEAR_Y = 103;
 
-    // Hotbar 5-9: the last row of the weapons card (weapons are hotbar 1-4), keys above.
-    public static final int HOTBAR_X = 15;
-    public static final int HOTBAR_Y = 254;
-    public static final int HOTBAR_SPACING = 24;
+    // Quick bar: hotbar 5-9 (1-4 are the weapon boxes).
+    public static final int HOTBAR_X = 207;
+    public static final int HOTBAR_Y = 281;
+    public static final int HOTBAR_SPACING = 22;
 
-    // Right-hand container grid, present only when a chest/crate was opened. Level with the
-    // pockets grid.
-    public static final int CONTAINER_X = PLAYER_WIDTH + 14;
-    public static final int CONTAINER_Y = 51;
+    // Column C: the opened container's grid, level with the pockets.
+    public static final int CONTAINER_X = COL_C_X + 1;
+    public static final int CONTAINER_Y = 33;
     public static final int CONTAINER_COLS = 9;
 
-    // --- Corpse view (Ragdollified). Mirrors the player panel's shape on the right. ---
-    public static final int CORPSE_ARMOR_X = PLAYER_WIDTH + 20;
-    public static final int CORPSE_SIDE_X = CORPSE_ARMOR_X + 122;
-    public static final int CORPSE_EQUIP_START_Y = 28;
+    // --- Corpse view (Ragdollified), in column C. ---
+    public static final int CORPSE_ARMOR_X = COL_C_X + 1;
+    public static final int CORPSE_SIDE_X = CORPSE_ARMOR_X + 144;
+    public static final int CORPSE_EQUIP_START_Y = 34;
     public static final int CORPSE_EQUIP_SPACING = 20;
     public static final int CORPSE_GEAR_X = CORPSE_ARMOR_X;
-    public static final int CORPSE_GEAR_Y = 122;
+    public static final int CORPSE_GEAR_Y = 125;
     public static final int CORPSE_GEAR_COLS = 6;
     public static final int CORPSE_GEAR_SPACING = 22;
     public static final int CORPSE_INV_X = CORPSE_ARMOR_X;
     /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
-    public static final int CORPSE_INV_Y = 178;
+    public static final int CORPSE_INV_Y = 179;
     public static final int CORPSE_LOOT_COLS = 9;
     /**
      * The corpse's loot is ONE continuous scrolling list: inventory rows, then its hotbar
@@ -116,12 +121,12 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * separate fixed sections.
      */
     /** Corpse's own hotbar row, its own labelled section under the inventory rows. */
-    public static final int CORPSE_HOTBAR_Y = 250;
+    public static final int CORPSE_HOTBAR_Y = 249;
     /**
      * Backpack section. Everything else on the corpse side is sized to be fully visible;
      * only the bag can genuinely overflow (bags run up to 42 slots), so it alone scrolls.
      */
-    public static final int CORPSE_BAG_Y = 288;
+    public static final int CORPSE_BAG_Y = 281;
     public static final int CORPSE_BAG_VISIBLE_ROWS = 3;
     public static final int CORPSE_BAG_SLOTS = CORPSE_LOOT_COLS * CORPSE_BAG_VISIBLE_ROWS;
 
@@ -132,9 +137,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int CORPSE_OFFHAND = 40;
     private static final int CORPSE_CURIO_START = 41;
 
-    // Pockets card (196..376 x 30..108).
-    public static final int INV_X = 205;
-    public static final int INV_Y = 51;
+    // Pockets (column B, under its strip at y 22).
+    public static final int INV_X = 207;
+    public static final int INV_Y = 33;
 
     /**
      * The loadout cluster - hotbar slots 0-3, typed, drawn as its own 2x2 block of labelled
@@ -148,17 +153,17 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      */
     // Widened in 2.12.3 (60 -> 100, 34 -> 44) once the boxes show the real gun model: at 60 px
     // a long sniper rendered barely a quarter of the box tall. Every gun is scaled to fit
-    // either way; wider just means bigger. 2.16.0: inside the weapons card (8..188 x 154..276),
-    // primary and holster on the first row, secondary and sheath on the second, each with
-    // 6 px above it for its label.
-    public static final int[] WEAPON_BOX_X = {14, 14, 138, 138};
-    public static final int[] WEAPON_BOX_Y = {182, 218, 182, 218};
-    public static final int[] WEAPON_BOX_W = {118, 118, 44, 44};
-    public static final int[] WEAPON_BOX_H = {24, 24, 24, 24};
+    // either way; wider just means bigger. 2.17.0: under the paperdoll in column A, primary
+    // and holster on the first row, secondary and sheath on the second, each under its strip.
+    public static final int[] WEAPON_BOX_X = {0, 0, 134, 134};
+    public static final int[] WEAPON_BOX_Y = {205, 257, 205, 257};
+    public static final int[] WEAPON_BOX_W = {130, 130, 58, 58};
+    public static final int[] WEAPON_BOX_H = {38, 38, 38, 38};
 
-    // Backpack card (196..376 x 112..), as tall as the worn bag.
-    public static final int BACKPACK_X = 205;
-    public static final int BACKPACK_Y = 133;
+    /** The worn bag's own box, left of the backpack grid (36x36 under the BACKPACK strip). */
+    public static final int BAG_BOX_X = 206, BAG_BOX_Y = 135, BAG_BOX = 36;
+    public static final int BACKPACK_X = 247;
+    public static final int BACKPACK_Y = 136;
     private static final int BACKPACK_COLS = 9;
     /**
      * Rows shown at once. 7 (2.13.3, was 4): the column has room for them - slots end at
@@ -169,9 +174,19 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int BACKPACK_VISIBLE_ROWS = 7;
     public static final int BACKPACK_MAX_SLOTS = BACKPACK_COLS * BACKPACK_VISIBLE_ROWS;
 
-    /** Secure container (2.14.0): 3x3 in its own card (196..376 x 268..346), conditions to its right. */
-    public static final int SECURE_X = 205;
-    public static final int SECURE_Y = 289;
+    /** Secure container (2.14.0): 3x3 at the bottom right of column B, beside the quick bar. */
+    public static final int SECURE_X = 355;
+    public static final int SECURE_Y = 281;
+
+    /**
+     * A slot drawn as a big labelled box rather than a grid cell (equipment, weapons, the
+     * worn bag). Box coordinates are layout coordinates; the real 16x16 Slot sits in its
+     * middle, and the screen widens hover/clicks to the whole box.
+     */
+    public record SlotBox(int x, int y, int w, int h, String label, int key) {}
+
+    /** Menu slot index -> its box. */
+    public final Map<Integer, SlotBox> slotBoxes = new LinkedHashMap<>();
 
     /**
      * Client only: false while the screen's HEALTH tab covers the equipment card. The armour,
@@ -293,10 +308,15 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         this.backpackHandler.setSyncedSlotCount(backpackSlotCount::get);
         addDataSlot(backpackSlotCount);
 
-        // --- Vanilla armor: evenly spaced left column ---
+        // --- Vanilla armor: boxes either side of the paperdoll ---
+        // HEAD, CHEST, LEGS, FEET -> headgear top left, body armour top right, legs bottom
+        // left, footwear middle right (face cover and offhand fill the other two).
+        SlotBox[] armourBoxes = {
+                box(LEFT_BOX_X, 0, "HEADGEAR"), box(RIGHT_BOX_X, 0, "BODY ARMOR"),
+                box(LEFT_BOX_X, 2, "LEGS"), box(RIGHT_BOX_X, 1, "FOOTWEAR")};
         for (int i = 0; i < ARMOR_SLOTS.length; i++) {
-            addSlot(new ArmorRestrictedSlot(playerInventory, 39 - i, ARMOR_SLOTS[i],
-                    EQUIP_COL_X, EQUIP_START_Y + i * EQUIP_SPACING));
+            SlotBox b = armourBoxes[i];
+            addBoxed(new ArmorRestrictedSlot(playerInventory, 39 - i, ARMOR_SLOTS[i], slotX(b), slotY(b)), b);
         }
 
         // --- Gather Curios slots, dropping the redundant ones ---
@@ -315,34 +335,38 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
 
-        // Mask sits level with the helmet, back (bag) level with the chestplate.
+        // Mask is the FACE COVER box under the headgear; back (the bag) gets its own box beside
+        // the backpack grid in column B, where it stays visible under the HEALTH tab.
         PendingCurio mask = takeExact(pending, MASK_ID);
         PendingCurio back = takeExact(pending, BACK_ID);
-        if (mask != null) addCurio(mask, SIDE_COL_X, EQUIP_START_Y, true);
-        if (back != null) addCurio(back, SIDE_COL_X, EQUIP_START_Y + EQUIP_SPACING, true);
-
-        // Everything else drops into the GEAR grid: two rows, spread as wide as the card
-        // allows (7 a row at 24 px, closing to 18 px for up to 9). Past 18 slots a third row
-        // starts, which the card doesn't have room for.
-        int gearCols = Math.max(7, Math.min(9, (pending.size() + GEAR_ROWS - 1) / GEAR_ROWS));
-        int gearSpacing = gearCols <= 7 ? 24 : gearCols == 8 ? 21 : 18;
-        // A single row sits in the middle of the card rather than at the top of an empty one.
-        int gearY = pending.size() <= gearCols ? GEAR_Y + GEAR_ROW_SPACING / 2 : GEAR_Y;
-        for (int i = 0; i < pending.size(); i++) {
-            addCurio(pending.get(i),
-                    GEAR_X + (i % gearCols) * gearSpacing,
-                    gearY + (i / gearCols) * GEAR_ROW_SPACING, false);
+        if (mask != null) {
+            SlotBox b = box(LEFT_BOX_X, 1, "FACE COVER");
+            addCurio(mask, slotX(b), slotY(b), true, b);
+        }
+        if (back != null) {
+            SlotBox b = new SlotBox(BAG_BOX_X, BAG_BOX_Y, BAG_BOX, BAG_BOX, "", 0);
+            addCurio(back, slotX(b), slotY(b), false, b);
         }
 
-        // --- Offhand: third slot in the paperdoll's side column, under mask/back curios ---
-        this.offhandX = SIDE_COL_X;
-        this.offhandY = EQUIP_START_Y + 2 * EQUIP_SPACING;
-        addSlot(new Slot(playerInventory, 40, offhandX, offhandY) {
+        // Everything else is the GEAR row in column B: 23 px apart for up to 8, closing up to
+        // touching cells (18) for up to 11. Past 11 a second row starts, which overlaps the
+        // backpack strip - the column has no room for it.
+        int n = pending.size();
+        int gearSpacing = n <= 8 ? 23 : n == 9 ? 22 : 18;
+        for (int i = 0; i < n; i++) {
+            addCurio(pending.get(i), GEAR_X + (i % 11) * gearSpacing, GEAR_Y + (i / 11) * 18, false, null);
+        }
+
+        // --- Offhand: the bottom right box ---
+        SlotBox offBox = box(RIGHT_BOX_X, 2, "OFFHAND");
+        this.offhandX = slotX(offBox);
+        this.offhandY = slotY(offBox);
+        addBoxed(new Slot(playerInventory, 40, offhandX, offhandY) {
             @Override
             public boolean isActive() {
                 return equipmentShown;
             }
-        });
+        }, offBox);
 
         // --- Inventory (27) + hotbar (9) ---
         this.inventoryStartIndex = slots.size();
@@ -361,11 +385,11 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                 // doesn't support a variably-sized Slot) - centred inside the bigger visual
                 // box the screen draws, rather than pinned to the box's corner, so clicking
                 // near the middle of the box (where the icon actually is) hits it.
-                int slotX = WEAPON_BOX_X[col] + (WEAPON_BOX_W[col] - 16) / 2;
-                int slotY = WEAPON_BOX_Y[col] + (WEAPON_BOX_H[col] - 16) / 2;
-                WeaponSlot ws = new WeaponSlot(playerInventory, WeaponSlots.ORDER[col], col, slotX, slotY);
+                SlotBox b = new SlotBox(WEAPON_BOX_X[col], WEAPON_BOX_Y[col], WEAPON_BOX_W[col],
+                        WEAPON_BOX_H[col], WEAPON_LABELS[col], col + 1);
+                WeaponSlot ws = new WeaponSlot(playerInventory, WeaponSlots.ORDER[col], col, slotX(b), slotY(b));
                 weaponSlots[col] = ws;
-                addSlot(ws);
+                addBoxed(ws, b);
             } else {
                 int hotbarCol = col - WeaponSlots.ORDER.length;
                 addSlot(new Slot(playerInventory, col, HOTBAR_X + hotbarCol * HOTBAR_SPACING, HOTBAR_Y));
@@ -985,15 +1009,38 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         return null;
     }
 
-    /** @param equipmentCard true for the face / bag slots, which hide with the rest of the
-     *                       equipment card under the HEALTH tab. */
-    private void addCurio(PendingCurio pc, int x, int y, boolean equipmentCard) {
-        addSlot(new SlotItemHandler(pc.handler().getStacks(), pc.slotIndex(), x, y) {
+    private static final String[] WEAPON_LABELS = {"PRIMARY WEAPON", "SECONDARY WEAPON", "HOLSTER", "SHEATH"};
+
+    /** An equipment box in column A: {@code col} is LEFT_BOX_X or RIGHT_BOX_X, {@code row} 0-2. */
+    private static SlotBox box(int col, int row, String label) {
+        return new SlotBox(col, BOX_ROW_Y[row], GEAR_BOX, GEAR_BOX, label, 0);
+    }
+
+    private static int slotX(SlotBox b) {
+        return b.x() + (b.w() - 16) / 2;
+    }
+
+    private static int slotY(SlotBox b) {
+        return b.y() + (b.h() - 16) / 2;
+    }
+
+    private void addBoxed(Slot slot, SlotBox box) {
+        addSlot(slot);
+        slotBoxes.put(slot.index, box);
+    }
+
+    /** @param equipmentCard true for the face cover, which hides with the rest of the
+     *                       equipment boxes under the HEALTH tab.
+     *  @param box           its big box, or null for a plain gear cell. */
+    private void addCurio(PendingCurio pc, int x, int y, boolean equipmentCard, SlotBox box) {
+        Slot slot = new SlotItemHandler(pc.handler().getStacks(), pc.slotIndex(), x, y) {
             @Override
             public boolean isActive() {
                 return !equipmentCard || equipmentShown;
             }
-        });
+        };
+        if (box != null) addBoxed(slot, box);
+        else addSlot(slot);
         curioSlotInfos.add(new CurioSlotInfo(pc.identifier(), x, y));
     }
 
