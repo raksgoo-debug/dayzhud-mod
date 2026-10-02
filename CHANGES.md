@@ -1,3 +1,24 @@
+# dayzhud 2.16.2 - smaller inventory text
+
+- Card headers and the EQUIPMENT / HEALTH tabs are drawn at 0.75 size (were full size).
+- The notes on the right of each header ("9 x 3", the bag name and count, "KEPT ON DEATH") and
+  the CONDITION title use the caption size (0.5; were 0.75).
+- "LOADOUT" is normal size (was 1.25x).
+
+# dayzhud 2.16.1 - inventory spacing
+
+On top of 2.16.0, whose layout was too crowded.
+- The player side is 384 x 352 (was 360 x 348): two 180-wide columns, every grid 9 px in
+  from its card edge. Chests, stashes and corpses open to the right of it as before.
+- The vitals sit in one row across the title bar.
+- Hotbar 5-9 moved into the WEAPONS card, under the weapon boxes, which are hotbar 1-4. The
+  separate HOTBAR card is gone.
+- Weapon labels have their own space above each box and no longer touch the box above.
+- The backpack card is as tall as the worn bag. There are no faint "missing" rows, and
+  "NO BAG WORN" shows when there's no bag.
+- Headers keep only their short accent underline. The grey rule across each card is gone.
+- A single row of curios is centred in the GEAR card.
+
 # dayzhud 2.16.0 - inventory redesign, HEALTH tab
 
 On top of 2.15.0.

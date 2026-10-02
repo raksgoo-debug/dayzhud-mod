@@ -66,41 +66,45 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     // 2.16.0 card layout: every section is a card with a header; the vitals moved up into
     // the title bar. TarkovInventoryScreen draws the cards around these positions.
+    // 2.16.1: spaced out - the player side is 384 wide (was 360), two 180-wide columns.
 
-    // Equipment card (8..172 x 30..150): armour column left of the paperdoll, face / bag /
+    /** Width of the player side; an opened container or corpse sits to the right of it. */
+    public static final int PLAYER_WIDTH = 384;
+
+    // Equipment card (8..188 x 30..150): armour column left of the paperdoll, face / bag /
     // offhand right of it.
     public static final int EQUIP_COL_X = 18;
-    public static final int SIDE_COL_X = 146;
-    public static final int EQUIP_START_Y = 52;
-    public static final int EQUIP_SPACING = 24;
+    public static final int SIDE_COL_X = 162;
+    public static final int EQUIP_START_Y = 54;
+    public static final int EQUIP_SPACING = 23;
 
-    // Gear card (8..172 x 242..296): two rows of Curios slots.
+    // Gear card (8..188 x 280..346): two rows of Curios slots.
     private static final int GEAR_X = 17;
-    private static final int GEAR_Y = 258;
+    private static final int GEAR_Y = 302;
     private static final int GEAR_ROWS = 2;
     private static final int GEAR_ROW_SPACING = 18;
 
-    // Hotbar card (8..172 x 300..340): hotbar 5-9, key numbers above each.
-    public static final int HOTBAR_X = 20;
-    public static final int HOTBAR_Y = 320;
-    public static final int HOTBAR_SPACING = 22;
+    // Hotbar 5-9: the last row of the weapons card (weapons are hotbar 1-4), keys above.
+    public static final int HOTBAR_X = 15;
+    public static final int HOTBAR_Y = 254;
+    public static final int HOTBAR_SPACING = 24;
 
     // Right-hand container grid, present only when a chest/crate was opened. Level with the
     // pockets grid.
-    public static final int CONTAINER_X = 372;
-    public static final int CONTAINER_Y = 50;
+    public static final int CONTAINER_X = PLAYER_WIDTH + 14;
+    public static final int CONTAINER_Y = 51;
     public static final int CONTAINER_COLS = 9;
 
     // --- Corpse view (Ragdollified). Mirrors the player panel's shape on the right. ---
-    public static final int CORPSE_ARMOR_X = 380;
-    public static final int CORPSE_SIDE_X = 502;
+    public static final int CORPSE_ARMOR_X = PLAYER_WIDTH + 20;
+    public static final int CORPSE_SIDE_X = CORPSE_ARMOR_X + 122;
     public static final int CORPSE_EQUIP_START_Y = 28;
     public static final int CORPSE_EQUIP_SPACING = 20;
-    public static final int CORPSE_GEAR_X = 380;
+    public static final int CORPSE_GEAR_X = CORPSE_ARMOR_X;
     public static final int CORPSE_GEAR_Y = 122;
     public static final int CORPSE_GEAR_COLS = 6;
     public static final int CORPSE_GEAR_SPACING = 22;
-    public static final int CORPSE_INV_X = 380;
+    public static final int CORPSE_INV_X = CORPSE_ARMOR_X;
     /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
     public static final int CORPSE_INV_Y = 178;
     public static final int CORPSE_LOOT_COLS = 9;
@@ -128,9 +132,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     private static final int CORPSE_OFFHAND = 40;
     private static final int CORPSE_CURIO_START = 41;
 
-    // Pockets card (180..352 x 30..106).
-    public static final int INV_X = 186;
-    public static final int INV_Y = 50;
+    // Pockets card (196..376 x 30..108).
+    public static final int INV_X = 205;
+    public static final int INV_Y = 51;
 
     /**
      * The loadout cluster - hotbar slots 0-3, typed, drawn as its own 2x2 block of labelled
@@ -144,16 +148,17 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      */
     // Widened in 2.12.3 (60 -> 100, 34 -> 44) once the boxes show the real gun model: at 60 px
     // a long sniper rendered barely a quarter of the box tall. Every gun is scaled to fit
-    // either way; wider just means bigger. 2.16.0: inside the weapons card (8..172 x 154..240),
-    // primary and holster on the first row, secondary and sheath on the second.
-    public static final int[] WEAPON_BOX_X = {14, 14, 122, 122};
-    public static final int[] WEAPON_BOX_Y = {177, 208, 177, 208};
-    public static final int[] WEAPON_BOX_W = {104, 104, 44, 44};
-    public static final int[] WEAPON_BOX_H = {26, 26, 26, 26};
+    // either way; wider just means bigger. 2.16.0: inside the weapons card (8..188 x 154..276),
+    // primary and holster on the first row, secondary and sheath on the second, each with
+    // 6 px above it for its label.
+    public static final int[] WEAPON_BOX_X = {14, 14, 138, 138};
+    public static final int[] WEAPON_BOX_Y = {182, 218, 182, 218};
+    public static final int[] WEAPON_BOX_W = {118, 118, 44, 44};
+    public static final int[] WEAPON_BOX_H = {24, 24, 24, 24};
 
-    // Backpack card (180..352 x 110..256).
-    public static final int BACKPACK_X = 186;
-    public static final int BACKPACK_Y = 130;
+    // Backpack card (196..376 x 112..), as tall as the worn bag.
+    public static final int BACKPACK_X = 205;
+    public static final int BACKPACK_Y = 133;
     private static final int BACKPACK_COLS = 9;
     /**
      * Rows shown at once. 7 (2.13.3, was 4): the column has room for them - slots end at
@@ -164,9 +169,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     public static final int BACKPACK_VISIBLE_ROWS = 7;
     public static final int BACKPACK_MAX_SLOTS = BACKPACK_COLS * BACKPACK_VISIBLE_ROWS;
 
-    /** Secure container (2.14.0): 3x3 in its own card (180..352 x 260..340), conditions to its right. */
-    public static final int SECURE_X = 186;
-    public static final int SECURE_Y = 280;
+    /** Secure container (2.14.0): 3x3 in its own card (196..376 x 268..346), conditions to its right. */
+    public static final int SECURE_X = 205;
+    public static final int SECURE_Y = 289;
 
     /**
      * Client only: false while the screen's HEALTH tab covers the equipment card. The armour,
@@ -317,14 +322,16 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         if (back != null) addCurio(back, SIDE_COL_X, EQUIP_START_Y + EQUIP_SPACING, true);
 
         // Everything else drops into the GEAR grid: two rows, spread as wide as the card
-        // allows (7 a row at 21 px, closing to 18 px for up to 9). Past 18 slots a third row
+        // allows (7 a row at 24 px, closing to 18 px for up to 9). Past 18 slots a third row
         // starts, which the card doesn't have room for.
         int gearCols = Math.max(7, Math.min(9, (pending.size() + GEAR_ROWS - 1) / GEAR_ROWS));
-        int gearSpacing = gearCols <= 7 ? 21 : gearCols == 8 ? 19 : 18;
+        int gearSpacing = gearCols <= 7 ? 24 : gearCols == 8 ? 21 : 18;
+        // A single row sits in the middle of the card rather than at the top of an empty one.
+        int gearY = pending.size() <= gearCols ? GEAR_Y + GEAR_ROW_SPACING / 2 : GEAR_Y;
         for (int i = 0; i < pending.size(); i++) {
             addCurio(pending.get(i),
                     GEAR_X + (i % gearCols) * gearSpacing,
-                    GEAR_Y + (i / gearCols) * GEAR_ROW_SPACING, false);
+                    gearY + (i / gearCols) * GEAR_ROW_SPACING, false);
         }
 
         // --- Offhand: third slot in the paperdoll's side column, under mask/back curios ---

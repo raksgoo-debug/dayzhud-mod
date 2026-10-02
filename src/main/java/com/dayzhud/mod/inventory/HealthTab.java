@@ -32,7 +32,7 @@ final class HealthTab {
             ACCENT = StyledTheme.ACCENT, BLOOD = 0xFFE23A2E;
 
     /** Diagram origin (top of the head, centre line) in panel coordinates, and GUI px per skin px. */
-    private static final float ORIGIN_X = 90, ORIGIN_Y = 52, K = 2.7f;
+    private static final float ORIGIN_X = 98, ORIGIN_Y = 54, K = 2.7f;
 
     /** x, y, w, h in skin pixels from the origin. Front view, so the right side is on the left. */
     private static final Map<String, int[]> SHAPES = Map.of(
@@ -47,7 +47,7 @@ final class HealthTab {
 
     private static final String[] LEFT_ROWS = {"HEAD", "RIGHT_ARM", "RIGHT_LEG", "RIGHT_FOOT"};
     private static final String[] RIGHT_ROWS = {"BODY", "LEFT_ARM", "LEFT_LEG", "LEFT_FOOT"};
-    private static final int ROW_LEFT_X = 16, ROW_RIGHT_X = 164, ROW_Y = 54, ROW_SPACING = 21, ROW_W = 44;
+    private static final int ROW_LEFT_X = 16, ROW_RIGHT_X = 180, ROW_Y = 56, ROW_SPACING = 21, ROW_W = 44;
     private static final int BAR_W = 30;
 
     private final TarkovInventoryScreen screen;
@@ -128,7 +128,7 @@ final class HealthTab {
             hintColor = DIM;
         }
         float hx = screen.left() + ORIGIN_X - screen.font().width(hint) / 4f;
-        screen.caption(g, hint, Math.max(screen.left() + 12, hx), screen.top() + 141, hintColor);
+        screen.caption(g, hint, Math.max(screen.left() + 14, hx), screen.top() + 143, hintColor);
     }
 
     private void drawRow(GuiGraphics g, Limb limb, int x, int y, boolean rightAligned) {

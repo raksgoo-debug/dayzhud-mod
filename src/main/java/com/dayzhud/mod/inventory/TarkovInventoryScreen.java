@@ -55,7 +55,6 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int CARD_BG = 0xFF181818;
     private static final int CARD_BORDER = 0xFF2C2C2C;
     private static final int ACCENT = StyledTheme.ACCENT;
-    private static final int MISSING_CELL = 0xFF262626;
     private static final int BAR_TRACK = 0xFF2A2A2A;
     private static final int COLOR_LOW = 0xFFE2A62E, COLOR_CRITICAL = 0xFFE23A2E, COLOR_WARN = 0xFFE2D22E;
 
@@ -105,13 +104,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 360;
+        this.imageWidth = TarkovInventoryMenu.PLAYER_WIDTH;
         // 2.12.5: 376 -> 348. At GUI scale 3 on a 1080p screen there are only 360 units, so
-        // 376 centred to topPos -8 and cut off the top of the window.
-        this.imageHeight = 348;
+        // 376 centred to topPos -8 and cut off the top of the window. 2.16.1: 352, still
+        // inside 360.
+        this.imageHeight = 352;
         if (menu.isCorpse()) {
             this.imageWidth = TarkovInventoryMenu.CORPSE_INV_X + 9 * 18 + 12;
-            this.imageHeight = 348; // same as the player's own panel; the corpse bag ends at 342
         } else if (menu.hasContainer()) {
             // Grow rightwards to fit the container grid; the loadout side keeps its layout.
             this.imageWidth = TarkovInventoryMenu.CONTAINER_X
@@ -185,21 +184,19 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
         // Title bar (2.16.0): name, vitals, buttons, then a rule the width of the player side.
         graphics.pose().pushPose();
-        graphics.pose().translate(x + 10, y + 8, 0);
-        graphics.pose().scale(1.25f, 1.25f, 1f);
+        graphics.pose().translate(x + 12, y + 10, 0);   // 2.16.2: normal size, was 1.25x
         graphics.drawString(font, "LOADOUT", 0, 0, TEXT_COLOR, false);
         graphics.pose().popPose();
-        graphics.fill(x + 8, y + 24, x + 352, y + 25, CARD_BORDER);
+        graphics.fill(x + 8, y + 26, x + TarkovInventoryMenu.PLAYER_WIDTH - 8, y + 27, CARD_BORDER);
 
-        // Cards. The left column's positions match TarkovInventoryMenu's slot constants.
-        drawCard(graphics, 8, 30, 172, 150);     // equipment / health
-        drawCard(graphics, 8, 154, 172, 240);    // weapons
-        drawCard(graphics, 8, 242, 172, 296);    // gear
-        drawCard(graphics, 8, 300, 172, 340);    // hotbar
-        drawCard(graphics, 180, 30, 352, 106);   // pockets
-        drawCard(graphics, 180, 110, 352, 256);  // backpack
-        drawCard(graphics, 180, 260, 352, 340);  // secure + conditions
-        drawMissingBagRows(graphics);
+        // Cards. Their positions match TarkovInventoryMenu's slot constants.
+        drawCard(graphics, 8, 30, 188, 150);     // equipment / health
+        drawCard(graphics, 8, 154, 188, 276);    // weapons + hotbar 5-9
+        drawCard(graphics, 8, 280, 188, 346);    // gear
+        drawCard(graphics, 196, 30, 376, 108);   // pockets
+        drawCard(graphics, 196, 112, 376, backpackCardBottom()); // backpack, sized to the bag
+        drawCard(graphics, 196, 268, 376, 346);  // secure + conditions
+        drawNoBagNote(graphics);
 
         if (menu.isCorpse()) {
             drawCorpseZones(graphics, x, y);
@@ -209,7 +206,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             int cy = TarkovInventoryMenu.CONTAINER_Y;
             int cw = TarkovInventoryMenu.CONTAINER_COLS * 18;
             int ch = menu.containerRows * 18;
-            drawCard(graphics, cx - 6, 30, cx + cw + 6, cy + ch + 6);
+            drawCard(graphics, cx - 9, 30, cx + cw + 9, cy + ch + 5);
         }
 
         for (var slot : menu.slots) {
@@ -231,24 +228,20 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     /**
-     * The backpack card always has room for the biggest bag; cells the worn bag doesn't have
-     * are faint outlines, with a note saying why they're empty.
+     * The backpack card is as tall as the worn bag (2.16.1; it used to always fit the biggest
+     * bag, with the missing rows drawn faint - which read as clutter). Panel y of its bottom.
      */
-    private void drawMissingBagRows(GuiGraphics graphics) {
+    private int backpackCardBottom() {
         int bagSlots = menu.getActiveBackpackSlots();
-        int max = TarkovInventoryMenu.BACKPACK_MAX_SLOTS;
-        if (bagSlots >= max) return;
-        int bx = leftPos + TarkovInventoryMenu.BACKPACK_X, by = topPos + TarkovInventoryMenu.BACKPACK_Y;
-        for (int i = bagSlots; i < max; i++) {
-            int cx = bx + (i % 9) * 18 - 1, cy = by + (i / 9) * 18 - 1;
-            graphics.renderOutline(cx, cy, 18, 18, MISSING_CELL);
-        }
-        String note = bagSlots == 0 ? "NO BAG WORN" : "A BIGGER BAG FILLS THESE ROWS";
-        int firstEmptyRow = (bagSlots + 8) / 9;
-        int rows = TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS;
-        // Centred in the empty rows.
-        int noteY = by + (firstEmptyRow * 18 + rows * 18) / 2 - 2;
-        caption(graphics, note, bx + 81 - font.width(note) / 4f, noteY, LABEL_DIM);
+        if (bagSlots == 0) return TarkovInventoryMenu.BACKPACK_Y + 14;
+        int rows = Math.min(TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS, (bagSlots + 8) / 9);
+        return TarkovInventoryMenu.BACKPACK_Y + rows * 18 + 5;
+    }
+
+    private void drawNoBagNote(GuiGraphics graphics) {
+        if (menu.getActiveBackpackSlots() > 0) return;
+        caption(graphics, "NO BAG WORN", leftPos + TarkovInventoryMenu.BACKPACK_X,
+                topPos + TarkovInventoryMenu.BACKPACK_Y + 2, LABEL_DIM);
     }
 
     @Override
@@ -326,32 +319,45 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (!healthTabShown()) health.cancel();
     }
 
-    private static final int TAB_EQUIP_X = 14, TAB_HEALTH_X = 90, TAB_Y = 34;
+    private static final int TAB_EQUIP_X = 14, TAB_HEALTH_X = 66, TAB_Y = 35;
+
+    /** Card headers and tabs (2.16.2: were full size, 1.0, and read too big). */
+    private static final float HEADER_SCALE = 0.75f;
+
+    private void drawScaled(GuiGraphics graphics, String text, float x, float y, float scale, int color) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(scale, scale, 1f);
+        graphics.drawString(font, text, 0, 0, color, false);
+        graphics.pose().popPose();
+    }
 
     /** The equipment card's header: one title, or two tabs when First Aid is installed. */
     private void drawEquipmentHeader(GuiGraphics graphics) {
         if (!tabAvailable) {
-            drawHeader(graphics, "EQUIPMENT", 14, TAB_Y, 152, null, 0);
+            drawHeader(graphics, "EQUIPMENT", 14, TAB_Y, 168, null, 0);
             return;
         }
         boolean onHealth = healthTabShown();
         drawTab(graphics, "EQUIPMENT", TAB_EQUIP_X, !onHealth);
         drawTab(graphics, "HEALTH", TAB_HEALTH_X, onHealth);
-        graphics.fill(leftPos + 14, topPos + TAB_Y + 11, leftPos + 166, topPos + TAB_Y + 12, CARD_BORDER);
     }
 
+    /** A tab title: bright with the accent rule when active, dim (lighter on hover) when not. */
     private void drawTab(GuiGraphics graphics, String label, int x, boolean active) {
-        int w = font.width(label);
+        int w = Math.round(font.width(label) * HEADER_SCALE);
         boolean hover = isOverTab(label, x, lastMouseX, lastMouseY);
-        graphics.drawString(font, label, leftPos + x, topPos + TAB_Y,
-                active ? TEXT_COLOR : hover ? HEADER_COLOR : LABEL_DIM, false);
-        graphics.fill(leftPos + x, topPos + TAB_Y + 10, leftPos + x + w + 2, topPos + TAB_Y + 11,
-                active ? ACCENT : CARD_BORDER);
+        drawScaled(graphics, label, leftPos + x, topPos + TAB_Y + 2, HEADER_SCALE,
+                active || hover ? HEADER_COLOR : LABEL_DIM);
+        if (active) {
+            graphics.fill(leftPos + x, topPos + TAB_Y + 10, leftPos + x + w + 4, topPos + TAB_Y + 11, ACCENT);
+        }
     }
 
     private boolean isOverTab(String label, int x, double mouseX, double mouseY) {
         int tx = leftPos + x, ty = topPos + TAB_Y - 2;
-        return mouseX >= tx && mouseX < tx + font.width(label) + 2 && mouseY >= ty && mouseY < ty + 14;
+        return mouseX >= tx && mouseX < tx + font.width(label) * HEADER_SCALE + 4
+                && mouseY >= ty && mouseY < ty + 14;
     }
 
     /** Slot names beside the armour and side columns, and the paperdoll between them. */
@@ -437,29 +443,28 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         if (localPlayer == null) return;
 
         // Centred between the armour column and the side column, feet on the card's floor.
-        int pdX = leftPos + 90;
-        int pdY = topPos + 144;
+        int pdX = leftPos + 98;
+        int pdY = topPos + 145;
 
         // Facing mostly forward but turned slightly toward the right of the screen.
         // TUNING NOTE: this helper turns the model by roughly (angleXComponent * 20)
         // degrees off front-facing, so small values give small turns. Flip the sign if it
         // leans the wrong way.
-        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 46,
+        InventoryScreen.renderEntityInInventoryFollowsAngle(graphics, pdX, pdY, 44,
                 -0.8f, 0.0f, localPlayer);
     }
 
     private void drawSectionHeaders(GuiGraphics graphics) {
         drawEquipmentHeader(graphics);
-        drawHeader(graphics, "WEAPONS", 14, 158, 152, null, 0);
-        drawHeader(graphics, "GEAR", 14, 246, 152, "CURIOS", LABEL_DIM);
-        drawHeader(graphics, "HOTBAR", 14, 304, 152, null, 0);
-        drawHeader(graphics, "POCKETS", 186, 34, 160, "9 x 3", LABEL_DIM);
-        drawHeader(graphics, "BACKPACK", 186, 114, 160, backpackSummary(), LABEL_DIM);
-        drawHeader(graphics, "SECURE", 186, 264, 160, "KEPT ON DEATH", ACCENT);
+        drawHeader(graphics, "WEAPONS", 14, 159, 168, "HOTBAR 1-9", LABEL_DIM);
+        drawHeader(graphics, "GEAR", 14, 285, 168, "CURIOS", LABEL_DIM);
+        drawHeader(graphics, "POCKETS", 204, 35, 162, "9 x 3", LABEL_DIM);
+        drawHeader(graphics, "BACKPACK", 204, 117, 162, backpackSummary(), LABEL_DIM);
+        drawHeader(graphics, "SECURE", 204, 273, 162, "KEPT ON DEATH", ACCENT);
         for (int i = 0; i < 5; i++) {
             caption(graphics, String.valueOf(5 + i),
                     leftPos + TarkovInventoryMenu.HOTBAR_X + i * TarkovInventoryMenu.HOTBAR_SPACING,
-                    topPos + TarkovInventoryMenu.HOTBAR_Y - 5, LABEL_DIM);
+                    topPos + TarkovInventoryMenu.HOTBAR_Y - 6, LABEL_DIM);
         }
         if (menu.isCorpse()) {
             String name = title.getString().toUpperCase(Locale.ROOT);
@@ -480,8 +485,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             // "Barrel", or a renamed container), sent from the server when it opened.
             String name = title.getString().toUpperCase(Locale.ROOT);
             int size = menu.openedContainer.getContainerSize();
-            drawHeader(graphics, name, TarkovInventoryMenu.CONTAINER_X, 34,
-                    TarkovInventoryMenu.CONTAINER_COLS * 18 - 2, size + " SLOTS", LABEL_DIM);
+            drawHeader(graphics, name, TarkovInventoryMenu.CONTAINER_X - 1, 35,
+                    TarkovInventoryMenu.CONTAINER_COLS * 18, size + " SLOTS", LABEL_DIM);
         }
     }
 
@@ -492,31 +497,27 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int used = menu.usedBackpackCells();
         String name = menu.backpackHandler.getBagStack().getHoverName().getString().toUpperCase(Locale.ROOT);
         String count = used + "/" + slots;
-        int room = 160 - font.width("BACKPACK") - 10 - Math.round(font.width("  " + count) * 0.75f);
-        while (name.length() > 3 && Math.round(font.width(name) * 0.75f) > room) {
+        int room = 162 - Math.round(font.width("BACKPACK") * HEADER_SCALE) - 10
+                - Math.round(font.width("  " + count) * 0.5f);
+        while (name.length() > 3 && Math.round(font.width(name) * 0.5f) > room) {
             name = name.substring(0, name.length() - 1);
         }
         return name + "  " + count;
     }
 
     /**
-     * A card header in panel coordinates: title, an accent rule under it running on as a
-     * plain rule to {@code width}, and optional small text on the right.
+     * A card header in panel coordinates: title with a short accent rule under it, and
+     * optional small text right-aligned at {@code width}. (2.16.1: the rule no longer runs on
+     * across the card - one line fewer per card.)
      */
     private void drawHeader(GuiGraphics graphics, String text, int px, int py, int width,
                             String right, int rightColor) {
         int x = leftPos + px, y = topPos + py;
-        int w = font.width(text);
-        graphics.drawString(font, text, x, y, HEADER_COLOR, false);
-        graphics.fill(x, y + 10, x + Math.min(width, w + 6), y + 11, ACCENT);
-        if (w + 6 < width) graphics.fill(x + w + 6, y + 10, x + width, y + 11, CARD_BORDER);
-        if (right != null) {
-            graphics.pose().pushPose();
-            graphics.pose().translate(x + width - font.width(right) * 0.75f, y + 1, 0);
-            graphics.pose().scale(0.75f, 0.75f, 1f);
-            graphics.drawString(font, right, 0, 0, rightColor, false);
-            graphics.pose().popPose();
-        }
+        int w = Math.round(font.width(text) * HEADER_SCALE);
+        drawScaled(graphics, text, x, y + 2, HEADER_SCALE, HEADER_COLOR);
+        graphics.fill(x, y + 10, x + Math.min(width, w + 4), y + 11, ACCENT);
+        // Caption-sized, sitting on the same line as the title's foot.
+        if (right != null) captionRight(graphics, right, x + width, y + 4, rightColor);
     }
 
     /** The corpse side keeps its pre-2.16 look: small title over a plain rule. */
@@ -951,12 +952,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        drawVital(graphics, 98, 4, "HEALTH", health01, severityColor(health01), percent(health01));
-        drawVital(graphics, 180, 4, "HYDRATION", water01, severityColor(water01), percent(water01));
-        drawVital(graphics, 98, 14, "ENERGY", food01, severityColor(food01), percent(food01));
+        // One row (2.16.1; was two, squeezed): four columns between the title and the buttons.
+        drawVital(graphics, VITAL_X[0], VITAL_Y, "HEALTH", health01, severityColor(health01), percent(health01));
+        drawVital(graphics, VITAL_X[1], VITAL_Y, "HYDRATION", water01, severityColor(water01), percent(water01));
+        drawVital(graphics, VITAL_X[2], VITAL_Y, "ENERGY", food01, severityColor(food01), percent(food01));
 
         if (!com.dayzhud.mod.weight.ClientWeight.known()) {
-            drawVital(graphics, 180, 14, "WEIGHT", 0f, LABEL_DIM, "-");
+            drawVital(graphics, VITAL_X[3], VITAL_Y, "WEIGHT", 0f, LABEL_DIM, "-");
             return;
         }
         float kg = com.dayzhud.mod.weight.ClientWeight.kg();
@@ -967,22 +969,25 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         // Against the next limit up, the same number the HUD warns about.
         float limit = level == 0 ? over : level == 1 ? heavy : critical;
         int color = weightColor(level);
-        drawVital(graphics, 180, 14, "WEIGHT", kg / critical, color,
-                String.format(Locale.ROOT, "%.1f / %.0f KG", kg, limit));
+        drawVital(graphics, VITAL_X[3], VITAL_Y, "WEIGHT", kg / critical, color,
+                String.format(Locale.ROOT, "%.1f/%.0f KG", kg, limit));
         // Where the overweight and heavy limits fall on the bar.
         for (float mark : new float[]{over / critical, heavy / critical}) {
-            int mx = leftPos + 180 + Math.round(72 * Math.min(1f, mark));
-            graphics.fill(mx, topPos + 14 + 5, mx + 1, topPos + 14 + 9, HEADER_COLOR);
+            int mx = leftPos + VITAL_X[3] + Math.round(VITAL_W * Math.min(1f, mark));
+            graphics.fill(mx, topPos + VITAL_Y + 7, mx + 1, topPos + VITAL_Y + 11, HEADER_COLOR);
         }
     }
 
+    private static final int[] VITAL_X = {96, 156, 216, 276};
+    private static final int VITAL_Y = 8, VITAL_W = 54;
+
     private void drawVital(GuiGraphics graphics, int px, int py, String label, float value01, int color,
                            String value) {
-        int x = leftPos + px, y = topPos + py, width = 72;
+        int x = leftPos + px, y = topPos + py, width = VITAL_W;
         caption(graphics, label, x, y, LABEL_DIM);
         captionRight(graphics, value, x + width, y, color);
-        graphics.fill(x, y + 6, x + width, y + 8, BAR_TRACK);
-        graphics.fill(x, y + 6, x + Math.round(width * Math.max(0f, Math.min(1f, value01))), y + 8, color);
+        graphics.fill(x, y + 8, x + width, y + 10, BAR_TRACK);
+        graphics.fill(x, y + 8, x + Math.round(width * Math.max(0f, Math.min(1f, value01))), y + 10, color);
     }
 
     private static String percent(float value01) {
@@ -1011,10 +1016,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private void drawConditions(GuiGraphics graphics) {
         LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
         if (player == null) return;
-        int x = leftPos + 250, y = topPos + 281;
+        int x = leftPos + TarkovInventoryMenu.SECURE_X + 3 * 18 + 12, y = topPos + TarkovInventoryMenu.SECURE_Y;
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
-        graphics.pose().scale(0.75f, 0.75f, 1f);
+        graphics.pose().scale(0.5f, 0.5f, 1f);
         graphics.drawString(font, "CONDITION", 0, 0, HEADER_COLOR, false);
         graphics.pose().popPose();
 
@@ -1088,13 +1093,15 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     /** Recessed zones for the corpse side, matching the player panel's structure. */
     private void drawCorpseZones(GuiGraphics graphics, int x, int y) {
-        graphics.fill(x + 364, y + 16, x + 365, y + imageHeight - 16, PANEL_BORDER);
-        graphics.fill(x + 372, y + 20, x + 548, y + 110, SECTION_BG);   // armor + figure
-        graphics.fill(x + 372, y + 116, x + 548, y + 162, SECTION_BG);  // gear
-        graphics.fill(x + 372, y + 172, x + 548, y + 236, SECTION_BG);  // inventory
-        graphics.fill(x + 372, y + 244, x + 548, y + 272, SECTION_BG);  // hotbar
+        // Relative to the corpse columns, which start 20 px right of the player side.
+        int l = x + TarkovInventoryMenu.CORPSE_ARMOR_X - 8, r = l + 176;
+        graphics.fill(l - 8, y + 16, l - 7, y + imageHeight - 16, PANEL_BORDER);
+        graphics.fill(l, y + 20, r, y + 110, SECTION_BG);   // armor + figure
+        graphics.fill(l, y + 116, r, y + 162, SECTION_BG);  // gear
+        graphics.fill(l, y + 172, r, y + 236, SECTION_BG);  // inventory
+        graphics.fill(l, y + 244, r, y + 272, SECTION_BG);  // hotbar
         if (menu.corpseHasBackpack()) {
-            graphics.fill(x + 372, y + 282, x + 548, y + 348, SECTION_BG); // backpack
+            graphics.fill(l, y + 282, r, y + 348, SECTION_BG); // backpack
         }
     }
 
@@ -1102,7 +1109,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private static final int CRAFT_BTN_W = 16;
     private static final int CRAFT_BTN_H = 16;
 
-    private int craftBtnX() { return leftPos + 316; }
+    private int craftBtnX() { return leftPos + 340; }
     private int craftBtnY() { return topPos + 5; }
 
     private boolean isOverCraftButton(double mouseX, double mouseY) {
@@ -1134,7 +1141,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     // --- Skills button, immediately right of the crafting button ---
 
-    private int skillsBtnX() { return leftPos + 336; }
+    private int skillsBtnX() { return leftPos + 360; }
     private int skillsBtnY() { return topPos + 5; }
 
     private boolean isOverSkillsButton(double mouseX, double mouseY) {
@@ -1206,7 +1213,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         var view = menu.backpackView;
         if (!view.isScrollable()) return;
 
-        int trackX = leftPos + 347;
+        int trackX = leftPos + TarkovInventoryMenu.BACKPACK_X + 9 * 18 + 1;
         int trackTop = topPos + TarkovInventoryMenu.BACKPACK_Y - 1;
         int trackHeight = TarkovInventoryMenu.BACKPACK_VISIBLE_ROWS * 18;
 
@@ -1265,8 +1272,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     }
 
     private boolean isOverBackpackArea(double mouseX, double mouseY) {
-        int x1 = leftPos + 180, x2 = leftPos + 352;
-        int y1 = topPos + 110, y2 = topPos + 256;   // the backpack card
+        int x1 = leftPos + 196, x2 = leftPos + 376;
+        int y1 = topPos + 112, y2 = topPos + backpackCardBottom();   // the backpack card
         return mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2;
     }
 
