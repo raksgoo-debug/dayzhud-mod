@@ -266,6 +266,7 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         menu.sellTabActive = sellTab;
         if (search != null) search.visible = !sellTab && !questTab;
+        StyledTheme.backdrop(g, width, height);
         super.render(g, mouseX, mouseY, partialTick);
 
         drawHeader(g);

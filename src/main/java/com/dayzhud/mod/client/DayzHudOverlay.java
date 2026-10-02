@@ -374,7 +374,7 @@ public class DayzHudOverlay implements IGuiOverlay {
     }
 
     /** Maps the internal 0-1 gauge to a plausible Celsius reading for display (0 = -10C, 0.5 = 15C, 1 = 40C). */
-    private int tempCelsius(float t) {
+    public static int tempCelsius(float t) {
         return Math.round(-10f + t * 50f);
     }
 }

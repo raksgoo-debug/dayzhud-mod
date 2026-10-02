@@ -253,7 +253,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         lastMouseX = mouseX;
         lastMouseY = mouseY;
         syncEquipmentTab();
-        // No renderBackground: the world stays visible (2.17.0).
+        // See-through dark backdrop instead of vanilla's near-opaque one.
+        StyledTheme.backdrop(graphics, width, height);
 
         // Vanilla draws the carried item as its normal inventory icon - for a TACZ gun, the
         // small diagonal sprite - and that draw is private, so it can't be replaced. Instead
@@ -659,7 +660,9 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         stat(graphics, ICON_STAMINA, x, y2, Math.round(stamina * 100) + "%", low(stamina, TEXT_COLOR));
 
         float t = com.dayzhud.mod.client.VitalsTracker.getTemperature01();
-        String temp = t < 0.25f ? "FREEZING" : t < 0.4f ? "COLD" : t <= 0.6f ? "NORMAL" : t <= 0.75f ? "HOT" : "HEATSTROKE";
+        // The HUD's own Celsius reading - short enough for the column ("HEATSTROKE" ran into
+        // the bleeding value next to it).
+        String temp = com.dayzhud.mod.client.DayzHudOverlay.tempCelsius(t) + "°C";
         int tempColor = t < 0.25f ? StyledTheme.INFO : t < 0.4f ? 0xFF9CC8EE : t <= 0.6f ? TEXT_COLOR
                 : t <= 0.75f ? COLOR_LOW : StyledTheme.BAD;
         stat(graphics, ICON_TEMPERATURE, x + 48, y2, temp, tempColor);

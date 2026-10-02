@@ -27,6 +27,13 @@ public class OverlayCanceller {
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
+        // 2.17.1: while one of this mod's own screens is up, no HUD at all - it drew through
+        // the inventory's bottom rows (hotbar under the nav bar, stamina bar and status icons
+        // over the vitals). The screens show the same information themselves.
+        if (isStyledScreenOpen()) {
+            event.setCanceled(true);
+            return;
+        }
         if (event.getOverlay() == VanillaGuiOverlay.FOOD_LEVEL.type()
                 || event.getOverlay() == VanillaGuiOverlay.PLAYER_HEALTH.type()
                 || event.getOverlay() == VanillaGuiOverlay.ARMOR_LEVEL.type()
@@ -42,5 +49,13 @@ public class OverlayCanceller {
                 || THIRST_WAS_TAKEN_OVERLAY_ID.equals(event.getOverlay().id())) {
             event.setCanceled(true);
         }
+    }
+
+    private static boolean isStyledScreenOpen() {
+        var screen = net.minecraft.client.Minecraft.getInstance().screen;
+        return screen instanceof com.dayzhud.mod.inventory.TarkovInventoryScreen
+                || screen instanceof com.dayzhud.mod.inventory.StyledContainerScreen<?>
+                || screen instanceof com.dayzhud.mod.market.MarketScreen
+                || screen instanceof SkillsScreen;
     }
 }

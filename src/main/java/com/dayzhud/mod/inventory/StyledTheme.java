@@ -8,8 +8,9 @@ import net.minecraft.client.gui.GuiGraphics;
  * restyles pulls its colours and primitives from here, so changing the palette in one
  * place updates the whole game's UI rather than needing edits in a dozen screen classes.
  *
- * 2.17.0: Arena Breakout style. No panel behind a screen - the world stays visible - and
- * every section is a translucent dark box with a small grey label strip on top. Orange marks
+ * 2.17.0: Arena Breakout style. No panel behind a screen, just a see-through dark backdrop
+ * ({@link #backdrop}) over the world, and every section is a translucent dark box with a
+ * small grey label strip on top. Orange marks
  * what's active; green / amber / blue / red are reserved for values.
  */
 public final class StyledTheme {
@@ -48,9 +49,20 @@ public final class StyledTheme {
 
     private StyledTheme() {}
 
+    /** Backdrop dimming: darker toward the bottom, like the reference, but see-through. */
+    public static final int BACKDROP_TOP = 0x88101112, BACKDROP_BOTTOM = 0xB0080909;
+
+    /**
+     * Dims the whole screen behind a UI: dark, but the world stays visible through it
+     * (2.17.1; 2.17.0 had none at all, and vanilla's own backdrop is near-opaque).
+     */
+    public static void backdrop(GuiGraphics g, int screenWidth, int screenHeight) {
+        g.fillGradient(0, 0, screenWidth, screenHeight, BACKDROP_TOP, BACKDROP_BOTTOM);
+    }
+
     /**
      * A screen's outer frame. Deliberately draws nothing: the style has no panel, the
-     * sections float over the world. Kept so every screen still marks where its frame is.
+     * sections float over the dimmed world. Kept so every screen still marks where its frame is.
      */
     public static void panel(GuiGraphics g, int x, int y, int w, int h) {
     }

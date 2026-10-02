@@ -1,3 +1,14 @@
+# dayzhud 2.17.1 - dimmed backdrop, no HUD under the UI
+
+- All of the mod's screens have a dark backdrop again. It is see-through, so the world stays
+  visible (`StyledTheme.backdrop`): a gradient from about 53% to 69% dark, top to bottom.
+  2.17.0 had none, and vanilla's own backdrop is near-opaque.
+- The HUD is hidden while one of the mod's screens is open. This covers the hotbar, status
+  icons, stamina and XP bars, and other mods' overlays. They drew through the inventory's
+  bottom rows, under the nav bar and over the vitals.
+- The inventory shows temperature in degrees, like the HUD ("40°C"). "HEATSTROKE" was too
+  long and ran into the bleeding value beside it.
+
 # dayzhud 2.17.0 - Arena Breakout-style UI
 
 Every screen the mod draws now uses one look:
