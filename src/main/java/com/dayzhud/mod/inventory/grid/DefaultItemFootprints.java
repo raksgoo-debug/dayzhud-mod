@@ -62,6 +62,8 @@ public final class DefaultItemFootprints {
             Map.entry("fieldkit:frame_backpack", new Footprint(3, 3)),
             Map.entry("fieldkit:frame_backpack_multicam", new Footprint(3, 3)),
             Map.entry("fieldkit:frame_backpack_coyote", new Footprint(3, 3)),
+            // Field Kit's car first aid kit - a pouch, two cells wide, as in the reference.
+            Map.entry("fieldkit:car_first_aid_kit", new Footprint(2, 1)),
             Map.entry("caps_awim_tactical_gear_rework:greentacticalbackpack", new Footprint(2, 2)),
             Map.entry("caps_awim_tactical_gear_rework:blacktacticalbackpack", new Footprint(2, 2)),
             Map.entry("caps_awim_tactical_gear_rework:greenhikingbackpack", new Footprint(2, 2)),

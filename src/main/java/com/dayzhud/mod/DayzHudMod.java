@@ -49,6 +49,8 @@ public class DayzHudMod {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
                 com.dayzhud.mod.injury.InjuryConfig.SPEC, "dayzhud-injuries.toml");
         modEventBus.addListener(this::commonSetup);
+        // LR Tactical's meds treat bleeding/pain through its own event (optional, reflective).
+        com.dayzhud.mod.injury.InjurySystem.registerCompat();
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature
         // trackers are all purely visual for the local player, so they live client-only.

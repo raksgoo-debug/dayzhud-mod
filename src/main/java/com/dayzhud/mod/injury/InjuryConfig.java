@@ -9,6 +9,9 @@ public final class InjuryConfig {
 
     public static final ForgeConfigSpec SPEC;
 
+    /** Default bleedChancePerDamage (2.17.4; was 0.08). */
+    public static final double DEFAULT_BLEED_CHANCE = 0.03;
+
     public static final ForgeConfigSpec.BooleanValue ENABLED;
     public static final ForgeConfigSpec.DoubleValue BLEED_CHANCE;
     public static final ForgeConfigSpec.DoubleValue HEAVY_BLEED_DAMAGE;
@@ -29,9 +32,10 @@ public final class InjuryConfig {
                         "painkiller suppresses it.")
                 .define("enabled", true);
         BLEED_CHANCE = b.comment(
-                        "Chance to start bleeding per point of damage taken (0.08 = a 5-damage hit",
-                        "bleeds 40% of the time; capped at 90%).")
-                .defineInRange("bleedChancePerDamage", 0.08, 0.0, 1.0);
+                        "Chance to start bleeding per point of damage taken (0.03 = a 5-damage hit",
+                        "bleeds 15% of the time; capped at 60%). Was 0.08 before 2.17.4 - a config still",
+                        "on 0.08 is moved to the new default automatically.")
+                .defineInRange("bleedChancePerDamage", DEFAULT_BLEED_CHANCE, 0.0, 1.0);
         HEAVY_BLEED_DAMAGE = b.comment(
                         "A single hit of at least this much damage can cause HEAVY bleeding instead.")
                 .defineInRange("heavyBleedDamage", 7.0, 1.0, 100.0);
@@ -53,7 +57,9 @@ public final class InjuryConfig {
                         "Items that stop bleeding when used, as \"id=light\" (stops light wounds) or",
                         "\"id=heavy\" (stops all bleeding). For items that keep their variant in NBT",
                         "use the market's key format, e.g. lrtactical:consumable/lrtactical:carfak.",
-                        "Treated when the item finishes being used - its own effect still happens.")
+                        "Treated when the item finishes being used - its own effect still happens.",
+                        "Built in on top of this list: fieldkit:bandage=heavy, fieldkit:car_first_aid_kit=heavy.",
+                        "List one here to change it, or as \"id=none\" to turn it off.")
                 .defineList("bleedTreatments", List.of(
                         "tarkovdayz:bandgecivil=light",
                         "tarkovdayz:bandge=light",
@@ -64,7 +70,9 @@ public final class InjuryConfig {
                         "lrtactical:consumable/lrtactical:surv12=heavy"
                 ), o -> o instanceof String s && s.contains("="));
         PAIN_TREATMENTS = b.comment(
-                        "Items that suppress pain when used, as \"id=seconds\" of relief.")
+                        "Items that suppress pain when used, as \"id=seconds\" of relief.",
+                        "Built in on top of this list: fieldkit:painkillers=300 (one pill of the blister).",
+                        "List it here to change it, or as \"id=none\" to turn it off.")
                 .defineList("painTreatments", List.of(
                         "tarkovdayz:painkillers=240",
                         "tarkovdayz:ibuprofen=480",

@@ -1065,6 +1065,24 @@
       "sub": "injectors",
       "buy": true
     },
+    "fieldkit:bandage": {
+      "value": 1800,
+      "category": "meds",
+      "sub": "bandages",
+      "buy": true
+    },
+    "fieldkit:car_first_aid_kit": {
+      "value": 16000,
+      "category": "meds",
+      "sub": "kits",
+      "buy": true
+    },
+    "fieldkit:painkillers": {
+      "value": 5500,
+      "category": "meds",
+      "sub": "pills",
+      "buy": true
+    },
     "fieldkit:lighter": {
       "value": 2200,
       "category": "misc",

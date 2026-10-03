@@ -1,3 +1,36 @@
+# dayzhud 2.17.4 - less bleeding, stronger bandage, LR Tactical meds always count
+
+- **Bleeding is less likely.** `bleedChancePerDamage` defaults to 0.03 (was 0.08), so a
+  5-damage hit bleeds 15% of the time instead of 40%. The cap is 60% (was 90%). A config
+  still on the old 0.08 is moved to 0.03 automatically, and any other value is left alone.
+- **Field Kit's bandage stops all bleeding** (was light only).
+- **LR Tactical consumables always treat now.** Its "toggle-use" meds apply their effect
+  from their own use tick and end the use themselves, so vanilla's item-use Finish event
+  never fired for them and dayzhud missed them. dayzhud now also listens to LR Tactical's own
+  ConsumableUseEvent, found by reflection, which every one of its consumables posts when its
+  effect applies.
+- The LR Tactical meds that treat are unchanged:
+  - CAR kit, CMS and Surv12 stop all bleeding;
+  - ibuprofen, Golden Star and Vaseline relieve pain.
+
+# dayzhud 2.17.3 - darker backdrop, Field Kit meds
+
+- **Backdrop:** the UI backdrop is near-opaque, 91% to 95% dark top to bottom (was 53% to
+  69%). The world is only a faint shape behind it. Change it with `StyledTheme.BACKDROP_TOP`
+  and `BACKDROP_BOTTOM`.
+- **Field Kit's channelled meds** now work with dayzhud's injuries:
+  - `fieldkit:bandage` stops light bleeding.
+  - `fieldkit:car_first_aid_kit` stops all bleeding, once for each of its 4 uses.
+  - `fieldkit:painkillers` gives 300 s of pain relief for each pill of the blister.
+- **Config:** these three are built in and merged under `dayzhud-injuries.toml`, so they
+  work with a config made by an earlier version. Listing one there overrides it, and
+  `id=none` turns it off.
+- **Market:** all three are for sale, priced against the tarkovdayz equivalents:
+  - bandage 1 800 (bandages);
+  - car first aid kit 16 000 (kits);
+  - painkillers 5 500 (pills).
+- **Grid:** the car first aid kit takes 2x1 cells.
+
 # dayzhud 2.17.2 - fixed inventory position, vitals icons
 
 - **Position:** the inventory sits in the same left-anchored spot whether or not a chest is

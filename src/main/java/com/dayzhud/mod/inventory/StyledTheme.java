@@ -49,8 +49,11 @@ public final class StyledTheme {
 
     private StyledTheme() {}
 
-    /** Backdrop dimming: darker toward the bottom, like the reference, but see-through. */
-    public static final int BACKDROP_TOP = 0x88101112, BACKDROP_BOTTOM = 0xB0080909;
+    /**
+     * Backdrop dimming, darker toward the bottom like the reference. 2.17.3: near-opaque
+     * (91% to 95%) - the world is only a faint shape behind the UI (was 53% to 69%).
+     */
+    public static final int BACKDROP_TOP = 0xE8101112, BACKDROP_BOTTOM = 0xF2080909;
 
     /**
      * Dims the whole screen behind a UI: dark, but the world stays visible through it
