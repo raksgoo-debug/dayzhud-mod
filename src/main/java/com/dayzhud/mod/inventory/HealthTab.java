@@ -171,16 +171,16 @@ final class HealthTab {
         if (limb == null) return;
         List<Component> lines = new ArrayList<>();
         lines.add(Component.literal(longName(id)));
-        lines.add(Component.literal("§7" + number(limb.current()) + " / " + limb.max() + " HP"));
+        lines.add(Component.literal("\u00a77" + number(limb.current()) + " / " + limb.max() + " HP"));
         if (limb.healProgress() >= 0) {
-            lines.add(Component.literal("§aHealing - " + Math.round(limb.healProgress() * 100) + "%"));
+            lines.add(Component.literal("\u00a7aHealing - " + Math.round(limb.healProgress() * 100) + "%"));
         }
         ItemStack carried = screen.menu().getCarried();
         if (FirstAidCompat.isHealingItem(carried)) {
-            lines.add(Component.literal(limb.current() >= limb.max() ? "§8Not hurt"
-                    : "§8Hold to apply " + carried.getHoverName().getString()));
+            lines.add(Component.literal(limb.current() >= limb.max() ? "\u00a78Not hurt"
+                    : "\u00a78Hold to apply " + carried.getHoverName().getString()));
         } else if (limb.current() < limb.max()) {
-            lines.add(Component.literal("§8Hold a bandage or plaster here to treat it"));
+            lines.add(Component.literal("\u00a78Hold a bandage or plaster here to treat it"));
         }
         g.renderComponentTooltip(screen.font(), lines, mouseX, mouseY);
     }

@@ -1,3 +1,17 @@
+# dayzhud 2.17.2 - fixed inventory position, vitals icons
+
+- **Position:** the inventory sits in the same left-anchored spot whether or not a chest is
+  open. Before, it was centred on its own and jumped left when a container opened. With
+  nothing open, the right column is just empty.
+- **Vitals icons:** every one of the eight shows a coloured icon at all times.
+  - New weight icon, a kettlebell (`icon_weight.png`).
+  - New bleeding icon, two red drops (`icon_blood.png`). It used to borrow the water drop.
+  - The pain bolt is amber. It was the same dim grey as "NONE" and couldn't be seen.
+- **Tooltips:** hovering a vital names it with a short note:
+  - weight shows the overweight, heavy and critical limits;
+  - temperature shows Freezing / Cold / Normal / Hot / Heatstroke;
+  - pain shows how long the painkiller has left.
+
 # dayzhud 2.17.1 - dimmed backdrop, no HUD under the UI
 
 - All of the mod's screens have a dark backdrop again. It is see-through, so the world stays

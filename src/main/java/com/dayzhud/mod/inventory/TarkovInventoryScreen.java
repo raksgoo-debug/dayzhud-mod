@@ -110,9 +110,10 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
 
     public TarkovInventoryScreen(TarkovInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        // Columns A and B, plus C when something was opened.
-        this.imageWidth = menu.isCorpse() || menu.hasContainer()
-                ? TarkovInventoryMenu.FULL_WIDTH : TarkovInventoryMenu.PLAYER_WIDTH;
+        // Always the full three-column width, so the layout sits in the same place whether or
+        // not something is open (2.17.2; it used to centre just columns A and B, and jumped
+        // left when a chest opened). Column C is simply empty with nothing open.
+        this.imageWidth = TarkovInventoryMenu.FULL_WIDTH;
         // 356: inside the 360 GUI units a 1080p screen has at GUI scale 3.
         this.imageHeight = TarkovInventoryMenu.LAYOUT_HEIGHT;
         this.inventoryLabelY = -1000;
@@ -292,6 +293,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         drawCurioHoverTooltip(graphics);
         drawWeaponHoverTooltip(graphics, mouseX, mouseY);
         if (healthTabShown()) health.renderTooltip(graphics, mouseX, mouseY);
+        drawVitalTooltip(graphics, mouseX, mouseY);
     }
 
     // ---- Equipment / Health tabs (2.16.0) -----------------------------------------------------
@@ -606,7 +608,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 case HOLSTER -> "Pistols";
                 case SHEATH -> "Melee weapons";
             };
-            graphics.renderTooltip(font, Component.literal(type.label + " §7- " + accepted), mouseX, mouseY);
+            graphics.renderTooltip(font, Component.literal(type.label + " \u00a77- " + accepted), mouseX, mouseY);
             return;
         }
     }
@@ -645,34 +647,45 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         float water01 = ThirstWasTakenCompat.getThirst01(player)
                 .orElseGet(() -> player.getFoodData().getSaturationLevel() / 20f);
 
-        stat(graphics, ICON_HEART, x, y, health, low(health01, StyledTheme.GOOD));
-        stat(graphics, ICON_FOOD, x + 48, y, food + "/20", low(food / 20f, StyledTheme.WARN));
-        stat(graphics, ICON_WATER, x + 96, y, Math.round(water01 * 20) + "/20", low(water01, StyledTheme.INFO));
+        // Each icon keeps its own colour even when the value is "NONE", so the eight read as
+        // eight distinct things (2.17.2: the pain bolt went the same dim grey as its "NONE"
+        // and vanished, and bleeding borrowed the water drop). Hover any of them for its name.
+        stat(graphics, 0, ICON_HEART, x, y, health, low(health01, StyledTheme.GOOD), StyledTheme.GOOD,
+                "Health", FirstAidCompat.isModLoaded() ? "All limbs together (First Aid)" : null);
+        stat(graphics, 1, ICON_FOOD, x + 48, y, food + "/20", low(food / 20f, StyledTheme.WARN), StyledTheme.WARN,
+                "Energy", "Food level");
+        stat(graphics, 2, ICON_WATER, x + 96, y, Math.round(water01 * 20) + "/20", low(water01, StyledTheme.INFO),
+                StyledTheme.INFO, "Hydration", null);
         if (com.dayzhud.mod.weight.ClientWeight.known()) {
             int level = com.dayzhud.mod.weight.ClientWeight.level();
-            caption(graphics, "KG", x + 144, y + 2.5f, LABEL_DIM);
-            value(graphics, String.format(Locale.ROOT, "%.1f", com.dayzhud.mod.weight.ClientWeight.kg()),
-                    x + 155, y, level == 0 ? TEXT_COLOR : level == 1 ? StyledTheme.WARN
-                            : level == 2 ? COLOR_LOW : StyledTheme.BAD);
+            int color = level == 0 ? TEXT_COLOR : level == 1 ? StyledTheme.WARN : level == 2 ? COLOR_LOW : StyledTheme.BAD;
+            stat(graphics, 3, ICON_WEIGHT, x + 144, y,
+                    String.format(Locale.ROOT, "%.1fKG", com.dayzhud.mod.weight.ClientWeight.kg()), color, color,
+                    "Carried weight", String.format(Locale.ROOT, "Slower over %.0f kg, no sprinting over %.0f kg, crawling over %.0f kg",
+                            com.dayzhud.mod.weight.ClientWeight.overweight(), com.dayzhud.mod.weight.ClientWeight.heavy(),
+                            com.dayzhud.mod.weight.ClientWeight.critical()));
         }
 
         float stamina = com.dayzhud.mod.client.VitalsTracker.getStamina01();
-        stat(graphics, ICON_STAMINA, x, y2, Math.round(stamina * 100) + "%", low(stamina, TEXT_COLOR));
+        stat(graphics, 4, ICON_STAMINA, x, y2, Math.round(stamina * 100) + "%", low(stamina, TEXT_COLOR), TEXT_COLOR,
+                "Stamina", null);
 
         float t = com.dayzhud.mod.client.VitalsTracker.getTemperature01();
         // The HUD's own Celsius reading - short enough for the column ("HEATSTROKE" ran into
         // the bleeding value next to it).
-        String temp = com.dayzhud.mod.client.DayzHudOverlay.tempCelsius(t) + "°C";
+        String temp = com.dayzhud.mod.client.DayzHudOverlay.tempCelsius(t) + DEGREES_C;
         int tempColor = t < 0.25f ? StyledTheme.INFO : t < 0.4f ? 0xFF9CC8EE : t <= 0.6f ? TEXT_COLOR
                 : t <= 0.75f ? COLOR_LOW : StyledTheme.BAD;
-        stat(graphics, ICON_TEMPERATURE, x + 48, y2, temp, tempColor);
+        String tempState = t < 0.25f ? "Freezing" : t < 0.4f ? "Cold" : t <= 0.6f ? "Normal" : t <= 0.75f ? "Hot" : "Heatstroke";
+        stat(graphics, 5, ICON_TEMPERATURE, x + 48, y2, temp, tempColor, tempColor, "Body temperature", tempState);
 
         int heavyWounds = com.dayzhud.mod.injury.ClientInjuries.heavy();
         int lightWounds = com.dayzhud.mod.injury.ClientInjuries.light();
         String bleed = heavyWounds > 0 ? "HEAVY" + (heavyWounds > 1 ? " x" + heavyWounds : "")
                 : lightWounds > 0 ? "LIGHT" + (lightWounds > 1 ? " x" + lightWounds : "") : "NONE";
-        stat(graphics, ICON_WATER, x + 96, y2, bleed, bleed.equals("NONE") ? LABEL_DIM
-                : heavyWounds > 0 ? 0xFFB01E1E : StyledTheme.BAD, 0xFFE23A2E);
+        stat(graphics, 6, ICON_BLOOD, x + 96, y2, bleed, bleed.equals("NONE") ? LABEL_DIM
+                        : heavyWounds > 0 ? 0xFFB01E1E : StyledTheme.BAD, StyledTheme.BAD,
+                "Bleeding", "Light wounds clot by themselves; heavy ones need a first aid kit");
 
         int pain = com.dayzhud.mod.injury.ClientInjuries.pain();
         int relief = com.dayzhud.mod.injury.ClientInjuries.reliefSeconds();
@@ -684,26 +697,45 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             painColor = StyledTheme.GOOD;
         } else if (pain >= com.dayzhud.mod.injury.InjurySystem.PAIN_MILD) {
             boolean severe = pain >= com.dayzhud.mod.injury.InjurySystem.PAIN_SEVERE;
-            painText = relief > 0 ? relief + "S RELIEF" : severe ? "SEVERE" : "PAIN";
+            painText = relief > 0 ? relief + "S" : severe ? "SEVERE" : "PAIN";
             painColor = relief > 0 ? StyledTheme.GOOD : severe ? StyledTheme.BAD : COLOR_LOW;
         } else {
             painText = "NONE";
             painColor = LABEL_DIM;
         }
-        stat(graphics, ICON_PAIN, x + 144, y2, painText, painColor);
+        stat(graphics, 7, ICON_PAIN, x + 144, y2, painText, painColor, COLOR_LOW, "Pain",
+                relief > 0 ? "Painkiller working: " + relief + "s left" : "Slows stamina recovery; painkillers relieve it");
     }
+
+    /** "\u00b0C", built from the code point so the source file's encoding can't mangle it. */
+    private static final String DEGREES_C = (char) 0xB0 + "C";
+    private static final ResourceLocation ICON_WEIGHT = rl("icon_weight");
+    private static final ResourceLocation ICON_BLOOD = rl("icon_blood");
+
+    /** Name and detail of each vital, as last drawn, for the hover tooltips. */
+    private final String[][] vitalTips = new String[8][];
 
     private static int low(float value01, int normal) {
         return value01 <= 0.25f ? StyledTheme.BAD : normal;
     }
 
-    private void stat(GuiGraphics graphics, ResourceLocation icon, int x, int y, String value, int color) {
-        stat(graphics, icon, x, y, value, color, color);
-    }
-
-    private void stat(GuiGraphics graphics, ResourceLocation icon, int x, int y, String value, int color, int iconColor) {
+    private void stat(GuiGraphics graphics, int index, ResourceLocation icon, int x, int y, String value, int color,
+                      int iconColor, String name, String detail) {
         blitTinted(graphics, icon, x, y, 8, 8, iconColor | 0xFF000000);
         value(graphics, value, x + 11, y, color);
+        vitalTips[index] = new String[]{name, detail};
+    }
+
+    /** Names the vital under the cursor: two rows of four 48-wide cells under the weapons. */
+    private void drawVitalTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        int col = (mouseX - leftPos) / 48, row = mouseY - topPos < 316 ? 0 : 1;
+        if (mouseX < leftPos || col > 3 || mouseY < topPos + 302 || mouseY >= topPos + 330) return;
+        String[] tip = vitalTips[row * 4 + col];
+        if (tip == null) return;
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+        lines.add(Component.literal(tip[0]));
+        if (tip[1] != null) lines.add(Component.literal("\u00a77" + tip[1]));
+        graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
     /** A vital's value: 0.75 size, shadowed so it reads over the world. */
