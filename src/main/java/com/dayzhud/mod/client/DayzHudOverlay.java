@@ -111,15 +111,20 @@ public class DayzHudOverlay implements IGuiOverlay {
         drawGaugeStat(graphics, col2Icon, rowY, ICON_DROPLET_OUTLINE, ICON_DROPLET_SOLID, water01, severityColor(water01), Math.round(water01 * 100) + "%");
         drawGaugeStat(graphics, col3Icon, rowY, ICON_HEART_OUTLINE, ICON_HEART_SOLID, health01, severityColor(health01), Math.round(health01 * 100) + "%");
 
-        drawConditions(graphics, col0Icon - 10, rowY);
-        drawBalance(graphics, rowY, rightX);
+        // Conditions get their own line above the status row, right-aligned with it (2.17.5).
+        // They used to run leftwards from the temperature column on the status row itself,
+        // and with bleeding and pain both showing they reached into the hotbar.
+        int conditionsY = rowY - ICON_SIZE - CONDITIONS_GAP;
+        boolean anyCondition = drawConditions(graphics, rightX, conditionsY);
+        drawBalance(graphics, anyCondition ? conditionsY : rowY, rightX);
         drawStaminaBar(graphics, stamina01, screenWidth, screenHeight);
         drawXpBar(graphics, player, screenWidth, screenHeight);
         drawMovementIcon(graphics, player, screenWidth, screenHeight);
     }
 
     /**
-     * Rouble balance, sitting directly above the status row and right-aligned with it.
+     * Rouble balance, sitting directly above the status row (or above the conditions line when
+     * that's showing) and right-aligned with it.
      *
      * Off by default (market.showBalanceOnHud). The terminal already shows the balance, and
      * the HUD corner is already carrying health, water, food and temperature.
@@ -137,17 +142,23 @@ public class DayzHudOverlay implements IGuiOverlay {
     }
 
     private static final ResourceLocation ICON_BOLT = rl("icon_bolt");
+    /** Two drops of blood - not the water droplet tinted red, which read as thirst (2.17.5). */
+    private static final ResourceLocation ICON_BLOOD = rl("icon_blood");
+    /** Space between the conditions line and the status row under it. */
+    private static final int CONDITIONS_GAP = 4;
     private static final int COLOR_BLEED = 0xE23A2E;
     private static final int COLOR_HEAVY_BLEED = 0x9E0F0F;
     private static final int COLOR_RELIEVED = 0x8FB08F;
 
     /**
-     * Conditions (2.15.0), right-to-left from {@code rightEdge}, level with the status row:
-     * heavy bleeding, light bleeding (each with its wound count), pain (bolt; muted green with
-     * the painkiller's seconds left while suppressed), and carried weight when over the limit.
-     * Nothing is drawn when all is well, so the corner stays as it was.
+     * Conditions (2.15.0), right-to-left from {@code rightEdge} on the line above the status
+     * row: carried weight when over the limit, pain (bolt; muted green with the painkiller's
+     * seconds left while suppressed), light bleeding and heavy bleeding (each with its wound
+     * count). Nothing is drawn when all is well, so the corner stays as it was.
+     *
+     * @return whether anything was drawn
      */
-    private void drawConditions(GuiGraphics graphics, int rightEdge, int y) {
+    private boolean drawConditions(GuiGraphics graphics, int rightEdge, int y) {
         var font = Minecraft.getInstance().font;
         int x = rightEdge;
 
@@ -172,7 +183,8 @@ public class DayzHudOverlay implements IGuiOverlay {
             x -= 8;
         }
         x = drawWound(graphics, font, x, y, com.dayzhud.mod.injury.ClientInjuries.light(), COLOR_BLEED);
-        drawWound(graphics, font, x, y, com.dayzhud.mod.injury.ClientInjuries.heavy(), COLOR_HEAVY_BLEED);
+        x = drawWound(graphics, font, x, y, com.dayzhud.mod.injury.ClientInjuries.heavy(), COLOR_HEAVY_BLEED);
+        return x != rightEdge;
     }
 
     private int drawWound(GuiGraphics graphics, net.minecraft.client.gui.Font font, int x, int y, int count, int color) {
@@ -181,7 +193,7 @@ public class DayzHudOverlay implements IGuiOverlay {
         x -= font.width(text);
         if (!text.isEmpty()) graphics.drawString(font, text, x, y + 2, color, true);
         x -= ICON_SIZE + (text.isEmpty() ? 0 : 1);
-        drawIcon(graphics, ICON_DROPLET_SOLID, x, y, color);
+        drawIcon(graphics, ICON_BLOOD, x, y, color);
         return x - 8;
     }
 

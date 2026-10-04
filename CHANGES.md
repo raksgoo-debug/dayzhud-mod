@@ -1,3 +1,13 @@
+# dayzhud 2.17.5 - HUD conditions line
+
+- **Overlap fixed:** the HUD's condition icons (bleeding, pain, overweight) now sit on their
+  own line just above the status row, right-aligned with it. They used to run leftwards from
+  the temperature reading along the status row itself, and with bleeding and pain both
+  showing they reached into the hotbar.
+- **Balance:** when shown, it moves up a line while conditions are on screen.
+- **Bleeding icon:** it is now the two-drop blood icon the inventory uses. It was the water
+  droplet tinted red, which read as thirst.
+
 # dayzhud 2.17.4 - less bleeding, stronger bandage, LR Tactical meds always count
 
 - **Bleeding is less likely.** `bleedChancePerDamage` defaults to 0.03 (was 0.08), so a
