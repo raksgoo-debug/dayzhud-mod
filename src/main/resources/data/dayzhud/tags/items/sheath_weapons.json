@@ -2,6 +2,18 @@
   "values": [
     "#minecraft:swords",
     "minecraft:trident",
-    { "id": "lrtactical:melee", "required": false }
+    { "id": "lrtactical:melee", "required": false },
+    { "id": "fieldkit:kitchen_knife", "required": false },
+    { "id": "fieldkit:baseball_bat", "required": false },
+    { "id": "fieldkit:spiked_baseball_bat", "required": false },
+    { "id": "fieldkit:nailed_plank", "required": false },
+    { "id": "fieldkit:metal_pipe", "required": false },
+    { "id": "fieldkit:claw_hammer", "required": false },
+    { "id": "fieldkit:frying_pan", "required": false },
+    { "id": "fieldkit:spear", "required": false },
+    { "id": "fieldkit:crowbar", "required": false },
+    { "id": "fieldkit:hatchet", "required": false },
+    { "id": "fieldkit:machete", "required": false },
+    { "id": "fieldkit:sledgehammer", "required": false }
   ]
 }

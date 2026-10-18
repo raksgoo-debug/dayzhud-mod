@@ -1,0 +1,24 @@
+{
+  "title": "Night Shift",
+  "description": "Something keeps hitting the perimeter after dark. Forty hostiles, and I'll stop hearing about it.",
+  "order": 80,
+  "requires": [
+    "dayzhud:marksman"
+  ],
+  "objectives": [
+    {
+      "type": "kill",
+      "target": "hostile",
+      "count": 40
+    }
+  ],
+  "rewards": {
+    "roubles": 32000,
+    "items": [
+      {
+        "item": "tarkovdayz:ammobox_762",
+        "count": 2
+      }
+    ]
+  }
+}

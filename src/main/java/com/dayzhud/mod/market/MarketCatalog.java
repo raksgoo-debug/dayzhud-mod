@@ -44,7 +44,7 @@ public final class MarketCatalog {
      * legs" is the order a sort gives you and it is the wrong one.
      */
     public static final List<String> SUB_ORDER = List.of(
-            "helmets", "body armor", "legs", "boots",
+            "helmets", "body armor", "legs", "boots", "armor parts",
             "pistols", "smgs", "rifles", "marksman", "shotguns", "machine guns", "launchers",
             "optics", "muzzle", "grips", "stocks", "extended",
             "small", "standard", "extended mags", "drums",

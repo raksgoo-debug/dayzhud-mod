@@ -1,0 +1,23 @@
+{
+  "title": "Regular",
+  "description": "Make it out five more times. A regular gets a real pack.",
+  "order": 90,
+  "requires": [
+    "dayzhud:getting_out_alive"
+  ],
+  "objectives": [
+    {
+      "type": "extract",
+      "count": 5
+    }
+  ],
+  "rewards": {
+    "roubles": 45000,
+    "items": [
+      {
+        "item": "fieldkit:assault_backpack",
+        "count": 1
+      }
+    ]
+  }
+}

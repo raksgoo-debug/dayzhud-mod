@@ -1,0 +1,29 @@
+{
+  "title": "Veteran",
+  "description": "A hundred of the dead and three more trips out. Do that, and you're one of us.",
+  "order": 120,
+  "requires": [
+    "dayzhud:regular",
+    "dayzhud:night_shift"
+  ],
+  "objectives": [
+    {
+      "type": "kill",
+      "target": "undead",
+      "count": 100
+    },
+    {
+      "type": "extract",
+      "count": 3
+    }
+  ],
+  "rewards": {
+    "roubles": 120000,
+    "items": [
+      {
+        "item": "fieldkit:raid_backpack",
+        "count": 1
+      }
+    ]
+  }
+}

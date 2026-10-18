@@ -1,0 +1,126 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+issueTrackerURL="https://example.com/issues"
+
+[[mods]]
+modId="dayzhud"
+version="2.18.0"
+displayName="DayZ HUD"
+authors="YourName"
+description='''Replaces the vanilla HUD with a DayZ-style status stack (health/blood, water, food, stamina, temperature) and reads thirst from Thirst Was Taken when present.'''
+
+[[dependencies.dayzhud]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47.4.20,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.dayzhud]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
+
+# Mandatory: the inventory screen surfaces whatever Curios slots are registered for the
+# player by any installed mod (mask, backpack, uniform, etc). This mod no longer defines
+# its own slot types - it just displays what Curios already knows about.
+[[dependencies.dayzhud]]
+    modId="curios"
+    mandatory=true
+    versionRange="[5.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: corpse looting. Ragdollified 1.0.0-RELEASE split its player-corpse
+# feature out of the core mod into a separate addon, "Ragdollified Player Corpse"
+# (modid ragdollifiedpc) - so that, not "ragdollified", is what owns the corpse menu now.
+# When it's installed, CorpseOpenRedirect replaces its looting screen with the merged
+# Tarkov view. Loading AFTER it keeps our redirect behind its own registration. The
+# redirect still recognises the pre-split core class name, so old packs keep working.
+[[dependencies.dayzhud]]
+    modId="ragdollifiedpc"
+    mandatory=false
+    versionRange="[0.1.0-BETA,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: First Aid. When present it owns the player's real health as a per-limb
+# damage model, and vanilla health becomes only a derived summary of it - so the HUD reads
+# the limbs directly via FirstAidCompat. Loading AFTER it keeps its capability registered
+# before we ever look it up.
+[[dependencies.dayzhud]]
+    modId="firstaid"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: loads fine with or without Thirst Was Taken installed.
+# If present, the mod reads its thirst value via reflection for the HUD's water gauge.
+# (Note: the mod's actual id is "thirst" - the jar is just named ThirstWasTaken-*.jar.)
+[[dependencies.dayzhud]]
+    modId="thirst"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="CLIENT"
+
+# Soft dependency: tarkovdayz (Zcraft-Items). It supplies the rouble notes the wallet is
+# denominated in, most of what the trader stocks, and the desktop PC and laptop the market's
+# default access config points at. Nothing here is a hard reference - if the mod is absent,
+# those price entries drop out of the catalogue and the terminal ids never match anything.
+[[dependencies.dayzhud]]
+    modId="tarkovdayz"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: TACZ. Guns and ammo are priced from their own ballistics, so the shop
+# follows whatever gun pack is installed. Reached entirely by reflection (TaczMarketCompat)
+# rather than a compile-time dependency, deliberately: a hard dependency would pin this mod
+# to one TACZ version.
+[[dependencies.dayzhud]]
+    modId="tacz"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+# Soft dependency: TaCZ Magazines. Empty magazines are stocked and priced by capacity.
+# Reflective, like every other integration here.
+[[dependencies.dayzhud]]
+    modId="taczmagazines"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="AFTER"
+    side="BOTH"
+
+
+# Soft dependency: Field Kit. Its consumables are stocked and priced; every one is a plainly
+# registered item, so no NBT-variant handling is needed for them.
+#
+# ordering=NONE, and it MUST stay NONE. Field Kit already declares dayzhud with
+# ordering="AFTER"; declaring fieldkit AFTER us as well makes each wait for the other and
+# Forge refuses to sort the mod list at all - "Mod Sorting failed. Detected Cycles", before
+# any mod loads. Nothing here needs an order: the price data is read from a datapack and the
+# items are looked up by id when the catalogue is built, long after every mod has registered.
+[[dependencies.dayzhud]]
+    modId="fieldkit"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+# Soft dependency: Rig & Plate. Its helmets, vests, rigs, masks, headset and gear attachments
+# are priced, sized in the grid and drawn there as their GeckoLib model. Nothing compiles
+# against it - the models are reached through its items' own IClientItemExtensions renderer.
+[[dependencies.dayzhud]]
+    modId="rigandplate"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="NONE"
+    side="BOTH"

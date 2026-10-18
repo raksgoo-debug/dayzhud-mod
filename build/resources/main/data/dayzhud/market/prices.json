@@ -1,0 +1,1237 @@
+{
+  "_comment": [
+    "Trader price data. 'value' is what ONE unit is worth; a trader pays",
+    "value * market.sellMultiplier for it and charges value * count *",
+    "market.buyMultiplier for a listing. Entries without \"buy\": true can be",
+    "sold but are not stocked - the barter junk that only flows one way.",
+    "Override this file from a datapack at the same path to retune the economy.",
+    "NOT EVERYTHING NEEDS A ROW HERE. TACZ guns and ammo are priced from their own",
+    "ballistics, and armour with no entry is priced AND stocked from its own stats",
+    "(see DerivedPrices and the [derived] config block) - which is what makes a gear",
+    "mod shipping 238 armour pieces workable.",
+    "KEY FORMATS: a plain item id; 'tacz:gun/<id>' or 'tacz:ammo/<id>'; or",
+    "'<item id>/<variant id>' for mods that put many items on one registry name via",
+    "NBT, listed in market.nbtVariantItems - LesRaisins Tactical works that way, so",
+    "its medkits are lrtactical:consumable/lrtactical:ai2 and NOT lrtactical:ai2,",
+    "which is not a registered item at all.",
+    "Optional \"sub\" on an entry files it into a section inside its category",
+    "(e.g. \"category\": \"gear\", \"sub\": \"backpacks\"). Armour sections and gun",
+    "sections are derived from equipment slot and TACZ gun type automatically.",
+    "Field Kit consumables use plain item ids - unlike lrtactical, every one",
+    "is separately registered. 'Open' tin variants and the lit lighter are",
+    "states rather than stock: sellable, never stocked."
+  ],
+  "entries": {
+    "tarkovdayz:bandgecivil": {
+      "value": 1100,
+      "category": "meds",
+      "buy": true,
+      "sub": "bandages"
+    },
+    "tarkovdayz:bandge": {
+      "value": 2400,
+      "category": "meds",
+      "buy": true,
+      "sub": "bandages"
+    },
+    "tarkovdayz:ai_2": {
+      "value": 6500,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "tarkovdayz:salewafirstaidkit": {
+      "value": 12000,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "tarkovdayz:grizzly": {
+      "value": 42000,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "tarkovdayz:salinebag": {
+      "value": 9500,
+      "category": "meds",
+      "buy": true,
+      "sub": "injectors"
+    },
+    "tarkovdayz:salinebag_empty": {
+      "value": 800,
+      "category": "meds",
+      "sub": "injectors"
+    },
+    "tarkovdayz:defibrillator": {
+      "value": 38000,
+      "category": "meds",
+      "sub": "kits"
+    },
+    "tarkovdayz:morphine": {
+      "value": 18000,
+      "category": "meds",
+      "buy": true,
+      "sub": "injectors"
+    },
+    "tarkovdayz:painkillers": {
+      "value": 4200,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "tarkovdayz:ibuprofen": {
+      "value": 5600,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "tarkovdayz:tetracycline": {
+      "value": 7800,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "tarkovdayz:vitamin": {
+      "value": 3100,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "tarkovdayz:anti_radpill": {
+      "value": 9200,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "tarkovdayz:ledx": {
+      "value": 78000,
+      "category": "meds",
+      "sub": "kits"
+    },
+    "tarkovdayz:cola": {
+      "value": 1900,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:mre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:rice": {
+      "value": 1400,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:tea": {
+      "value": 900,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:mayonnaise": {
+      "value": 2600,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:luckysmoke": {
+      "value": 2200,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:m_20smoke": {
+      "value": 2600,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:marlborosmoke": {
+      "value": 3400,
+      "category": "provisions",
+      "buy": true
+    },
+    "tarkovdayz:circuitboard": {
+      "value": 12000,
+      "category": "electronics"
+    },
+    "tarkovdayz:militarycircuitboards": {
+      "value": 34000,
+      "category": "electronics"
+    },
+    "tarkovdayz:cpu": {
+      "value": 8600,
+      "category": "electronics"
+    },
+    "tarkovdayz:cpu_fan": {
+      "value": 3400,
+      "category": "electronics"
+    },
+    "tarkovdayz:gpu": {
+      "value": 46000,
+      "category": "electronics"
+    },
+    "tarkovdayz:psu": {
+      "value": 7400,
+      "category": "electronics"
+    },
+    "tarkovdayz:hdd": {
+      "value": 9800,
+      "category": "electronics"
+    },
+    "tarkovdayz:ssdc": {
+      "value": 16500,
+      "category": "electronics"
+    },
+    "tarkovdayz:sas": {
+      "value": 21000,
+      "category": "electronics"
+    },
+    "tarkovdayz:memorystick": {
+      "value": 14000,
+      "category": "electronics"
+    },
+    "tarkovdayz:laptop": {
+      "value": 52000,
+      "category": "electronics"
+    },
+    "tarkovdayz:lcd": {
+      "value": 5200,
+      "category": "electronics"
+    },
+    "tarkovdayz:led_light": {
+      "value": 2800,
+      "category": "electronics"
+    },
+    "tarkovdayz:relay": {
+      "value": 3600,
+      "category": "electronics"
+    },
+    "tarkovdayz:magnet": {
+      "value": 4900,
+      "category": "electronics"
+    },
+    "tarkovdayz:helix": {
+      "value": 33000,
+      "category": "electronics"
+    },
+    "tarkovdayz:ms_4000": {
+      "value": 18500,
+      "category": "electronics"
+    },
+    "tarkovdayz:tplug": {
+      "value": 2900,
+      "category": "electronics"
+    },
+    "tarkovdayz:sparkplug": {
+      "value": 3200,
+      "category": "electronics"
+    },
+    "tarkovdayz:sparkplugbox": {
+      "value": 11000,
+      "category": "electronics"
+    },
+    "tarkovdayz:controller": {
+      "value": 24000,
+      "category": "electronics"
+    },
+    "tarkovdayz:jammer": {
+      "value": 29000,
+      "category": "electronics"
+    },
+    "tarkovdayz:walkie_talkie": {
+      "value": 13500,
+      "category": "electronics"
+    },
+    "tarkovdayz:wificamera": {
+      "value": 27000,
+      "category": "electronics"
+    },
+    "tarkovdayz:xphone": {
+      "value": 31000,
+      "category": "electronics"
+    },
+    "tarkovdayz:zphone": {
+      "value": 41000,
+      "category": "electronics"
+    },
+    "tarkovdayz:potassium": {
+      "value": 6800,
+      "category": "electronics"
+    },
+    "tarkovdayz:gas_analyzer": {
+      "value": 26000,
+      "category": "electronics"
+    },
+    "tarkovdayz:tetriz": {
+      "value": 96000,
+      "category": "electronics"
+    },
+    "tarkovdayz:gold_coin": {
+      "value": 15000,
+      "category": "valuables"
+    },
+    "tarkovdayz:intelligence": {
+      "value": 15000,
+      "category": "valuables"
+    },
+    "tarkovdayz:intelligencefolder": {
+      "value": 43000,
+      "category": "valuables"
+    },
+    "tarkovdayz:kek": {
+      "value": 900,
+      "category": "materials"
+    },
+    "tarkovdayz:tape": {
+      "value": 1600,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:gunpowdergreen": {
+      "value": 5400,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:gunpowerred": {
+      "value": 7200,
+      "category": "materials",
+      "buy": true
+    },
+    "tarkovdayz:c_4explosives": {
+      "value": 58000,
+      "category": "materials"
+    },
+    "tarkovdayz:ammobox_919": {
+      "value": 4800,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:amobox_12ga": {
+      "value": 6200,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_545": {
+      "value": 7200,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_556": {
+      "value": 7600,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_762": {
+      "value": 9400,
+      "category": "ammo",
+      "buy": true
+    },
+    "tarkovdayz:ammobox_308": {
+      "value": 11800,
+      "category": "ammo",
+      "buy": true
+    },
+    "minecraft:bread": {
+      "value": 320,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:cooked_beef": {
+      "value": 640,
+      "category": "supplies",
+      "buy": true,
+      "count": 2
+    },
+    "minecraft:golden_apple": {
+      "value": 14000,
+      "category": "supplies",
+      "buy": true
+    },
+    "minecraft:torch": {
+      "value": 90,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:arrow": {
+      "value": 120,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:glass_bottle": {
+      "value": 220,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:iron_ingot": {
+      "value": 850,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:gold_ingot": {
+      "value": 3200,
+      "category": "supplies"
+    },
+    "minecraft:diamond": {
+      "value": 9500,
+      "category": "supplies"
+    },
+    "minecraft:emerald": {
+      "value": 2200,
+      "category": "supplies"
+    },
+    "minecraft:gunpowder": {
+      "value": 700,
+      "category": "supplies",
+      "buy": true,
+      "count": 8
+    },
+    "minecraft:redstone": {
+      "value": 240,
+      "category": "supplies"
+    },
+    "minecraft:coal": {
+      "value": 180,
+      "category": "supplies",
+      "buy": true,
+      "count": 16
+    },
+    "minecraft:leather": {
+      "value": 520,
+      "category": "supplies"
+    },
+    "minecraft:string": {
+      "value": 130,
+      "category": "supplies"
+    },
+    "minecraft:paper": {
+      "value": 60,
+      "category": "supplies"
+    },
+    "minecraft:ender_pearl": {
+      "value": 3000,
+      "category": "supplies"
+    },
+    "minecraft:obsidian": {
+      "value": 1100,
+      "category": "supplies",
+      "buy": true,
+      "count": 4
+    },
+    "minecraft:oak_planks": {
+      "value": 40,
+      "category": "supplies",
+      "buy": true,
+      "count": 32
+    },
+    "minecraft:cobblestone": {
+      "value": 20,
+      "category": "supplies",
+      "buy": true,
+      "count": 32
+    },
+    "caps_awim_tactical_gear_rework:blackhikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:greenhikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:multicamhikingbackpack": {
+      "value": 23000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:urbanahikingbackpack": {
+      "value": 21000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:blacktacticalbackpack": {
+      "value": 34000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:greentacticalbackpack": {
+      "value": 34000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:sportsbag": {
+      "value": 9500,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:assault_backpack": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:assault_backpack_black": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:assault_backpack_coyote": {
+      "value": 18000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:pilgrim_backpack": {
+      "value": 36000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:pilgrim_backpack_coyote": {
+      "value": 36000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:raid_backpack": {
+      "value": 52000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:raid_backpack_black": {
+      "value": 52000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:gunslinger_backpack": {
+      "value": 56000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:gunslinger_backpack_multicam": {
+      "value": 59000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack": {
+      "value": 68000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack_multicam": {
+      "value": 71000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "fieldkit:frame_backpack_coyote": {
+      "value": 68000,
+      "category": "gear",
+      "buy": true,
+      "sub": "backpacks"
+    },
+    "caps_awim_tactical_gear_rework:rps_smiersh": {
+      "value": 28000,
+      "category": "gear",
+      "buy": true,
+      "sub": "rigs"
+    },
+    "caps_awim_tactical_gear_rework:gasmaskmodule": {
+      "value": 31000,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:nvgmodule": {
+      "value": 74000,
+      "category": "gear",
+      "sub": "headwear"
+    },
+    "caps_awim_tactical_gear_rework:helmet_multitool": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true,
+      "sub": "headwear"
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasses": {
+      "value": 8200,
+      "category": "gear",
+      "buy": true,
+      "sub": "eyewear"
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasseswithoutrim": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true,
+      "sub": "eyewear"
+    },
+    "caps_awim_tactical_gear_rework:tacticalglasseswithoutrimred": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true,
+      "sub": "eyewear"
+    },
+    "caps_awim_tactical_gear_rework:tacticalglassesyellow": {
+      "value": 7600,
+      "category": "gear",
+      "buy": true,
+      "sub": "eyewear"
+    },
+    "caps_awim_tactical_gear_rework:glovesblack": {
+      "value": 4400,
+      "category": "gear",
+      "buy": true,
+      "sub": "gloves"
+    },
+    "caps_awim_tactical_gear_rework:arcticb": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:atacs_balaclava": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:blackbalaclava": {
+      "value": 2400,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:blackskullbalaclava": {
+      "value": 3100,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:greenbalaklava": {
+      "value": 2400,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:multicam_balaclava": {
+      "value": 2600,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:greenms": {
+      "value": 2900,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:mhalataks": {
+      "value": 3400,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:brownarafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:greenarafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:whitearafatka": {
+      "value": 2200,
+      "category": "gear",
+      "buy": true,
+      "sub": "masks"
+    },
+    "caps_awim_tactical_gear_rework:atacsuniform": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:gorka_uniform": {
+      "value": 13500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:grayurbana": {
+      "value": 11000,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:greenuniform": {
+      "value": 10500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:multicamuniform": {
+      "value": 13000,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:sportsuniform": {
+      "value": 5200,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformarcticbase": {
+      "value": 11500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformblacktiger": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformemr": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformgreencifra": {
+      "value": 12000,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformgreenmulticam": {
+      "value": 13000,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformpmcstriker": {
+      "value": 15500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:uniformtigr": {
+      "value": 12500,
+      "category": "gear",
+      "buy": true,
+      "sub": "uniforms"
+    },
+    "caps_awim_tactical_gear_rework:bandage": {
+      "value": 1400,
+      "category": "meds",
+      "buy": true,
+      "sub": "bandages"
+    },
+    "caps_awim_tactical_gear_rework:bandagevp": {
+      "value": 1600,
+      "category": "meds",
+      "buy": true,
+      "sub": "bandages"
+    },
+    "caps_awim_tactical_gear_rework:foodirp": {
+      "value": 5800,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:foodmre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:irp": {
+      "value": 5800,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:mre": {
+      "value": 6400,
+      "category": "provisions",
+      "buy": true
+    },
+    "caps_awim_tactical_gear_rework:foodirpeat": {
+      "value": 120,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:foodmreeat": {
+      "value": 120,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovsix": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovseven": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:tarkovtree": {
+      "value": 3600,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:vidra": {
+      "value": 2800,
+      "category": "misc"
+    },
+    "caps_awim_tactical_gear_rework:theappershovel": {
+      "value": 4200,
+      "category": "misc",
+      "buy": true
+    },
+    "lrtactical:throwable/lrtactical:m67": {
+      "value": 24000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "grenades"
+    },
+    "lrtactical:throwable/lrtactical:rgn": {
+      "value": 29000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "grenades"
+    },
+    "lrtactical:throwable/lrtactical:flash_grenade": {
+      "value": 17000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "grenades"
+    },
+    "lrtactical:throwable/lrtactical:smoke_grenade": {
+      "value": 12000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "grenades"
+    },
+    "lrtactical:throwable/lrtactical:molotov": {
+      "value": 9500,
+      "category": "tactical",
+      "buy": true,
+      "sub": "explosives"
+    },
+    "lrtactical:throwable/lrtactical:c4": {
+      "value": 62000,
+      "buy": false,
+      "category": "tactical",
+      "sub": "explosives"
+    },
+    "lrtactical:consumable/lrtactical:ai2": {
+      "value": 6500,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "lrtactical:consumable/lrtactical:carfak": {
+      "value": 14000,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "lrtactical:consumable/lrtactical:cms": {
+      "value": 26000,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "lrtactical:consumable/lrtactical:surv12": {
+      "value": 48000,
+      "category": "meds",
+      "buy": true,
+      "sub": "kits"
+    },
+    "lrtactical:consumable/lrtactical:blood_pack": {
+      "value": 21000,
+      "category": "meds",
+      "buy": true,
+      "sub": "injectors"
+    },
+    "lrtactical:consumable/lrtactical:amoxycillin": {
+      "value": 7400,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "lrtactical:consumable/lrtactical:ibuprofen": {
+      "value": 5600,
+      "category": "meds",
+      "buy": true,
+      "sub": "pills"
+    },
+    "lrtactical:consumable/lrtactical:goldenstar": {
+      "value": 4100,
+      "category": "meds",
+      "buy": true,
+      "sub": "injectors"
+    },
+    "lrtactical:consumable/lrtactical:vaseline": {
+      "value": 8800,
+      "category": "meds",
+      "buy": true,
+      "sub": "injectors"
+    },
+    "lrtactical:consumable/lrtactical:condensed_milk": {
+      "value": 2400,
+      "category": "provisions",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:baseball_bat": {
+      "value": 3200,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:dagger": {
+      "value": 6800,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:melee/lrtactical:karambit": {
+      "value": 19000,
+      "category": "weapons",
+      "buy": true
+    },
+    "lrtactical:flash_shield": {
+      "value": 34000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "shields"
+    },
+    "lrtactical:detonator": {
+      "value": 9000,
+      "category": "tactical",
+      "buy": true,
+      "sub": "explosives"
+    },
+    "fieldkit:army_ration": {
+      "value": 7200,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_meat": {
+      "value": 3400,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_fish": {
+      "value": 2900,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_peas": {
+      "value": 2100,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:canned_caviar": {
+      "value": 4600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:condensed_milk": {
+      "value": 2600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:instant_noodles": {
+      "value": 2200,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:crackers": {
+      "value": 1300,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:jerky": {
+      "value": 3100,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:chocolate_bar": {
+      "value": 1800,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:protein_bar": {
+      "value": 2400,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:pickle_jar": {
+      "value": 2700,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:sugar_box": {
+      "value": 1600,
+      "category": "provisions",
+      "sub": "food",
+      "buy": true
+    },
+    "fieldkit:water_bottle": {
+      "value": 1500,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:juice_carton": {
+      "value": 2000,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:energy_drink": {
+      "value": 3800,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:coffee_jar": {
+      "value": 5200,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:vodka": {
+      "value": 4400,
+      "category": "provisions",
+      "sub": "drink",
+      "buy": true
+    },
+    "fieldkit:iodine_tablets": {
+      "value": 6400,
+      "category": "meds",
+      "sub": "pills",
+      "buy": true
+    },
+    "fieldkit:syringe_adrenaline": {
+      "value": 19000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_propital": {
+      "value": 24000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_etg": {
+      "value": 41000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:syringe_sj6": {
+      "value": 33000,
+      "category": "meds",
+      "sub": "injectors",
+      "buy": true
+    },
+    "fieldkit:bandage": {
+      "value": 1800,
+      "category": "meds",
+      "sub": "bandages",
+      "buy": true
+    },
+    "fieldkit:car_first_aid_kit": {
+      "value": 16000,
+      "category": "meds",
+      "sub": "kits",
+      "buy": true
+    },
+    "fieldkit:painkillers": {
+      "value": 5500,
+      "category": "meds",
+      "sub": "pills",
+      "buy": true
+    },
+    "fieldkit:lighter": {
+      "value": 2200,
+      "category": "misc",
+      "buy": true
+    },
+    "fieldkit:cigarette": {
+      "value": 900,
+      "category": "misc",
+      "buy": true
+    },
+    "fieldkit:canned_meat_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_fish_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_peas_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:canned_caviar_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:condensed_milk_open": {
+      "value": 300,
+      "category": "misc"
+    },
+    "fieldkit:lighter_lit": {
+      "value": 2200,
+      "category": "misc"
+    },
+    "fieldkit:canned_beans": { "value": 2300, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:canned_peaches": { "value": 2500, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:canned_tuna": { "value": 3000, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:dog_food": { "value": 1700, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:potato_chips": { "value": 1400, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:cereal_box": { "value": 1900, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:honey_jar": { "value": 3600, "category": "provisions", "sub": "food", "buy": true },
+    "fieldkit:cola_can": { "value": 1900, "category": "provisions", "sub": "drink", "buy": true },
+    "fieldkit:water_tin": { "value": 700, "category": "provisions", "sub": "drink" },
+    "fieldkit:water_can": { "value": 800, "category": "provisions", "sub": "drink" },
+    "fieldkit:water_jar": { "value": 900, "category": "provisions", "sub": "drink" },
+    "fieldkit:water_glass_bottle": { "value": 1000, "category": "provisions", "sub": "drink" },
+    "fieldkit:canned_beans_open": { "value": 300, "category": "misc" },
+    "fieldkit:canned_peaches_open": { "value": 300, "category": "misc" },
+    "fieldkit:canned_tuna_open": { "value": 300, "category": "misc" },
+    "fieldkit:dog_food_open": { "value": 300, "category": "misc" },
+    "fieldkit:empty_tin": { "value": 150, "category": "misc" },
+    "fieldkit:empty_can": { "value": 150, "category": "misc" },
+    "fieldkit:empty_bottle": { "value": 300, "category": "misc" },
+    "fieldkit:empty_jar": { "value": 250, "category": "misc" },
+    "fieldkit:empty_water_bottle": { "value": 200, "category": "misc" },
+    "fieldkit:kitchen_knife": { "value": 2800, "category": "weapons", "buy": true },
+    "fieldkit:baseball_bat": { "value": 3200, "category": "weapons", "buy": true },
+    "fieldkit:spiked_baseball_bat": { "value": 5200, "category": "weapons", "buy": true },
+    "fieldkit:nailed_plank": { "value": 1800, "category": "weapons", "buy": true },
+    "fieldkit:metal_pipe": { "value": 2600, "category": "weapons", "buy": true },
+    "fieldkit:claw_hammer": { "value": 3400, "category": "weapons", "buy": true },
+    "fieldkit:frying_pan": { "value": 2400, "category": "weapons", "buy": true },
+    "fieldkit:spear": { "value": 2900, "category": "weapons", "buy": true },
+    "fieldkit:crowbar": { "value": 6200, "category": "weapons", "buy": true },
+    "fieldkit:hatchet": { "value": 7400, "category": "weapons", "buy": true },
+    "fieldkit:machete": { "value": 9800, "category": "weapons", "buy": true },
+    "fieldkit:sledgehammer": { "value": 11500, "category": "weapons", "buy": true },
+    "fieldkit:flashlight": { "value": 6500, "category": "electronics", "buy": true },
+    "fieldkit:flashlight_on": { "value": 6500, "category": "electronics" },
+    "fieldkit:battery": { "value": 1200, "category": "electronics", "buy": true },
+    "fieldkit:binoculars": { "value": 14000, "category": "electronics", "buy": true },
+    "fieldkit:electronics_scrap": { "value": 1600, "category": "materials" },
+    "fieldkit:copper_wire": { "value": 1400, "category": "materials" },
+    "fieldkit:duct_tape": { "value": 2100, "category": "materials", "buy": true },
+    "fieldkit:nails": { "value": 900, "category": "materials", "buy": true },
+    "fieldkit:wood_plank": { "value": 300, "category": "materials", "buy": true },
+    "fieldkit:scrap_metal": { "value": 700, "category": "materials" },
+    "fieldkit:rag": { "value": 250, "category": "materials", "buy": true },
+    "fieldkit:rope": { "value": 1100, "category": "materials", "buy": true },
+    "fieldkit:newspaper": { "value": 120, "category": "materials" },
+    "fieldkit:toilet_paper": { "value": 400, "category": "materials" },
+    "fieldkit:gold_chain": { "value": 18000, "category": "valuables" },
+    "fieldkit:wristwatch": { "value": 7800, "category": "valuables" },
+    "fieldkit:matches": { "value": 600, "category": "misc", "buy": true },
+    "fieldkit:lighter_fluid": { "value": 1800, "category": "misc", "buy": true },
+    "fieldkit:soap": { "value": 900, "category": "misc", "buy": true },
+    "fieldkit:screwdriver": { "value": 2200, "category": "misc", "buy": true },
+    "fieldkit:drawstring_bag": { "value": 3800, "category": "gear", "sub": "backpacks", "buy": true },
+    "fieldkit:drawstring_bag_black": { "value": 3800, "category": "gear", "sub": "backpacks", "buy": true },
+    "fieldkit:school_backpack": { "value": 7500, "category": "gear", "sub": "backpacks", "buy": true },
+    "fieldkit:school_backpack_navy": { "value": 7500, "category": "gear", "sub": "backpacks", "buy": true },
+
+    "rigandplate:tsh4_helmet": { "value": 6500, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:ssh68_helmet": { "value": 14000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:kolpak_helmet": { "value": 21000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:untar_helmet": { "value": 24000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:kiver_helmet": { "value": 34000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:6b7_helmet": { "value": 38000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:6b47_helmet": { "value": 42000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:sfera_helmet": { "value": 46000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:zsh12m_helmet": { "value": 52000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:lshz2_helmet": { "value": 72000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:rys_helmet": { "value": 78000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:maska_helmet": { "value": 98000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:altyn_helmet": { "value": 115000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:vulkan_helmet": { "value": 135000, "category": "armor", "sub": "helmets", "buy": true },
+    "rigandplate:module3m_vest": { "value": 16000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b2_vest": { "value": 22000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:zhuk_vest": { "value": 26000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b23_vest": { "value": 61000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b5_19_vest": { "value": 68000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b13_vest": { "value": 82000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b45_vest": { "value": 105000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:redut_vest": { "value": 128000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:gzhel_vest": { "value": 135000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:korund_vest": { "value": 145000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:6b43_vest": { "value": 195000, "category": "armor", "sub": "body armor", "buy": true },
+    "rigandplate:rails": { "value": 6500, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:counterweight": { "value": 3200, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:strobe": { "value": 8800, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:pvs14": { "value": 95000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:goggles": { "value": 6400, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:kolpak_visor": { "value": 7800, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:kiver_visor": { "value": 12000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:zsh_visor": { "value": 14000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:aventail": { "value": 18000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:lshz_visor": { "value": 24000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:rys_visor": { "value": 26000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:maska_visor": { "value": 30000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:altyn_visor": { "value": 32000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:vulkan_visor": { "value": 38000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:mic": { "value": 4500, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:groin": { "value": 14000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:collar": { "value": 16000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:pouches": { "value": 12000, "category": "armor", "sub": "armor parts", "buy": true },
+    "rigandplate:belts_rig": { "value": 9000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:zhguchiy_rig": { "value": 15000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:wartech_rig": { "value": 18000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:umka_vest": { "value": 22000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:smersh_rig": { "value": 28000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:tarzan_rig": { "value": 36000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:6b3tm_rig": { "value": 38000, "category": "gear", "sub": "rigs", "buy": true },
+    "rigandplate:shemagh_mask": { "value": 2400, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:balaclava_mask": { "value": 2600, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:halfmask_mask": { "value": 3800, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:gp5_mask": { "value": 7200, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:rpg67_mask": { "value": 9600, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:gp7_mask": { "value": 11500, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:ubey_mask": { "value": 26000, "category": "gear", "sub": "masks", "buy": true },
+    "rigandplate:gssh01_headset": { "value": 18000, "category": "gear", "sub": "headwear", "buy": true }
+  }
+}

@@ -1,3 +1,59 @@
+# dayzhud 2.18.0 - corpse loadout, Field Kit and Rig & Plate compat
+
+## Corpse loot column
+
+- **Weapon boxes:** the corpse's hotbar 1-4 now shows as PRIMARY WEAPON, SECONDARY WEAPON,
+  HOLSTER and SHEATH boxes, laid out like your own loadout (primary and holster on top). Each
+  draws the gun or melee weapon as its model, with its name, calibre and rounds. They only
+  take what your own boxes would: guns by type, melee in the sheath.
+- **Quick bar:** hotbar 5-9 is a fourth row under the corpse's inventory.
+- **Equipment:** the figure stays, with four rows of cells around it:
+  - left edge: head, body, legs and feet, which now show vanilla's empty-armour ghosts;
+  - right of the figure: the offhand, with a shield ghost;
+  - the other 11 cells are curios. Up to four more go at the end of the quick bar row.
+- Hovering an empty equipment cell names it ("Headgear", "Offhand", or the curio slot).
+- **Backpack:** still 3 rows.
+- **Search:** the weapon boxes are searched right after the gear, before the inventory. A box
+  not yet searched is hatched over all of it.
+- The weapon boxes are 30 tall, so a gun draws a bit smaller than in your own 38-tall boxes.
+  It is never narrowed.
+- A corpse from an earlier version can hold a multi-cell item's hidden markers in hotbar 1-4.
+  They are cleared when the corpse is opened.
+
+## Field Kit
+
+- **Melee:** these go in the SHEATH slot:
+  - kitchen knife, machete, hatchet, crowbar, claw hammer;
+  - baseball bat, spiked bat, plank with nails, lead pipe;
+  - sledgehammer, frying pan, improvised spear.
+- **Market:** the rest of Field Kit is priced:
+  - melee weapons, in WEAPONS;
+  - the new tins and drinks;
+  - flashlight, battery and binoculars;
+  - junk and materials (duct tape, nails, rope, rags, scrap, wire);
+  - valuables (gold chain, wristwatch);
+  - the school and drawstring bags.
+  - Empty containers, opened tins and filled water containers can be sold but aren't stocked.
+- **Grid:** tools and melee are 2 to 5 cells long and drawn side-on, head to the left, like
+  guns. The school and drawstring bags are 2x2 and drawn as their model, like the other bags.
+
+## Rig & Plate
+
+- **Market:** all 58 items are priced:
+  - helmets and body armour in ARMOR;
+  - visors, NVGs and other attachments in ARMOR > ARMOR PARTS;
+  - rigs, masks and the headset in GEAR.
+  - Prices follow each piece's armour class.
+- **Grid:**
+  - helmets 2x2, vests 3x3;
+  - rigs 3x2 (the armoured 6B3TM 3x3, the belts 3x1);
+  - gas masks 2x2, headset 2x1;
+  - attachments 1x1 to 2x2.
+- **Render:** gear is drawn as its GeckoLib model, front-on, with fitted visors and NVGs. This
+  covers the grid, the equipment boxes and the carried item. Attachments only have a flat icon,
+  which is scaled up.
+- Soft dependency (`rigandplate`), reached by reflection. Without it nothing changes.
+
 # dayzhud 2.17.5 - HUD conditions line
 
 - **Overlap fixed:** the HUD's condition icons (bleeding, pain, overweight) now sit on their

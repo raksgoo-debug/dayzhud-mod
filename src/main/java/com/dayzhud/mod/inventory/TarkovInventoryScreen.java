@@ -392,17 +392,22 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             Slot slot = menu.slots.get(i);
             if (!slot.isActive() || !ClientSearchState.isMasked(i)) continue;
 
-            int x = leftPos + slot.x;
-            int y = topPos + slot.y;
-            graphics.fill(x, y, x + 16, y + 16, SEARCH_COVER_BG);
+            // A boxed slot (a corpse's weapon boxes) is covered box and all, not just the
+            // 16x16 slot in its middle.
+            var box = menu.slotBoxes.get(i);
+            int x = leftPos + (box != null ? box.x() + 1 : slot.x);
+            int y = topPos + (box != null ? box.y() + 1 : slot.y);
+            int w = box != null ? box.w() - 2 : 16;
+            int h = box != null ? box.h() - 2 : 16;
+            graphics.fill(x, y, x + w, y + h, SEARCH_COVER_BG);
             // Diagonal hatching, clipped to the slot. Drawn as short horizontal runs stepping
             // down one pixel at a time, which is cheaper than a texture and keeps the look
             // consistent with the rest of the flat-filled UI.
-            for (int d = -16; d < 16; d += 4) {
-                for (int step = 0; step < 16; step++) {
+            for (int d = -h; d < w; d += 4) {
+                for (int step = 0; step < h; step++) {
                     int px = x + d + step;
                     int py = y + step;
-                    if (px < x || px >= x + 16) continue;
+                    if (px < x || px >= x + w) continue;
                     graphics.fill(px, py, px + 1, py + 1, SEARCH_COVER_LINE);
                 }
             }
@@ -435,13 +440,13 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
             if (!slot.isActive()) continue;
             var b = e.getValue();
             int bx = leftPos + b.x(), by = topPos + b.y(), bw = b.w(), bh = b.h();
-            boolean weapon = b.key() > 0;
+            boolean weapon = b.weapon() != null;
             ItemStack stack = slot.getItem();
 
             if (stack.isEmpty()) {
-                if (weapon) {
-                    drawFlatWeaponIcon(graphics, WeaponSlots.ORDER[b.key() - 1], bx + 6, by + 6, bw - 12, bh - 12,
-                            WEAPON_GHOST_COLOR);
+                // No ghost on a corpse box still to be searched - its cover says "unknown".
+                if (weapon && !ClientSearchState.isMasked(e.getKey())) {
+                    drawFlatWeaponIcon(graphics, b.weapon(), bx + 6, by + 6, bw - 12, bh - 12, WEAPON_GHOST_COLOR);
                 }
             } else {
                 graphics.pose().pushPose();
@@ -475,14 +480,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
                 }
             }
 
-            if (weapon) {
+            if (b.key() > 0) {
                 int kx = bx + bw - 8, ky = by + 1;
                 graphics.pose().pushPose();
                 graphics.pose().translate(0, 0, TEXT_Z);
                 graphics.renderOutline(kx, ky, 7, 7, 0xFF4A4E52);
                 graphics.pose().popPose();
                 small(graphics, String.valueOf(b.key()), kx + 2, ky + 1.5f, HEADER_COLOR, TEXT_Z);
-            } else if (stack.isEmpty() && b.label().isEmpty()) {
+            } else if (!weapon && stack.isEmpty() && b.label().isEmpty()) {
                 small(graphics, "NO BAG", bx + 2, by + 2, LABEL_DIM, 0);
             }
 
@@ -582,6 +587,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      */
     private void drawCurioHoverTooltip(GuiGraphics graphics) {
         if (hoveredSlot == null || hoveredSlot.hasItem()) return;
+        // The corpse's equipment cells: armour, offhand and its curios, named by slot.
+        String corpseName = menu.corpseSlotNames.get(hoveredSlot.index);
+        if (corpseName != null) {
+            if (!ClientSearchState.isMasked(hoveredSlot.index)) {
+                graphics.renderTooltip(font, Component.literal(prettify(corpseName)), lastMouseX, lastMouseY);
+            }
+            return;
+        }
         for (var info : menu.curioSlotInfos) {
             if (info.x() == hoveredSlot.x && info.y() == hoveredSlot.y) {
                 graphics.renderTooltip(font, Component.literal(prettify(info.identifier())), lastMouseX, lastMouseY);
@@ -601,7 +614,8 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
     private void drawWeaponHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         if (hoveredSlot == null || hoveredSlot.hasItem()) return;
         for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
-            if (menu.weaponSlots[i] != hoveredSlot) continue;
+            if (menu.weaponSlots[i] != hoveredSlot && menu.corpseWeaponSlots[i] != hoveredSlot) continue;
+            if (ClientSearchState.isMasked(hoveredSlot.index)) return;
             WeaponSlots type = WeaponSlots.ORDER[i];
             String accepted = switch (type) {
                 case PRIMARY, SECONDARY -> "Rifles, SMGs, shotguns, snipers, MGs, launchers";
@@ -1075,9 +1089,7 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
         int x = TarkovInventoryMenu.CORPSE_ARMOR_X - 1;
         String name = title.getString().toUpperCase(Locale.ROOT);
         strip(graphics, name, TarkovInventoryMenu.COL_C_X, 22, stripWidth(name), null, 0);
-        strip(graphics, "GEAR", x, TarkovInventoryMenu.CORPSE_GEAR_Y - 11, 62, null, 0);
         strip(graphics, "INVENTORY", x, TarkovInventoryMenu.CORPSE_INV_Y - 11, 62, null, 0);
-        strip(graphics, "HOTBAR", x, TarkovInventoryMenu.CORPSE_HOTBAR_Y - 11, 62, null, 0);
         if (menu.corpseHasBackpack()) {
             strip(graphics, "BACKPACK", x, TarkovInventoryMenu.CORPSE_BAG_Y - 11, 62, null, 0);
         }
@@ -1092,13 +1104,14 @@ public class TarkovInventoryScreen extends AbstractContainerScreen<TarkovInvento
      * also keeps the panel readable regardless of what the corpse was wearing.
      */
     private void drawCorpseFigure(GuiGraphics graphics) {
-        // Centred in the gap between the armor column and the side column, and vertically
-        // centred on the four armor rows so it sits level with the gear it represents.
-        int size = 84;
-        int gapCentreX = TarkovInventoryMenu.CORPSE_ARMOR_X + 16
-                + (TarkovInventoryMenu.CORPSE_SIDE_X - (TarkovInventoryMenu.CORPSE_ARMOR_X + 16)) / 2;
-        int armorTop = TarkovInventoryMenu.CORPSE_EQUIP_START_Y;
-        int armorBottom = armorTop + 3 * TarkovInventoryMenu.CORPSE_EQUIP_SPACING + 16;
+        // Centred in the gap between the left and right pairs of equipment columns, and
+        // vertically on the four equipment rows so it sits level with the gear it represents.
+        int size = 72;
+        int gapLeft = TarkovInventoryMenu.CORPSE_EQUIP_COL_X[1] + 17;
+        int gapRight = TarkovInventoryMenu.CORPSE_EQUIP_COL_X[2] - 1;
+        int gapCentreX = gapLeft + (gapRight - gapLeft) / 2;
+        int armorTop = TarkovInventoryMenu.CORPSE_EQUIP_Y;
+        int armorBottom = armorTop + (TarkovInventoryMenu.CORPSE_EQUIP_ROWS - 1) * TarkovInventoryMenu.CORPSE_EQUIP_SPACING + 16;
 
         int cx = leftPos + gapCentreX - size / 2;
         int cy = topPos + armorTop + (armorBottom - armorTop) / 2 - size / 2;

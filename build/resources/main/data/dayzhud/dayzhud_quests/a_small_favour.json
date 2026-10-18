@@ -1,0 +1,21 @@
+{
+  "title": "A Small Favour",
+  "description": "The clinic ran out of dressings last week. Bring me a couple of civilian bandages and I'll make it worth your while.",
+  "order": 10,
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:bandgecivil",
+      "count": 2
+    }
+  ],
+  "rewards": {
+    "roubles": 6000,
+    "items": [
+      {
+        "item": "tarkovdayz:bandge",
+        "count": 2
+      }
+    ]
+  }
+}

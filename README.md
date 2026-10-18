@@ -94,8 +94,10 @@ fixable spots, not a sign the overall approach is wrong.
 ## Corpse looting (Ragdollified)
 
 When a Ragdollified player corpse is opened, `CorpseOpenRedirect` swaps its looting screen
-for the merged view - your own loadout panel on the left, the corpse's armor, curios, gear,
-inventory, hotbar and backpack laid out down the right-hand column.
+for the merged view - your own loadout panel on the left, and down the right-hand column the
+corpse's equipment (armour, offhand and curios around its outline figure), its loadout
+(hotbar 1-4 as PRIMARY / SECONDARY / HOLSTER / SHEATH boxes, typed like your own), its
+inventory with the quick bar (hotbar 5-9) under it, and its backpack.
 
 **Ragdollified 1.0.0-RELEASE split the corpse feature into its own addon.** The looting
 code is no longer part of `ragdollified`; it now lives in **Ragdollified Player Corpse**

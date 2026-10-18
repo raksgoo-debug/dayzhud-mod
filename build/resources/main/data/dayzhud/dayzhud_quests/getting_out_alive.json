@@ -1,0 +1,23 @@
+{
+  "title": "Getting Out Alive",
+  "description": "Anyone can walk out. Surviving it is the trick. Reach an extraction point and come back to tell me about it.",
+  "order": 40,
+  "requires": [
+    "dayzhud:clean_streets"
+  ],
+  "objectives": [
+    {
+      "type": "extract",
+      "count": 1
+    }
+  ],
+  "rewards": {
+    "roubles": 10000,
+    "items": [
+      {
+        "item": "tarkovdayz:salewafirstaidkit",
+        "count": 1
+      }
+    ]
+  }
+}

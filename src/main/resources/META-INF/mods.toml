@@ -114,3 +114,13 @@ description='''${mod_description}'''
     versionRange="[1.0,)"
     ordering="NONE"
     side="BOTH"
+
+# Soft dependency: Rig & Plate. Its helmets, vests, rigs, masks, headset and gear attachments
+# are priced, sized in the grid and drawn there as their GeckoLib model. Nothing compiles
+# against it - the models are reached through its items' own IClientItemExtensions renderer.
+[[dependencies.${mod_id}]]
+    modId="rigandplate"
+    mandatory=false
+    versionRange="[0.1,)"
+    ordering="NONE"
+    side="BOTH"

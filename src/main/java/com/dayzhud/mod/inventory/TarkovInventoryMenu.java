@@ -9,7 +9,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.level.Level;
@@ -24,6 +26,7 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -102,16 +105,34 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
 
     // --- Corpse view (Ragdollified), in column C. ---
     public static final int CORPSE_ARMOR_X = COL_C_X + 1;
-    public static final int CORPSE_SIDE_X = CORPSE_ARMOR_X + 144;
-    public static final int CORPSE_EQUIP_START_Y = 34;
-    public static final int CORPSE_EQUIP_SPACING = 20;
-    public static final int CORPSE_GEAR_X = CORPSE_ARMOR_X;
-    public static final int CORPSE_GEAR_Y = 125;
-    public static final int CORPSE_GEAR_COLS = 6;
-    public static final int CORPSE_GEAR_SPACING = 22;
+    /**
+     * Equipment (2.18.0): four rows of cells, touching, either side of the outline figure.
+     * Armour runs down the left edge with a curio column beside it; on the right, offhand
+     * tops a curio column with one more beyond it - 11 curios in all. Packed at 18 rather
+     * than the old 20 so the weapon boxes below fit without the backpack losing a row.
+     */
+    public static final int CORPSE_EQUIP_Y = 33;
+    public static final int CORPSE_EQUIP_SPACING = 18;
+    public static final int CORPSE_EQUIP_ROWS = 4;
+    /** The four cell columns, left to right; the figure sits between the second and third. */
+    public static final int[] CORPSE_EQUIP_COL_X = {CORPSE_ARMOR_X, CORPSE_ARMOR_X + 18,
+            CORPSE_ARMOR_X + 146, CORPSE_ARMOR_X + 164};
+    /**
+     * The corpse's loadout (2.18.0): its hotbar 0-3 as PRIMARY / SECONDARY / HOLSTER /
+     * SHEATH boxes, arranged like the player's own (primary and holster on the first row).
+     * Index order matches {@link WeaponSlots#ORDER}. Box tops, below their strips. Full
+     * width, so a gun is drawn smaller than in the player's 38-tall boxes but never narrowed.
+     */
+    public static final int[] CORPSE_WEAPON_BOX_X = {COL_C_X, COL_C_X, COL_C_X + 124, COL_C_X + 124};
+    public static final int[] CORPSE_WEAPON_BOX_Y = {115, 156, 115, 156};
+    public static final int[] CORPSE_WEAPON_BOX_W = {121, 121, 58, 58};
+    public static final int CORPSE_WEAPON_BOX_H = 30;
+    /** Curios past the 11 equipment cells continue on the quick bar's row, after its 5 cells. */
+    public static final int CORPSE_OVERFLOW_X = CORPSE_ARMOR_X + 108;
+    public static final int CORPSE_OVERFLOW_MAX = 4;
     public static final int CORPSE_INV_X = CORPSE_ARMOR_X;
-    /** Corpse's own inventory: 3 main rows plus its hotbar row, always fully visible. */
-    public static final int CORPSE_INV_Y = 179;
+    /** Corpse's own inventory: 3 main rows, with the quick bar as a fourth row under them. */
+    public static final int CORPSE_INV_Y = 199;
     public static final int CORPSE_LOOT_COLS = 9;
     /**
      * The corpse's loot is ONE continuous scrolling list: inventory rows, then its hotbar
@@ -120,19 +141,24 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * only works if the whole region is a single uniform grid, hence one list rather than
      * separate fixed sections.
      */
-    /** Corpse's own hotbar row, its own labelled section under the inventory rows. */
-    public static final int CORPSE_HOTBAR_Y = 249;
+    /** Corpse's quick bar (hotbar 4-8; 0-3 are the weapon boxes): the inventory's fourth row,
+     *  under its strip rather than one of its own (2.18.0). */
+    public static final int CORPSE_HOTBAR_Y = CORPSE_INV_Y + 3 * 18;
     /**
      * Backpack section. Everything else on the corpse side is sized to be fully visible;
      * only the bag can genuinely overflow (bags run up to 42 slots), so it alone scrolls.
+     * Its last row ends on CONTENT_BOTTOM exactly.
      */
-    public static final int CORPSE_BAG_Y = 281;
+    public static final int CORPSE_BAG_Y = 283;
     public static final int CORPSE_BAG_VISIBLE_ROWS = 3;
     public static final int CORPSE_BAG_SLOTS = CORPSE_LOOT_COLS * CORPSE_BAG_VISIBLE_ROWS;
 
     /** Corpse container index layout - verified against Ragdollified's CorpseMenu. */
     private static final int CORPSE_MAIN_START = 9;   // 9..35 main inventory
     private static final int CORPSE_HOTBAR_START = 0; // 0..8 hotbar
+    /** First hotbar index that isn't a weapon box - the quick bar runs from here to 8. */
+    private static final int CORPSE_QUICKBAR_START = CORPSE_HOTBAR_START + WeaponSlots.ORDER.length;
+    private static final int CORPSE_QUICKBAR_COLS = 9 - WeaponSlots.ORDER.length;
     private static final int CORPSE_ARMOR_FEET = 36;  // 36 feet .. 39 head
     private static final int CORPSE_OFFHAND = 40;
     private static final int CORPSE_CURIO_START = 41;
@@ -183,7 +209,13 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * worn bag). Box coordinates are layout coordinates; the real 16x16 Slot sits in its
      * middle, and the screen widens hover/clicks to the whole box.
      */
-    public record SlotBox(int x, int y, int w, int h, String label, int key) {}
+    public record SlotBox(int x, int y, int w, int h, String label, int key, WeaponSlots weapon) {
+        /** {@code key} 1-4 is one of the player's weapon boxes (its key badge and ghost);
+         *  0 is any other box. A corpse's weapon boxes pass {@code weapon} without a key. */
+        public SlotBox(int x, int y, int w, int h, String label, int key) {
+            this(x, y, w, h, label, key, key > 0 ? WeaponSlots.ORDER[key - 1] : null);
+        }
+    }
 
     /** Menu slot index -> its box. */
     public final Map<Integer, SlotBox> slotBoxes = new LinkedHashMap<>();
@@ -233,6 +265,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
      * that mapping is made explicit, instead of every caller re-deriving it.
      */
     public final Slot[] weaponSlots = new Slot[WeaponSlots.ORDER.length];
+    /** The corpse's PRIMARY/SECONDARY/HOLSTER/SHEATH, same order; all null with no corpse open. */
+    public final Slot[] corpseWeaponSlots = new Slot[WeaponSlots.ORDER.length];
+    /** Hover names for the corpse's equipment cells ("Headgear", a curio's id), by menu index. */
+    public final Map<Integer, String> corpseSlotNames = new HashMap<>();
 
     private final int inventoryStartIndex;
     private final int backpackStartIndex;
@@ -443,40 +479,83 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         reconcileGrids();
     }
 
+    /** Vanilla's empty-slot ghosts for the corpse's armour cells, head first, then offhand. */
+    private static final ResourceLocation[] CORPSE_ARMOR_ICONS = {
+            InventoryMenu.EMPTY_ARMOR_SLOT_HELMET, InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
+            InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS, InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS};
+    private static final String[] CORPSE_ARMOR_NAMES = {"Headgear", "Body armor", "Legs", "Footwear"};
+
     /**
-     * Corpse layout: armor column + offhand/curio side column beside a paperdoll, a gear
-     * grid, then the corpse's own inventory and hotbar - mirroring the player's own panel
-     * so both sides of the screen read the same way.
+     * Corpse layout (2.18.0), mirroring the player's own panel so both sides read the same
+     * way: equipment in two rows (armour, offhand, curios), the loadout as four weapon boxes,
+     * then the corpse's inventory, quick bar and backpack.
      */
     private void addCorpseSlots(Container corpse) {
-        // Armor, head at the top (container stores feet-first, so count down).
-        for (int i = 0; i < 4; i++) {
-            addSlot(new Slot(corpse, CORPSE_ARMOR_FEET + 3 - i,
-                    CORPSE_ARMOR_X, CORPSE_EQUIP_START_Y + i * CORPSE_EQUIP_SPACING));
-        }
-        // Offhand at the top of the side column.
-        addSlot(new Slot(corpse, CORPSE_OFFHAND, CORPSE_SIDE_X, CORPSE_EQUIP_START_Y));
-
-        // Curios: first two beside the paperdoll, the rest in the gear grid.
-        int curioCount = corpseCurioIds.size();
-        int sideRow = 1;
-        int gearIndex = 0;
-        for (int i = 0; i < curioCount; i++) {
-            int slotIndex = CORPSE_CURIO_START + i;
-            if (slotIndex >= corpse.getContainerSize()) break;
-            if (sideRow < 3) {
-                addSlot(new Slot(corpse, slotIndex, CORPSE_SIDE_X,
-                        CORPSE_EQUIP_START_Y + sideRow * CORPSE_EQUIP_SPACING));
-                sideRow++;
-            } else {
-                addSlot(new Slot(corpse, slotIndex,
-                        CORPSE_GEAR_X + (gearIndex % CORPSE_GEAR_COLS) * CORPSE_GEAR_SPACING,
-                        CORPSE_GEAR_Y + (gearIndex / CORPSE_GEAR_COLS) * CORPSE_GEAR_SPACING));
-                gearIndex++;
+        // Hotbar 0-3 were grid cells before 2.18.0, so a corpse can still hold a multi-cell
+        // item's shadow markers there. They're outside every grid region now and nothing
+        // would ever clear them, so they go before anything reads the slots.
+        if (!player.level().isClientSide) {
+            Container raw = searchedContainer != null ? searchedContainer : corpse;
+            for (int i = CORPSE_HOTBAR_START; i < CORPSE_QUICKBAR_START; i++) {
+                if (com.dayzhud.mod.inventory.grid.ItemGrid.isReservation(raw.getItem(i))) {
+                    raw.setItem(i, ItemStack.EMPTY);
+                }
             }
         }
 
-        // The corpse's own inventory and hotbar are fixed, labelled sections - they always
+        // Armour down the left edge, head first (the container stores it feet-first, so count
+        // down); offhand at the top of the right-hand pair of columns.
+        for (int i = 0; i < 4; i++) {
+            Slot s = addSlot(new Slot(corpse, CORPSE_ARMOR_FEET + 3 - i, CORPSE_EQUIP_COL_X[0], corpseEquipY(i)));
+            s.setBackground(InventoryMenu.BLOCK_ATLAS, CORPSE_ARMOR_ICONS[i]);
+            corpseSlotNames.put(s.index, CORPSE_ARMOR_NAMES[i]);
+        }
+        Slot off = addSlot(new Slot(corpse, CORPSE_OFFHAND, CORPSE_EQUIP_COL_X[2], corpseEquipY(0)));
+        off.setBackground(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
+        corpseSlotNames.put(off.index, "Offhand");
+
+        // Curios fill the other 11 cells: beside the armour, under the offhand, then the
+        // outer right column. Past that, up to four more sit at the end of the quick bar row.
+        // A corpse wearing more than that is unheard of in practice - the player's own GEAR
+        // row stops at 11 - and anything further is left off with a warning.
+        int[][] curioCells = new int[11][];
+        int n = 0;
+        for (int row = 0; row < CORPSE_EQUIP_ROWS; row++) curioCells[n++] = new int[]{1, row};
+        for (int row = 1; row < CORPSE_EQUIP_ROWS; row++) curioCells[n++] = new int[]{2, row};
+        for (int row = 0; row < CORPSE_EQUIP_ROWS; row++) curioCells[n++] = new int[]{3, row};
+        int cell = 0;
+        int overflow = 0;
+        for (int i = 0; i < corpseCurioIds.size(); i++) {
+            int slotIndex = CORPSE_CURIO_START + i;
+            if (slotIndex >= corpse.getContainerSize()) break;
+            int x, y;
+            if (cell < curioCells.length) {
+                x = CORPSE_EQUIP_COL_X[curioCells[cell][0]];
+                y = corpseEquipY(curioCells[cell][1]);
+                cell++;
+            } else if (overflow < CORPSE_OVERFLOW_MAX) {
+                x = CORPSE_OVERFLOW_X + overflow * 18;
+                y = CORPSE_HOTBAR_Y;
+                overflow++;
+            } else {
+                com.dayzhud.mod.DayzHudMod.LOGGER.warn("dayzhud: corpse has more curio slots than the "
+                        + "loot view shows; '{}' and any after it aren't shown.", corpseCurioIds.get(i));
+                break;
+            }
+            Slot s = addSlot(new Slot(corpse, slotIndex, x, y));
+            corpseSlotNames.put(s.index, corpseCurioIds.get(i));
+        }
+
+        // The loadout: hotbar 0-3 in the same typed boxes the player's own panel uses.
+        for (int i = 0; i < WeaponSlots.ORDER.length; i++) {
+            SlotBox b = new SlotBox(CORPSE_WEAPON_BOX_X[i], CORPSE_WEAPON_BOX_Y[i], CORPSE_WEAPON_BOX_W[i],
+                    CORPSE_WEAPON_BOX_H, WEAPON_LABELS[i], 0, WeaponSlots.ORDER[i]);
+            WeaponSlot ws = new WeaponSlot(corpse, WeaponSlots.ORDER[i], CORPSE_HOTBAR_START + i, slotX(b), slotY(b));
+            corpseWeaponSlots[i] = ws;
+            addBoxed(ws, b);
+        }
+
+        // The corpse's own inventory and quick bar are fixed, labelled sections - they always
         // fit, so there's nothing to gain from scrolling them.
         this.corpseInvStartIndex = slots.size();
         for (int row = 0; row < 3; row++) {
@@ -486,8 +565,8 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             }
         }
         this.corpseHotbarStartIndex = slots.size();
-        for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(corpse, CORPSE_HOTBAR_START + col,
+        for (int col = 0; col < CORPSE_QUICKBAR_COLS; col++) {
+            addSlot(new Slot(corpse, CORPSE_QUICKBAR_START + col,
                     CORPSE_INV_X + col * 18, CORPSE_HOTBAR_Y));
         }
 
@@ -511,6 +590,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
                     CORPSE_BAG_Y + (i / CORPSE_LOOT_COLS) * 18));
         }
 
+    }
+
+    private static int corpseEquipY(int row) {
+        return CORPSE_EQUIP_Y + row * CORPSE_EQUIP_SPACING;
     }
 
     /** True when the corpse is wearing a bag we can look inside. */
@@ -542,8 +625,10 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
         for (int i = 3; i >= 0; i--) order.add(CORPSE_ARMOR_FEET + i);   // head down to feet
         order.add(CORPSE_OFFHAND);
         for (int i = CORPSE_CURIO_START; i < searched.getContainerSize(); i++) order.add(i);
+        // The weapon boxes come right after the gear, as they're laid out (2.18.0).
+        for (int i = CORPSE_HOTBAR_START; i < CORPSE_QUICKBAR_START; i++) order.add(i);
         for (int i = CORPSE_MAIN_START; i < CORPSE_MAIN_START + 27; i++) order.add(i);
-        for (int i = CORPSE_HOTBAR_START; i < CORPSE_HOTBAR_START + 9; i++) order.add(i);
+        for (int i = CORPSE_QUICKBAR_START; i < CORPSE_HOTBAR_START + 9; i++) order.add(i);
 
         int[] out = new int[order.size()];
         for (int i = 0; i < out.length; i++) out[i] = order.get(i);
@@ -779,7 +864,7 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
                     CORPSE_MAIN_START, 9, 3, corpseInvStartIndex, all));
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseContainer),
-                    CORPSE_HOTBAR_START, 9, 1, corpseHotbarStartIndex, all));
+                    CORPSE_QUICKBAR_START, CORPSE_QUICKBAR_COLS, 1, corpseHotbarStartIndex, all));
             regions.add(new GridRegion(com.dayzhud.mod.inventory.grid.GridStorage.of(corpseLootView),
                     0, CORPSE_LOOT_COLS, CORPSE_BAG_VISIBLE_ROWS, corpseBagStartIndex, corpseLootView::isVisibleSlotUsable));
         }
@@ -1254,8 +1339,9 @@ public class TarkovInventoryMenu extends AbstractContainerMenu {
     static class WeaponSlot extends Slot {
         private final WeaponSlots type;
 
-        WeaponSlot(Inventory inventory, WeaponSlots type, int index, int x, int y) {
-            super(inventory, index, x, y);
+        /** {@code container} is the player's inventory, or a corpse's (its hotbar 0-3). */
+        WeaponSlot(Container container, WeaponSlots type, int index, int x, int y) {
+            super(container, index, x, y);
             this.type = type;
         }
 

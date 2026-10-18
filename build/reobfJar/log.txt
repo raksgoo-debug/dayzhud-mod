@@ -1,0 +1,637 @@
+Java Launcher: C:\Users\TNC\.gradle\jdks\eclipse_adoptium-17-amd64-windows\jdk-17.0.20.1+1\bin\java.exe
+Arguments: '--input, D:\Saved stuff\dayzhud-mod\build\libs\dayzhud-2.18.0.jar, --output, D:\Saved stuff\dayzhud-mod\build\reobfJar\output.jar, --names, D:\Saved stuff\dayzhud-mod\build\reobfJar\mappings.tsrg, --lib, C:\Users\TNC\.gradle\caches\forge_gradle\deobf_dependencies\top\theillusivec4\curios\curios-forge\5.12.1+1.20.1_mapped_official_1.20.1\curios-forge-5.12.1+1.20.1_mapped_official_1.20.1.jar, --lib, C:\Users\TNC\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.20_mapped_official_1.20.1\forge-1.20.1-47.4.20_mapped_official_1.20.1.jar, --lib, C:\Users\TNC\.gradle\caches\forge_gradle\minecraft_repo\versions\1.20.1\client-extra.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlloader\1.20.1-47.4.20\8798bdd148d476c7ec54d8156f88de5e243c2dfb\fmlloader-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarSelector\0.3.19\376cc9c8ea60720cf027c01fc033de915699801c\JarJarSelector-0.3.19.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarMetadata\0.3.19\83feaa9b770e6ac0e96ee4fc23fa89325c5fe2\JarJarMetadata-0.3.19.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\31.1-jre\60458f877d055d0c9114d9e1a2efb737b4bc282c\guava-31.1-jre.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.code.findbugs\jsr305\3.0.2\25ea2e8b0c338a877313bd4672d3fe056ea78f0d\jsr305-3.0.2.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\ca.weblite\java-objc-bridge\1.1\1227f9e0666314f9de41477e3ec277e542ed7f7b\java-objc-bridge-1.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\forgespi\7.0.1\3b4972a0cdb135853dba219be61a79b22cff1309\forgespi-7.0.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mergetool\1.1.5\f3da18e12c696d35a47c82cbb2cc8b5aa15e1154\mergetool-1.1.5-api.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\24.0.1\13c5c75c4206580aa4d683bffee658caae6c9f43\annotations-24.0.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\securejarhandler\2.1.10\51e6a22c6c716beb11e244bf5b8be480f51dd6b5\securejarhandler-2.1.10.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\coremods\5.2.4\e30bab269d896613e38396274711410b3a0e4b87\coremods-5.2.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\modlauncher\10.0.9\6d9443f56f50bb85cea383686ff9c867391458b\modlauncher-10.0.9.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.openjdk.nashorn\nashorn-core\15.4\f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5\nashorn-core-15.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-commons\9.9.1\ab35de4c537184a09339069f1a3b3aacf2289149\asm-commons-9.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-util\9.9.1\e51f5b0ae0b0c1960687ae970a2a3434d39d8abb\asm-util-9.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-analysis\9.9.1\1ab8d9316ef7a67240087919a708246c37ed1660\asm-analysis-9.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-tree\9.9.1\b6b1b3366296163b4b1f540731aad0a2baa484d8\asm-tree-9.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm\9.9.1\2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab\asm-9.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\accesstransformers\8.0.4\272d240aa73f42195b2a68e2ebd8b701ecf41f63\accesstransformers-8.0.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4\4.9.1\e92af8ab33e428461927b484e90bb155a4f3a052\antlr4-4.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4-runtime\4.9.1\428664f05d2b7f7b7610204b5aa7c1763f62011a\antlr4-runtime-4.9.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.4.20\e8cc697c69f3911e76caa2f005d9486597cd7448\fmlcore-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\eventbus\6.2.33\3fae69cfa9c5095bcc25c0a8a3ed9b26c156f922\eventbus-6.2.33.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\unsafe\0.2.0\54d7a0a5e8fdb71b973025caa46f341ae5904f39\unsafe-0.2.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\toml\3.6.4\51d6cefb2b55ee55ee26b16391212fb2c7dfb4f4\toml-3.6.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\core\3.6.4\510f174abbf1c947494db50ef2445683bd52c230\core-3.6.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.maven\maven-artifact\3.8.5\4433f50c07debefaed0553bd0068f4f48d449313\maven-artifact-3.8.5.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.jodah\typetools\0.6.3\a01aaa6ddaea9ec07ec4f209487b7a46a526283a\typetools-0.6.3.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecrell\terminalconsoleappender\1.2.0\96d02cd3b384ff015a8fef4223bcb4ccf1717c95\terminalconsoleappender-1.2.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jline\jline-reader\3.12.1\4382ab1382c7b6f379377ed5f665dc2f6e1218bc\jline-reader-3.12.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jline\jline-terminal\3.12.1\c777448314e050d980a6b697c140f3bfe9eb7416\jline-terminal-3.12.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.spongepowered\mixin\0.8.5\9d1c0c3a304ae6697ecd477218fa61b850bf57fc\mixin-0.8.5.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\bootstraplauncher\1.1.2\c546e00443d8432cda6baa1c860346980742628\bootstraplauncher-1.1.2.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarFileSystems\0.3.19\2464eb7d6b9ddb9db36a82cf8a95193e5c6fe020\JarJarFileSystems-0.3.19.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlearlydisplay\1.20.1-47.4.20\4dcdfb740aff35b40a3471708ca8a5f1e22a9504\fmlearlydisplay-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.20\c354b21002937b393c4f86163a98dccdf1d51e72\javafmllanguage-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.4.20\865d75f8c18329ddb31db5856701ab86609108b5\lowcodelanguage-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.4.20\af599930362212ae937e392709f49047e6abbbf\mclanguage-1.20.1-47.4.20.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.github.oshi\oshi-core\6.2.2\54f5efc19bca95d709d9a37d19ffcbba3d21c1a6\oshi-core-6.2.2.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.10\dd9b193aef96e973d5a11ab13cd17430c2e4306b\gson-2.10.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\failureaccess\1.0.1\1dcf1de382a0bf95a3d8b0849546c88bac1292c9\failureaccess-1.0.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.ibm.icu\icu4j\71.1\9e7d3304c23f9ba5cb71915f7cce23231a57a445\icu4j-71.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\authlib\4.0.43\2ff9d747a77570a07a60d32ac77eb6162ad2a2d9\authlib-4.0.43.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\blocklist\1.0.10\5c685c5ffa94c4cd39496c7184c1d122e515ecef\blocklist-1.0.10.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\brigadier\1.1.8\5244ce82c3337bba4a196a3ce858bfaecc74404a\brigadier-1.1.8.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\datafixerupper\6.0.8\3ba4a30557a9b057760af4011f909ba619fc5125\datafixerupper-6.0.8.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\logging\1.1.1\832b8e6674a9b325a5175a3a6267dfaf34c85139\logging-1.1.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\patchy\2.2.10\da05971b07cbb379d002cf7eaec6a2048211fefc\patchy-2.2.10.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\text2speech\1.17.9\3cad216e3a7f0c19b4b394388bc9ffc446f13b14\text2speech-1.17.9.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpclient\4.5.13\e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada\httpclient-4.5.13.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-codec\commons-codec\1.15\49d94806b6e3dc933dacbd8acb0fdbab8ebd1e5d\commons-codec-1.15.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-io\commons-io\2.11.0\a2503f302b11ebde7ebc3df41daebe0e4eea3689\commons-io-2.11.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-logging\commons-logging\1.2\4bfc12adfe4842bf07b657f0369c4cb522955686\commons-logging-1.2.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-handler\4.1.82.Final\644041d1fa96a5d3130a29e8978630d716d76e38\netty-handler-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-codec\4.1.82.Final\b77200379acb345a9ffdece1c605e591ac3e4e0a\netty-codec-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-classes-epoll\4.1.82.Final\e7c7dd18deac93105797f30057c912651ea76521\netty-transport-classes-epoll-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-native-unix-common\4.1.82.Final\3e895b35ca1b8a0eca56cacff4c2dde5d2c6abce\netty-transport-native-unix-common-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport\4.1.82.Final\e431a218d91acb6476ccad5f5aafde50aa3945ca\netty-transport-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-buffer\4.1.82.Final\a544270cf1ae8b8077082f5036436a9a9971ea71\netty-buffer-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-resolver\4.1.82.Final\38f665ae8dcd29032eea31245ba7806bed2e0fa8\netty-resolver-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-common\4.1.82.Final\22d148e85c3f5ebdacc0ce1f5aabb1d420f73f3\netty-common-4.1.82.Final.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\it.unimi.dsi\fastutil\8.5.9\bb7ea75ecdb216654237830b3a96d87ad91f8cc5\fastutil-8.5.9.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna-platform\5.12.1\97406a297c852f4a41e688a176ec675f72e8329\jna-platform-5.12.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna\5.12.1\b1e93a735caea94f503e95e6fe79bf9cdc1e985d\jna-5.12.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.sf.jopt-simple\jopt-simple\5.0.4\4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c\jopt-simple-5.0.4.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-compress\1.21\4ec95b60d4e86b5c95a0e919cb172a0af98011ef\commons-compress-1.21.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-lang3\3.12.0\c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e\commons-lang3-3.12.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpcore\4.4.15\7f2e0c573eaa7a74bac2e89b359e1f73d92a0a1d\httpcore-4.4.15.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-core\2.19.0\3b6eeb4de4c49c0fe38a4ee27188ff5fee44d0bb\log4j-core-2.19.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-slf4j2-impl\2.19.0\5c04bfdd63ce9dceb2e284b81e96b6a70010ee10\log4j-slf4j2-impl-2.19.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-api\2.19.0\ea1b37f38c327596b216542bc636cfdc0b8036fa\log4j-api-2.19.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.joml\joml\1.10.5\22566d58af70ad3d72308bab63b8339906deb649\joml-1.10.5.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\cbac1b8d30cb4795149c1ef540f912671a8616d0\lwjgl-glfw-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\ed892f945cf7e79c8756796f32d00fa4ceaf573b\lwjgl-glfw-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\beda65ee503443e60aa196d58ed31f8d001dc22a\lwjgl-glfw-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\b997e3391d6ce8f05487e7335d95c606043884a1\lwjgl-glfw-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\a817bcf213db49f710603677457567c37d53e103\lwjgl-jemalloc-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\948a89b76a16aa324b046ae9308891216ffce5f9\lwjgl-jemalloc-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\cae85c4edb219c88b6a0c26a87955ad98dc9519d\lwjgl-jemalloc-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\fb476c8ec110e1c137ad3ce8a7f7bfe6b11c6324\lwjgl-jemalloc-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\2623a6b8ae1dfcd880738656a9f0243d2e6840bd\lwjgl-openal-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\30a474d0e57193d7bc128849a3ab66bc9316fdb1\lwjgl-openal-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\40d65f1a7368a2aa47336f9cb69f5a190cf9975a\lwjgl-openal-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\888349f7b1be6fbae58bf8edfb9ef12def04c4e3\lwjgl-openal-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\831a5533a21a5f4f81bbc51bb13e9899319b5411\lwjgl-opengl-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\c1807e9bd571402787d7e37e3029776ae2513bb8\lwjgl-opengl-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\527d78f1e9056aff3ed02ce93019c73c5e8f1721\lwjgl-opengl-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\deef3eb9b178ff2ff3ce893cc72ae741c3a17974\lwjgl-opengl-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\b119297cf8ed01f247abe8685857f8e7fcf5980f\lwjgl-stb-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\86315914ac119efdb02dc9e8e978ade84f1702af\lwjgl-stb-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\fde63cdd2605c00636721a6c8b961e41d1f6b247\lwjgl-stb-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\a8d41f419eecb430b7c91ea2ce2c5c451cae2091\lwjgl-stb-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\ff1914111ef2e3e0110ef2dabc8d8cdaad82347\lwjgl-tinyfd-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\a5d830475ec0958d9fdba1559efa99aef211e6ff\lwjgl-tinyfd-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\83a5e780df610829ff3a737822b4f931cffecd91\lwjgl-tinyfd-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\842eedd876fae354abc308c98a263f6bbc9e8a4d\lwjgl-tinyfd-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\ae58664f88e18a9bb2c77b063833ca7aaec484cb\lwjgl-3.3.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\36c37f16ab611b3aa11f3bcf80b1d509b4ce6b\lwjgl-3.3.1-natives-windows.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\f46cadcf95675908fd3a550d63d9d709cb68998\lwjgl-3.3.1-natives-windows-arm64.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\3b14f4beae9dd39791ec9e12190a9380cd8a3ce6\lwjgl-3.3.1-natives-windows-x86.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.machinezoo.noexception\noexception\1.7.1\b65330c98e38a1f915fa54a6e5eca496505e3f0a\noexception-1.7.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.slf4j\slf4j-api\2.0.1\f48d81adce2abf5ad3cfe463df517952749e03bc\slf4j-api-2.0.1.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.codehaus.plexus\plexus-utils\3.3.0\cf43b5391de623b36fe066a21127baef82c64022\plexus-utils-3.3.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\listenablefuture\9999.0-empty-to-avoid-conflict-with-guava\b421526c5f297295adef1c886e5246c39d4ac629\listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.checkerframework\checker-qual\3.12.0\d5692f0526415fcc6de94bb5bfbd3afd9dd3b3e5\checker-qual-3.12.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.errorprone\error_prone_annotations\2.11.0\c5a0ace696d3f8b1c1d8cc036d8c03cc0cbe6b69\error_prone_annotations-2.11.0.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.j2objc\j2objc-annotations\1.3\ba035118bc8bac37d7eff77700720999acd9986d\j2objc-annotations-1.3.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\ST4\4.3\92f2c1ad8d84abcbeead6cf7f2c53a04166293c2\ST4-4.3.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr-runtime\3.5.2\cd9cd41361c155f3af0f653009dcecb08d8b4afd\antlr-runtime-3.5.2.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.abego.treelayout\org.abego.treelayout.core\1.0.3\457216e8e6578099ae63667bb1e4439235892028\org.abego.treelayout.core-1.0.3.jar, --lib, C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.glassfish\javax.json\1.0.4\3178f73569fd7a1e5ffc464e680f7a8cc784b85a\javax.json-1.0.4.jar, --disable-abstract-param'
+Classpath:
+ - C:\Users\TNC\.gradle\caches\forge_gradle\maven_downloader\net\minecraftforge\renamer\2.0.4\renamer-2.0.4-all.jar
+Working directory: D:\Saved stuff\dayzhud-mod\build\reobfJar
+Main class: net.minecraftforge.renamer.Main
+====================================
+Forge Renamer v2.0.4
+lib: C:\Users\TNC\.gradle\caches\forge_gradle\deobf_dependencies\top\theillusivec4\curios\curios-forge\5.12.1+1.20.1_mapped_official_1.20.1\curios-forge-5.12.1+1.20.1_mapped_official_1.20.1.jar
+lib: C:\Users\TNC\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.20_mapped_official_1.20.1\forge-1.20.1-47.4.20_mapped_official_1.20.1.jar
+lib: C:\Users\TNC\.gradle\caches\forge_gradle\minecraft_repo\versions\1.20.1\client-extra.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlloader\1.20.1-47.4.20\8798bdd148d476c7ec54d8156f88de5e243c2dfb\fmlloader-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarSelector\0.3.19\376cc9c8ea60720cf027c01fc033de915699801c\JarJarSelector-0.3.19.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarMetadata\0.3.19\83feaa9b770e6ac0e96ee4fc23fa89325c5fe2\JarJarMetadata-0.3.19.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\31.1-jre\60458f877d055d0c9114d9e1a2efb737b4bc282c\guava-31.1-jre.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.code.findbugs\jsr305\3.0.2\25ea2e8b0c338a877313bd4672d3fe056ea78f0d\jsr305-3.0.2.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\ca.weblite\java-objc-bridge\1.1\1227f9e0666314f9de41477e3ec277e542ed7f7b\java-objc-bridge-1.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\forgespi\7.0.1\3b4972a0cdb135853dba219be61a79b22cff1309\forgespi-7.0.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mergetool\1.1.5\f3da18e12c696d35a47c82cbb2cc8b5aa15e1154\mergetool-1.1.5-api.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jetbrains\annotations\24.0.1\13c5c75c4206580aa4d683bffee658caae6c9f43\annotations-24.0.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\securejarhandler\2.1.10\51e6a22c6c716beb11e244bf5b8be480f51dd6b5\securejarhandler-2.1.10.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\coremods\5.2.4\e30bab269d896613e38396274711410b3a0e4b87\coremods-5.2.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\modlauncher\10.0.9\6d9443f56f50bb85cea383686ff9c867391458b\modlauncher-10.0.9.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.openjdk.nashorn\nashorn-core\15.4\f67f5ffaa5f5130cf6fb9b133da00c7df3b532a5\nashorn-core-15.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-commons\9.9.1\ab35de4c537184a09339069f1a3b3aacf2289149\asm-commons-9.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-util\9.9.1\e51f5b0ae0b0c1960687ae970a2a3434d39d8abb\asm-util-9.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-analysis\9.9.1\1ab8d9316ef7a67240087919a708246c37ed1660\asm-analysis-9.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm-tree\9.9.1\b6b1b3366296163b4b1f540731aad0a2baa484d8\asm-tree-9.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.ow2.asm\asm\9.9.1\2ceea6ab43bcae1979b2a6d85fc0ca429877e5ab\asm-9.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\accesstransformers\8.0.4\272d240aa73f42195b2a68e2ebd8b701ecf41f63\accesstransformers-8.0.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4\4.9.1\e92af8ab33e428461927b484e90bb155a4f3a052\antlr4-4.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr4-runtime\4.9.1\428664f05d2b7f7b7610204b5aa7c1763f62011a\antlr4-runtime-4.9.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.4.20\e8cc697c69f3911e76caa2f005d9486597cd7448\fmlcore-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\eventbus\6.2.33\3fae69cfa9c5095bcc25c0a8a3ed9b26c156f922\eventbus-6.2.33.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\unsafe\0.2.0\54d7a0a5e8fdb71b973025caa46f341ae5904f39\unsafe-0.2.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\toml\3.6.4\51d6cefb2b55ee55ee26b16391212fb2c7dfb4f4\toml-3.6.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.electronwill.night-config\core\3.6.4\510f174abbf1c947494db50ef2445683bd52c230\core-3.6.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.maven\maven-artifact\3.8.5\4433f50c07debefaed0553bd0068f4f48d449313\maven-artifact-3.8.5.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.jodah\typetools\0.6.3\a01aaa6ddaea9ec07ec4f209487b7a46a526283a\typetools-0.6.3.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecrell\terminalconsoleappender\1.2.0\96d02cd3b384ff015a8fef4223bcb4ccf1717c95\terminalconsoleappender-1.2.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jline\jline-reader\3.12.1\4382ab1382c7b6f379377ed5f665dc2f6e1218bc\jline-reader-3.12.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.jline\jline-terminal\3.12.1\c777448314e050d980a6b697c140f3bfe9eb7416\jline-terminal-3.12.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.spongepowered\mixin\0.8.5\9d1c0c3a304ae6697ecd477218fa61b850bf57fc\mixin-0.8.5.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\cpw.mods\bootstraplauncher\1.1.2\c546e00443d8432cda6baa1c860346980742628\bootstraplauncher-1.1.2.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\JarJarFileSystems\0.3.19\2464eb7d6b9ddb9db36a82cf8a95193e5c6fe020\JarJarFileSystems-0.3.19.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlearlydisplay\1.20.1-47.4.20\4dcdfb740aff35b40a3471708ca8a5f1e22a9504\fmlearlydisplay-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.20\c354b21002937b393c4f86163a98dccdf1d51e72\javafmllanguage-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.4.20\865d75f8c18329ddb31db5856701ab86609108b5\lowcodelanguage-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.4.20\af599930362212ae937e392709f49047e6abbbf\mclanguage-1.20.1-47.4.20.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.github.oshi\oshi-core\6.2.2\54f5efc19bca95d709d9a37d19ffcbba3d21c1a6\oshi-core-6.2.2.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.10\dd9b193aef96e973d5a11ab13cd17430c2e4306b\gson-2.10.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\failureaccess\1.0.1\1dcf1de382a0bf95a3d8b0849546c88bac1292c9\failureaccess-1.0.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.ibm.icu\icu4j\71.1\9e7d3304c23f9ba5cb71915f7cce23231a57a445\icu4j-71.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\authlib\4.0.43\2ff9d747a77570a07a60d32ac77eb6162ad2a2d9\authlib-4.0.43.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\blocklist\1.0.10\5c685c5ffa94c4cd39496c7184c1d122e515ecef\blocklist-1.0.10.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\brigadier\1.1.8\5244ce82c3337bba4a196a3ce858bfaecc74404a\brigadier-1.1.8.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\datafixerupper\6.0.8\3ba4a30557a9b057760af4011f909ba619fc5125\datafixerupper-6.0.8.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\logging\1.1.1\832b8e6674a9b325a5175a3a6267dfaf34c85139\logging-1.1.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\patchy\2.2.10\da05971b07cbb379d002cf7eaec6a2048211fefc\patchy-2.2.10.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.mojang\text2speech\1.17.9\3cad216e3a7f0c19b4b394388bc9ffc446f13b14\text2speech-1.17.9.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpclient\4.5.13\e5f6cae5ca7ecaac1ec2827a9e2d65ae2869cada\httpclient-4.5.13.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-codec\commons-codec\1.15\49d94806b6e3dc933dacbd8acb0fdbab8ebd1e5d\commons-codec-1.15.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-io\commons-io\2.11.0\a2503f302b11ebde7ebc3df41daebe0e4eea3689\commons-io-2.11.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\commons-logging\commons-logging\1.2\4bfc12adfe4842bf07b657f0369c4cb522955686\commons-logging-1.2.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-handler\4.1.82.Final\644041d1fa96a5d3130a29e8978630d716d76e38\netty-handler-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-codec\4.1.82.Final\b77200379acb345a9ffdece1c605e591ac3e4e0a\netty-codec-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-classes-epoll\4.1.82.Final\e7c7dd18deac93105797f30057c912651ea76521\netty-transport-classes-epoll-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport-native-unix-common\4.1.82.Final\3e895b35ca1b8a0eca56cacff4c2dde5d2c6abce\netty-transport-native-unix-common-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-transport\4.1.82.Final\e431a218d91acb6476ccad5f5aafde50aa3945ca\netty-transport-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-buffer\4.1.82.Final\a544270cf1ae8b8077082f5036436a9a9971ea71\netty-buffer-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-resolver\4.1.82.Final\38f665ae8dcd29032eea31245ba7806bed2e0fa8\netty-resolver-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\io.netty\netty-common\4.1.82.Final\22d148e85c3f5ebdacc0ce1f5aabb1d420f73f3\netty-common-4.1.82.Final.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\it.unimi.dsi\fastutil\8.5.9\bb7ea75ecdb216654237830b3a96d87ad91f8cc5\fastutil-8.5.9.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna-platform\5.12.1\97406a297c852f4a41e688a176ec675f72e8329\jna-platform-5.12.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.java.dev.jna\jna\5.12.1\b1e93a735caea94f503e95e6fe79bf9cdc1e985d\jna-5.12.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\net.sf.jopt-simple\jopt-simple\5.0.4\4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c\jopt-simple-5.0.4.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-compress\1.21\4ec95b60d4e86b5c95a0e919cb172a0af98011ef\commons-compress-1.21.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.commons\commons-lang3\3.12.0\c6842c86792ff03b9f1d1fe2aab8dc23aa6c6f0e\commons-lang3-3.12.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.httpcomponents\httpcore\4.4.15\7f2e0c573eaa7a74bac2e89b359e1f73d92a0a1d\httpcore-4.4.15.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-core\2.19.0\3b6eeb4de4c49c0fe38a4ee27188ff5fee44d0bb\log4j-core-2.19.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-slf4j2-impl\2.19.0\5c04bfdd63ce9dceb2e284b81e96b6a70010ee10\log4j-slf4j2-impl-2.19.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.apache.logging.log4j\log4j-api\2.19.0\ea1b37f38c327596b216542bc636cfdc0b8036fa\log4j-api-2.19.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.joml\joml\1.10.5\22566d58af70ad3d72308bab63b8339906deb649\joml-1.10.5.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\cbac1b8d30cb4795149c1ef540f912671a8616d0\lwjgl-glfw-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\ed892f945cf7e79c8756796f32d00fa4ceaf573b\lwjgl-glfw-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\beda65ee503443e60aa196d58ed31f8d001dc22a\lwjgl-glfw-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-glfw\3.3.1\b997e3391d6ce8f05487e7335d95c606043884a1\lwjgl-glfw-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\a817bcf213db49f710603677457567c37d53e103\lwjgl-jemalloc-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\948a89b76a16aa324b046ae9308891216ffce5f9\lwjgl-jemalloc-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\cae85c4edb219c88b6a0c26a87955ad98dc9519d\lwjgl-jemalloc-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-jemalloc\3.3.1\fb476c8ec110e1c137ad3ce8a7f7bfe6b11c6324\lwjgl-jemalloc-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\2623a6b8ae1dfcd880738656a9f0243d2e6840bd\lwjgl-openal-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\30a474d0e57193d7bc128849a3ab66bc9316fdb1\lwjgl-openal-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\40d65f1a7368a2aa47336f9cb69f5a190cf9975a\lwjgl-openal-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-openal\3.3.1\888349f7b1be6fbae58bf8edfb9ef12def04c4e3\lwjgl-openal-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\831a5533a21a5f4f81bbc51bb13e9899319b5411\lwjgl-opengl-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\c1807e9bd571402787d7e37e3029776ae2513bb8\lwjgl-opengl-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\527d78f1e9056aff3ed02ce93019c73c5e8f1721\lwjgl-opengl-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-opengl\3.3.1\deef3eb9b178ff2ff3ce893cc72ae741c3a17974\lwjgl-opengl-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\b119297cf8ed01f247abe8685857f8e7fcf5980f\lwjgl-stb-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\86315914ac119efdb02dc9e8e978ade84f1702af\lwjgl-stb-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\fde63cdd2605c00636721a6c8b961e41d1f6b247\lwjgl-stb-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-stb\3.3.1\a8d41f419eecb430b7c91ea2ce2c5c451cae2091\lwjgl-stb-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\ff1914111ef2e3e0110ef2dabc8d8cdaad82347\lwjgl-tinyfd-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\a5d830475ec0958d9fdba1559efa99aef211e6ff\lwjgl-tinyfd-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\83a5e780df610829ff3a737822b4f931cffecd91\lwjgl-tinyfd-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl-tinyfd\3.3.1\842eedd876fae354abc308c98a263f6bbc9e8a4d\lwjgl-tinyfd-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\ae58664f88e18a9bb2c77b063833ca7aaec484cb\lwjgl-3.3.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\36c37f16ab611b3aa11f3bcf80b1d509b4ce6b\lwjgl-3.3.1-natives-windows.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\f46cadcf95675908fd3a550d63d9d709cb68998\lwjgl-3.3.1-natives-windows-arm64.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.lwjgl\lwjgl\3.3.1\3b14f4beae9dd39791ec9e12190a9380cd8a3ce6\lwjgl-3.3.1-natives-windows-x86.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.machinezoo.noexception\noexception\1.7.1\b65330c98e38a1f915fa54a6e5eca496505e3f0a\noexception-1.7.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.slf4j\slf4j-api\2.0.1\f48d81adce2abf5ad3cfe463df517952749e03bc\slf4j-api-2.0.1.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.codehaus.plexus\plexus-utils\3.3.0\cf43b5391de623b36fe066a21127baef82c64022\plexus-utils-3.3.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.guava\listenablefuture\9999.0-empty-to-avoid-conflict-with-guava\b421526c5f297295adef1c886e5246c39d4ac629\listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.checkerframework\checker-qual\3.12.0\d5692f0526415fcc6de94bb5bfbd3afd9dd3b3e5\checker-qual-3.12.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.errorprone\error_prone_annotations\2.11.0\c5a0ace696d3f8b1c1d8cc036d8c03cc0cbe6b69\error_prone_annotations-2.11.0.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\com.google.j2objc\j2objc-annotations\1.3\ba035118bc8bac37d7eff77700720999acd9986d\j2objc-annotations-1.3.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\ST4\4.3\92f2c1ad8d84abcbeead6cf7f2c53a04166293c2\ST4-4.3.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.antlr\antlr-runtime\3.5.2\cd9cd41361c155f3af0f653009dcecb08d8b4afd\antlr-runtime-3.5.2.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.abego.treelayout\org.abego.treelayout.core\1.0.3\457216e8e6578099ae63667bb1e4439235892028\org.abego.treelayout.core-1.0.3.jar
+lib: C:\Users\TNC\.gradle\caches\modules-2\files-2.1\org.glassfish\javax.json\1.0.4\3178f73569fd7a1e5ffc464e680f7a8cc784b85a\javax.json-1.0.4.jar
+log: null
+input: D:\Saved stuff\dayzhud-mod\build\libs\dayzhud-2.18.0.jar
+output: D:\Saved stuff\dayzhud-mod\build\reobfJar\output.jar
+threads: 12
+Names: D:\Saved stuff\dayzhud-mod\build\reobfJar\mappings.tsrg(reversed: false)
+Fix Annotations: false
+Fix Records: false
+Fix Identifiers: false
+Fix SourceFile: false
+Fix Line Numbers: false
+Strip codesigning signatures: false
+Adding Libraries to Inheritance
+Reading Input: D:\Saved stuff\dayzhud-mod\build\libs\dayzhud-2.18.0.jar
+Adding input to inheritance map
+Processing entries
+Conflicting propagated mapping for com/dayzhud/mod/client/SkillsScreen/isPauseScreen()Z from net/minecraft/client/gui/screens/Screen/isPauseScreen()Z: isPauseScreen -> m_7043_
+Conflicting propagated mapping for com/dayzhud/mod/client/SkillsScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/Screen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/dayzhud/mod/client/SkillsScreen/init()V from net/minecraft/client/gui/screens/Screen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/dayzhud/mod/client/SkillsScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/clearCache()V from net/minecraft/client/gui/Gui/clearCache()V: clearCache -> m_93091_
+Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/render(Lnet/minecraft/client/gui/GuiGraphics;F)V from net/minecraft/client/gui/Gui/render(Lnet/minecraft/client/gui/GuiGraphics;F)V: render -> m_280421_
+Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/renderPortalOverlay(Lnet/minecraft/client/gui/GuiGraphics;F)V from net/minecraft/client/gui/Gui/renderPortalOverlay(Lnet/minecraft/client/gui/GuiGraphics;F)V: renderPortalOverlay -> m_280379_
+Conflicting propagated mapping for net/minecraftforge/client/gui/overlay/ForgeGui/renderJumpMeter(Lnet/minecraft/world/entity/PlayerRideableJumping;Lnet/minecraft/client/gui/GuiGraphics;I)V from net/minecraft/client/gui/Gui/renderJumpMeter(Lnet/minecraft/world/entity/PlayerRideableJumping;Lnet/minecraft/client/gui/GuiGraphics;I)V: renderJumpMeter -> m_280069_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/mouseScrolled(DDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseScrolled(DDD)Z: mouseScrolled -> m_6050_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/init()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V: slotClicked -> m_6597_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V: renderLabels -> m_280003_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/removed()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/removed()V: removed -> m_7861_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/isHovering(IIIIDD)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/isHovering(IIIIDD)Z: isHovering -> m_6774_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/mouseDragged(DDIDD)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/mouseDragged(DDIDD)Z: mouseDragged -> m_7979_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryScreen/mouseReleased(DDI)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/mouseReleased(DDI)Z: mouseReleased -> m_6348_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/init()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V: slotClicked -> m_6597_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V: renderLabels -> m_280003_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/removed()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/removed()V: removed -> m_7861_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/keyPressed(III)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/keyPressed(III)Z: keyPressed -> m_7933_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V: render -> m_88315_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/mouseScrolled(DDD)Z from net/minecraft/client/gui/components/events/ContainerEventHandler/mouseScrolled(DDD)Z: mouseScrolled -> m_6050_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/onClose()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/onClose()V: onClose -> m_7379_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/init()V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/init()V: init -> m_7856_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderLabels(Lnet/minecraft/client/gui/GuiGraphics;II)V: renderLabels -> m_280003_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/mouseClicked(DDI)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/mouseClicked(DDI)Z: mouseClicked -> m_6375_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/resize(Lnet/minecraft/client/Minecraft;II)V from net/minecraft/client/gui/screens/Screen/resize(Lnet/minecraft/client/Minecraft;II)V: resize -> m_6574_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketScreen/hasClickedOutside(DDIII)Z from net/minecraft/client/gui/screens/inventory/AbstractContainerScreen/hasClickedOutside(DDIII)Z: hasClickedOutside -> m_7467_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketMenu/removed(Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/inventory/AbstractContainerMenu/removed(Lnet/minecraft/world/entity/player/Player;)V: removed -> m_6877_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/AbstractContainerMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6875_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/AbstractContainerMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;: quickMoveStack -> m_7648_
+Conflicting propagated mapping for net/minecraft/world/entity/LivingEntity/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V from net/minecraft/world/entity/player/Player/lambda$addAdditionalSaveData$3(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/nbt/Tag;)V: lambda$addAdditionalSaveData$3 -> m_219754_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/ContainerOpenRedirect$1/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuConstructor/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: createMenu -> m_7208_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/ContainerOpenRedirect$1/getDisplayName()Lnet/minecraft/network/chat/Component; from net/minecraft/world/MenuProvider/getDisplayName()Lnet/minecraft/network/chat/Component;: getDisplayName -> m_5446_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/broadcastChanges()V from net/minecraft/world/inventory/AbstractContainerMenu/broadcastChanges()V: broadcastChanges -> m_38946_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/moveItemStackTo(Lnet/minecraft/world/item/ItemStack;IIZ)Z from net/minecraft/world/inventory/AbstractContainerMenu/moveItemStackTo(Lnet/minecraft/world/item/ItemStack;IIZ)Z: moveItemStackTo -> m_38903_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/removed(Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/inventory/AbstractContainerMenu/removed(Lnet/minecraft/world/entity/player/Player;)V: removed -> m_6877_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/AbstractContainerMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6875_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/clicked(IILnet/minecraft/world/inventory/ClickType;Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/inventory/AbstractContainerMenu/clicked(IILnet/minecraft/world/inventory/ClickType;Lnet/minecraft/world/entity/player/Player;)V: clicked -> m_150399_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/AbstractContainerMenu/quickMoveStack(Lnet/minecraft/world/entity/player/Player;I)Lnet/minecraft/world/item/ItemStack;: quickMoveStack -> m_7648_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/CorpseOpenRedirect$1/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuConstructor/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: createMenu -> m_7208_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/CorpseOpenRedirect$1/getDisplayName()Lnet/minecraft/network/chat/Component; from net/minecraft/world/MenuProvider/getDisplayName()Lnet/minecraft/network/chat/Component;: getDisplayName -> m_5446_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/getContainerSize()I from net/minecraft/world/Container/getContainerSize()I: getContainerSize -> m_6643_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/stopOpen(Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/Container/stopOpen(Lnet/minecraft/world/entity/player/Player;)V: stopOpen -> m_5785_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/setItem(ILnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/Container/setItem(ILnet/minecraft/world/item/ItemStack;)V: setItem -> m_6836_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/removeItem(II)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/Container/removeItem(II)Lnet/minecraft/world/item/ItemStack;: removeItem -> m_7407_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/getItem(I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/Container/getItem(I)Lnet/minecraft/world/item/ItemStack;: getItem -> m_8020_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/clearContent()V from net/minecraft/world/Clearable/clearContent()V: clearContent -> m_6211_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/isEmpty()Z from net/minecraft/world/Container/isEmpty()Z: isEmpty -> m_7983_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/setChanged()V from net/minecraft/world/Container/setChanged()V: setChanged -> m_6596_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/removeItemNoUpdate(I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/Container/removeItemNoUpdate(I)Lnet/minecraft/world/item/ItemStack;: removeItemNoUpdate -> m_8016_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/startOpen(Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/Container/startOpen(Lnet/minecraft/world/entity/player/Player;)V: startOpen -> m_5856_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/Container/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6542_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/canPlaceItem(ILnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/Container/canPlaceItem(ILnet/minecraft/world/item/ItemStack;)Z: canPlaceItem -> m_7013_
+Conflicting propagated mapping for com/dayzhud/mod/search/SearchedContainer/getMaxStackSize()I from net/minecraft/world/Container/getMaxStackSize()I: getMaxStackSize -> m_6893_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/OpenTarkovInventoryPacket$1/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuConstructor/createMenu(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: createMenu -> m_7208_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/OpenTarkovInventoryPacket$1/getDisplayName()Lnet/minecraft/network/chat/Component; from net/minecraft/world/MenuProvider/getDisplayName()Lnet/minecraft/network/chat/Component;: getDisplayName -> m_5446_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/PortableCraftingMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/CraftingMenu/stillValid(Lnet/minecraft/world/entity/player/Player;)Z: stillValid -> m_6875_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashData$1/stopOpen(Lnet/minecraft/world/entity/player/Player;)V from net/minecraft/world/Container/stopOpen(Lnet/minecraft/world/entity/player/Player;)V: stopOpen -> m_5785_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/saveddata/SavedData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;: save -> m_7176_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashData$1/setChanged()V from net/minecraft/world/SimpleContainer/setChanged()V: setChanged -> m_6596_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/StyledFurnaceScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V from com/dayzhud/mod/inventory/StyledContainerScreen/renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V: renderBg -> m_7286_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$3/getBuffer(Lnet/minecraft/client/renderer/RenderType;)Lcom/mojang/blaze3d/vertex/VertexConsumer; from net/minecraft/client/renderer/MultiBufferSource$BufferSource/getBuffer(Lnet/minecraft/client/renderer/RenderType;)Lcom/mojang/blaze3d/vertex/VertexConsumer;: getBuffer -> m_6299_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$3/endBatch(Lnet/minecraft/client/renderer/RenderType;)V from net/minecraft/client/renderer/MultiBufferSource$BufferSource/endBatch(Lnet/minecraft/client/renderer/RenderType;)V: endBatch -> m_109912_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$3/endBatch()V from net/minecraft/client/renderer/MultiBufferSource$BufferSource/endBatch()V: endBatch -> m_109911_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/color(IIII)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/color(IIII)Lcom/mojang/blaze3d/vertex/VertexConsumer;: color -> m_6122_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/uv2(II)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/uv2(II)Lcom/mojang/blaze3d/vertex/VertexConsumer;: uv2 -> m_7120_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/defaultColor(IIII)V from com/mojang/blaze3d/vertex/VertexConsumer/defaultColor(IIII)V: defaultColor -> m_7404_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/normal(FFF)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/normal(FFF)Lcom/mojang/blaze3d/vertex/VertexConsumer;: normal -> m_5601_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/overlayCoords(II)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/overlayCoords(II)Lcom/mojang/blaze3d/vertex/VertexConsumer;: overlayCoords -> m_7122_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/vertex(DDD)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/vertex(DDD)Lcom/mojang/blaze3d/vertex/VertexConsumer;: vertex -> m_5483_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/endVertex()V from com/mojang/blaze3d/vertex/VertexConsumer/endVertex()V: endVertex -> m_5752_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/unsetDefaultColor()V from com/mojang/blaze3d/vertex/VertexConsumer/unsetDefaultColor()V: unsetDefaultColor -> m_141991_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder/uv(FF)Lcom/mojang/blaze3d/vertex/VertexConsumer; from com/mojang/blaze3d/vertex/VertexConsumer/uv(FF)Lcom/mojang/blaze3d/vertex/VertexConsumer;: uv -> m_7421_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$1/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/stash/StashBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/set(Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/inventory/Slot/set(Lnet/minecraft/world/item/ItemStack;)V: set -> m_5852_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/inventory/Slot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z: mayPlace -> m_5857_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/remove(I)Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/Slot/remove(I)Lnet/minecraft/world/item/ItemStack;: remove -> m_6201_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/onQuickCraft(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)V from net/minecraft/world/inventory/Slot/onQuickCraft(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)V: onQuickCraft -> m_40234_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getItem()Lnet/minecraft/world/item/ItemStack; from net/minecraft/world/inventory/Slot/getItem()Lnet/minecraft/world/item/ItemStack;: getItem -> m_7993_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I from net/minecraft/world/inventory/Slot/getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I: getMaxStackSize -> m_5866_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/Slot/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z: mayPickup -> m_8010_
+Conflicting propagated mapping for net/minecraftforge/items/SlotItemHandler/getMaxStackSize()I from net/minecraft/world/inventory/Slot/getMaxStackSize()I: getMaxStackSize -> m_6641_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$2/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$ArmorRestrictedSlot/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$ArmorRestrictedSlot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/inventory/Slot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z: mayPlace -> m_5857_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$ArmorRestrictedSlot/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraft/world/inventory/Slot/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z: mayPickup -> m_8010_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$ArmorRestrictedSlot/getMaxStackSize()I from net/minecraft/world/inventory/Slot/getMaxStackSize()I: getMaxStackSize -> m_6641_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$BackpackSlot/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$CorpseLootSlot/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$CorpseLootSlot/getItem()Lnet/minecraft/world/item/ItemStack; from net/minecraftforge/items/SlotItemHandler/getItem()Lnet/minecraft/world/item/ItemStack;: getItem -> m_7993_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$CorpseLootSlot/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z from net/minecraftforge/items/SlotItemHandler/mayPickup(Lnet/minecraft/world/entity/player/Player;)Z: mayPickup -> m_8010_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$SecureSlot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraftforge/items/SlotItemHandler/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z: mayPlace -> m_5857_
+Conflicting propagated mapping for com/dayzhud/mod/inventory/TarkovInventoryMenu$WeaponSlot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z from net/minecraft/world/inventory/Slot/mayPlace(Lnet/minecraft/world/item/ItemStack;)Z: mayPlace -> m_5857_
+Conflicting propagated mapping for net/minecraftforge/network/IContainerFactory/create(ILnet/minecraft/world/entity/player/Inventory;)Lnet/minecraft/world/inventory/AbstractContainerMenu; from net/minecraft/world/inventory/MenuType$MenuSupplier/create(ILnet/minecraft/world/entity/player/Inventory;)Lnet/minecraft/world/inventory/AbstractContainerMenu;: create -> m_39994_
+Conflicting propagated mapping for com/dayzhud/mod/market/SafeZoneData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/saveddata/SavedData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;: save -> m_7176_
+Conflicting propagated mapping for com/dayzhud/mod/market/ExtractionData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag; from net/minecraft/world/level/saveddata/SavedData/save(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;: save -> m_7176_
+Conflicting propagated mapping for com/dayzhud/mod/market/LaptopBlock/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState; from net/minecraft/world/level/block/Block/getStateForPlacement(Lnet/minecraft/world/item/context/BlockPlaceContext;)Lnet/minecraft/world/level/block/state/BlockState;: getStateForPlacement -> m_5573_
+Conflicting propagated mapping for com/dayzhud/mod/market/LaptopBlock/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape; from net/minecraft/world/level/block/state/BlockBehaviour/getShape(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/shapes/CollisionContext;)Lnet/minecraft/world/phys/shapes/VoxelShape;: getShape -> m_5940_
+Conflicting propagated mapping for com/dayzhud/mod/market/LaptopBlock/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V from net/minecraft/world/level/block/Block/createBlockStateDefinition(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V: createBlockStateDefinition -> m_7926_
+Conflicting propagated mapping for com/dayzhud/mod/market/LaptopBlock/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult; from net/minecraft/world/level/block/state/BlockBehaviour/use(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;: use -> m_6227_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketMenu$SellSlot/isActive()Z from net/minecraft/world/inventory/Slot/isActive()Z: isActive -> m_6659_
+Conflicting propagated mapping for com/dayzhud/mod/market/MarketPriceLoader/apply(Ljava/lang/Object;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V from net/minecraft/server/packs/resources/SimplePreparableReloadListener/apply(Ljava/lang/Object;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V: apply -> m_5787_
+Conflicting propagated mapping for net/minecraftforge/event/BuildCreativeModeTabContentsEvent/accept(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/CreativeModeTab$TabVisibility;)V from net/minecraft/world/item/CreativeModeTab$Output/accept(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/CreativeModeTab$TabVisibility;)V: accept -> m_246267_
+Conflicting propagated mapping for com/dayzhud/mod/quest/QuestLoader/apply(Ljava/lang/Object;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V from net/minecraft/server/packs/resources/SimplePreparableReloadListener/apply(Ljava/lang/Object;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V: apply -> m_5787_
+Adding extras
+Sorting
+Writing Output: D:\Saved stuff\dayzhud-mod\build\reobfJar\output.jar
+  META-INF/
+  META-INF/MANIFEST.MF
+  META-INF/mods.toml
+  assets/
+  assets/dayzhud/
+  assets/dayzhud/blockstates/
+  assets/dayzhud/blockstates/laptop.json
+  assets/dayzhud/blockstates/stash.json
+  assets/dayzhud/lang/
+  assets/dayzhud/lang/en_us.json
+  assets/dayzhud/models/
+  assets/dayzhud/models/block/
+  assets/dayzhud/models/block/laptop.json
+  assets/dayzhud/models/block/stash.json
+  assets/dayzhud/models/item/
+  assets/dayzhud/models/item/grid_reserved.json
+  assets/dayzhud/models/item/laptop.json
+  assets/dayzhud/models/item/stash.json
+  assets/dayzhud/sounds.json
+  assets/dayzhud/sounds/
+  assets/dayzhud/sounds/corpse_search.ogg
+  assets/dayzhud/sounds/heavy_breathing.ogg
+  assets/dayzhud/sounds/inventory_close.ogg
+  assets/dayzhud/sounds/inventory_move1.ogg
+  assets/dayzhud/sounds/inventory_move2.ogg
+  assets/dayzhud/sounds/inventory_move3.ogg
+  assets/dayzhud/sounds/inventory_open.ogg
+  assets/dayzhud/textures/
+  assets/dayzhud/textures/block/
+  assets/dayzhud/textures/block/laptop.png
+  assets/dayzhud/textures/block/stash_front.png
+  assets/dayzhud/textures/block/stash_side.png
+  assets/dayzhud/textures/block/stash_top.png
+  assets/dayzhud/textures/gui/
+  assets/dayzhud/textures/gui/corpse_figure.png
+  assets/dayzhud/textures/gui/icon_blood.png
+  assets/dayzhud/textures/gui/icon_bolt.png
+  assets/dayzhud/textures/gui/icon_crawling.png
+  assets/dayzhud/textures/gui/icon_crouching.png
+  assets/dayzhud/textures/gui/icon_droplet.png
+  assets/dayzhud/textures/gui/icon_droplet_outline.png
+  assets/dayzhud/textures/gui/icon_droplet_solid.png
+  assets/dayzhud/textures/gui/icon_food.png
+  assets/dayzhud/textures/gui/icon_food_outline.png
+  assets/dayzhud/textures/gui/icon_food_solid.png
+  assets/dayzhud/textures/gui/icon_heart.png
+  assets/dayzhud/textures/gui/icon_heart_outline.png
+  assets/dayzhud/textures/gui/icon_heart_solid.png
+  assets/dayzhud/textures/gui/icon_mounted.png
+  assets/dayzhud/textures/gui/icon_sprinting.png
+  assets/dayzhud/textures/gui/icon_standing.png
+  assets/dayzhud/textures/gui/icon_thermometer.png
+  assets/dayzhud/textures/gui/icon_thermometer_outline.png
+  assets/dayzhud/textures/gui/icon_thermometer_solid.png
+  assets/dayzhud/textures/gui/icon_walking.png
+  assets/dayzhud/textures/gui/icon_weight.png
+  assets/dayzhud/textures/gui/skill_acclimation.png
+  assets/dayzhud/textures/gui/skill_endurance.png
+  assets/dayzhud/textures/gui/skill_metabolism.png
+  assets/dayzhud/textures/gui/skill_toughness.png
+  assets/dayzhud/textures/gui/skill_vitality.png
+  assets/dayzhud/textures/gui/tacz_hud/
+  assets/dayzhud/textures/gui/tacz_hud/aa12.png
+  assets/dayzhud/textures/gui/tacz_hud/ai_awp.png
+  assets/dayzhud/textures/gui/tacz_hud/ak47.png
+  assets/dayzhud/textures/gui/tacz_hud/aug.png
+  assets/dayzhud/textures/gui/tacz_hud/b93r.png
+  assets/dayzhud/textures/gui/tacz_hud/cz75.png
+  assets/dayzhud/textures/gui/tacz_hud/db_long.png
+  assets/dayzhud/textures/gui/tacz_hud/db_short.png
+  assets/dayzhud/textures/gui/tacz_hud/deagle.png
+  assets/dayzhud/textures/gui/tacz_hud/deagle_golden.png
+  assets/dayzhud/textures/gui/tacz_hud/fn_evolys.png
+  assets/dayzhud/textures/gui/tacz_hud/fn_fal.png
+  assets/dayzhud/textures/gui/tacz_hud/g36k.png
+  assets/dayzhud/textures/gui/tacz_hud/glock_17.png
+  assets/dayzhud/textures/gui/tacz_hud/hk416a5.png
+  assets/dayzhud/textures/gui/tacz_hud/hk416d.png
+  assets/dayzhud/textures/gui/tacz_hud/hk_g3.png
+  assets/dayzhud/textures/gui/tacz_hud/hk_mk23.png
+  assets/dayzhud/textures/gui/tacz_hud/hk_mp5a5.png
+  assets/dayzhud/textures/gui/tacz_hud/kar98.png
+  assets/dayzhud/textures/gui/tacz_hud/lonetrail.png
+  assets/dayzhud/textures/gui/tacz_hud/m1014.png
+  assets/dayzhud/textures/gui/tacz_hud/m107.png
+  assets/dayzhud/textures/gui/tacz_hud/m16a1.png
+  assets/dayzhud/textures/gui/tacz_hud/m16a4.png
+  assets/dayzhud/textures/gui/tacz_hud/m1911.png
+  assets/dayzhud/textures/gui/tacz_hud/m249.png
+  assets/dayzhud/textures/gui/tacz_hud/m320.png
+  assets/dayzhud/textures/gui/tacz_hud/m4a1.png
+  assets/dayzhud/textures/gui/tacz_hud/m700.png
+  assets/dayzhud/textures/gui/tacz_hud/m870.png
+  assets/dayzhud/textures/gui/tacz_hud/m95.png
+  assets/dayzhud/textures/gui/tacz_hud/m9a4.png
+  assets/dayzhud/textures/gui/tacz_hud/minigun.png
+  assets/dayzhud/textures/gui/tacz_hud/mk14.png
+  assets/dayzhud/textures/gui/tacz_hud/p320.png
+  assets/dayzhud/textures/gui/tacz_hud/p90.png
+  assets/dayzhud/textures/gui/tacz_hud/qbz_191.png
+  assets/dayzhud/textures/gui/tacz_hud/qbz_95.png
+  assets/dayzhud/textures/gui/tacz_hud/rhino357.png
+  assets/dayzhud/textures/gui/tacz_hud/rpg7.png
+  assets/dayzhud/textures/gui/tacz_hud/rpk.png
+  assets/dayzhud/textures/gui/tacz_hud/scar_h.png
+  assets/dayzhud/textures/gui/tacz_hud/scar_l.png
+  assets/dayzhud/textures/gui/tacz_hud/sks_tactical.png
+  assets/dayzhud/textures/gui/tacz_hud/spas_12.png
+  assets/dayzhud/textures/gui/tacz_hud/spr15hb.png
+  assets/dayzhud/textures/gui/tacz_hud/springfield1873.png
+  assets/dayzhud/textures/gui/tacz_hud/taurus500.png
+  assets/dayzhud/textures/gui/tacz_hud/taurus943.png
+  assets/dayzhud/textures/gui/tacz_hud/timeless50.png
+  assets/dayzhud/textures/gui/tacz_hud/type_81.png
+  assets/dayzhud/textures/gui/tacz_hud/ump45.png
+  assets/dayzhud/textures/gui/tacz_hud/uzi.png
+  assets/dayzhud/textures/gui/tacz_hud/vector45.png
+  assets/dayzhud/textures/gui/weapon_flat_knife.png
+  assets/dayzhud/textures/gui/weapon_flat_pistol.png
+  assets/dayzhud/textures/gui/weapon_flat_rifle.png
+  assets/dayzhud/textures/item/
+  assets/dayzhud/textures/item/grid_reserved.png
+  com/
+  com/dayzhud/
+  com/dayzhud/mod/
+  com/dayzhud/mod/DayzHudMod.class
+  com/dayzhud/mod/client/
+  com/dayzhud/mod/client/ClientEvents.class
+  com/dayzhud/mod/client/DayzHotbarOverlay.class
+  com/dayzhud/mod/client/DayzHudOverlay.class
+  com/dayzhud/mod/client/OverlayCanceller.class
+  com/dayzhud/mod/client/SkillsScreen.class
+  com/dayzhud/mod/client/UiSounds.class
+  com/dayzhud/mod/client/VitalsTracker.class
+  com/dayzhud/mod/compat/
+  com/dayzhud/mod/compat/FirstAidCompat$Limb.class
+  com/dayzhud/mod/compat/FirstAidCompat.class
+  com/dayzhud/mod/compat/ThirstWasTakenCompat.class
+  com/dayzhud/mod/injury/
+  com/dayzhud/mod/injury/ClientInjuries.class
+  com/dayzhud/mod/injury/Injuries.class
+  com/dayzhud/mod/injury/InjuryCapability$1.class
+  com/dayzhud/mod/injury/InjuryCapability$ForgeBus.class
+  com/dayzhud/mod/injury/InjuryCapability$ModBus.class
+  com/dayzhud/mod/injury/InjuryCapability$Provider.class
+  com/dayzhud/mod/injury/InjuryCapability.class
+  com/dayzhud/mod/injury/InjuryConfig.class
+  com/dayzhud/mod/injury/InjurySyncPacket.class
+  com/dayzhud/mod/injury/InjurySystem.class
+  com/dayzhud/mod/inventory/
+  com/dayzhud/mod/inventory/ApplyHealingPacket.class
+  com/dayzhud/mod/inventory/BackCurioItemHandler.class
+  com/dayzhud/mod/inventory/BackpackScrollPacket.class
+  com/dayzhud/mod/inventory/ContainerOpenRedirect$1.class
+  com/dayzhud/mod/inventory/ContainerOpenRedirect.class
+  com/dayzhud/mod/inventory/CorpseLootHandler.class
+  com/dayzhud/mod/inventory/CorpseOpenRedirect$1.class
+  com/dayzhud/mod/inventory/CorpseOpenRedirect.class
+  com/dayzhud/mod/inventory/FlatItems.class
+  com/dayzhud/mod/inventory/FlatModelRenderer$1.class
+  com/dayzhud/mod/inventory/FlatModelRenderer$CapsModel.class
+  com/dayzhud/mod/inventory/FlatModelRenderer.class
+  com/dayzhud/mod/inventory/HealthTab.class
+  com/dayzhud/mod/inventory/NetworkHandler.class
+  com/dayzhud/mod/inventory/OpenCraftingPacket.class
+  com/dayzhud/mod/inventory/OpenTarkovInventoryPacket$1.class
+  com/dayzhud/mod/inventory/OpenTarkovInventoryPacket.class
+  com/dayzhud/mod/inventory/PixelProbe$Box.class
+  com/dayzhud/mod/inventory/PixelProbe$Draw.class
+  com/dayzhud/mod/inventory/PixelProbe.class
+  com/dayzhud/mod/inventory/PortableCraftingMenu.class
+  com/dayzhud/mod/inventory/SaSurvivalBackpackAccess.class
+  com/dayzhud/mod/inventory/ScrollingBackpackView$SlotUsable.class
+  com/dayzhud/mod/inventory/ScrollingBackpackView.class
+  com/dayzhud/mod/inventory/StyledContainerScreen.class
+  com/dayzhud/mod/inventory/StyledFurnaceScreen.class
+  com/dayzhud/mod/inventory/StyledScreens.class
+  com/dayzhud/mod/inventory/StyledTheme.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$1.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$2.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$3.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$Bounds.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$Model.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer$Recorder.class
+  com/dayzhud/mod/inventory/TaczFlatGunRenderer.class
+  com/dayzhud/mod/inventory/TaczHudIcons$Icon.class
+  com/dayzhud/mod/inventory/TaczHudIcons.class
+  com/dayzhud/mod/inventory/TarkovInventoryClientEvents$ModBusEvents.class
+  com/dayzhud/mod/inventory/TarkovInventoryClientEvents.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$1.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$2.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$ArmorRestrictedSlot.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$BackpackSlot.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$CorpseLootSlot.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$CurioSlotInfo.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$GridRegion.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$PendingCurio.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$SecureSlot.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$SlotBox.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu$WeaponSlot.class
+  com/dayzhud/mod/inventory/TarkovInventoryMenu.class
+  com/dayzhud/mod/inventory/TarkovInventoryScreen$1.class
+  com/dayzhud/mod/inventory/TarkovInventoryScreen.class
+  com/dayzhud/mod/inventory/TarkovMenuTypes.class
+  com/dayzhud/mod/inventory/WeaponSlotConfig.class
+  com/dayzhud/mod/inventory/WeaponSlots.class
+  com/dayzhud/mod/inventory/grid/
+  com/dayzhud/mod/inventory/grid/DefaultGunFootprints.class
+  com/dayzhud/mod/inventory/grid/DefaultItemFootprints.class
+  com/dayzhud/mod/inventory/grid/Footprint.class
+  com/dayzhud/mod/inventory/grid/GridConfig.class
+  com/dayzhud/mod/inventory/grid/GridPickup.class
+  com/dayzhud/mod/inventory/grid/GridStorage$1.class
+  com/dayzhud/mod/inventory/grid/GridStorage$2.class
+  com/dayzhud/mod/inventory/grid/GridStorage.class
+  com/dayzhud/mod/inventory/grid/GunSizes$Size.class
+  com/dayzhud/mod/inventory/grid/GunSizes.class
+  com/dayzhud/mod/inventory/grid/ItemFootprints$1.class
+  com/dayzhud/mod/inventory/grid/ItemFootprints.class
+  com/dayzhud/mod/inventory/grid/ItemGrid.class
+  com/dayzhud/mod/inventory/grid/MagazineFootprints.class
+  com/dayzhud/mod/inventory/grid/ModGridItems.class
+  com/dayzhud/mod/inventory/grid/RotateCarriedPacket.class
+  com/dayzhud/mod/inventory/secure/
+  com/dayzhud/mod/inventory/secure/SecureContainer.class
+  com/dayzhud/mod/inventory/secure/SecureContainerCapability$1.class
+  com/dayzhud/mod/inventory/secure/SecureContainerCapability$ForgeBus.class
+  com/dayzhud/mod/inventory/secure/SecureContainerCapability$ModBus.class
+  com/dayzhud/mod/inventory/secure/SecureContainerCapability$Provider.class
+  com/dayzhud/mod/inventory/secure/SecureContainerCapability.class
+  com/dayzhud/mod/inventory/stash/
+  com/dayzhud/mod/inventory/stash/StashBlock.class
+  com/dayzhud/mod/inventory/stash/StashData$1.class
+  com/dayzhud/mod/inventory/stash/StashData.class
+  com/dayzhud/mod/market/
+  com/dayzhud/mod/market/AmmoBoxes$Box.class
+  com/dayzhud/mod/market/AmmoBoxes.class
+  com/dayzhud/mod/market/ClientMarketState.class
+  com/dayzhud/mod/market/ClientWallet.class
+  com/dayzhud/mod/market/CurrencyItems.class
+  com/dayzhud/mod/market/DerivedPrices.class
+  com/dayzhud/mod/market/Extraction$Destination.class
+  com/dayzhud/mod/market/Extraction.class
+  com/dayzhud/mod/market/ExtractionData.class
+  com/dayzhud/mod/market/ItemStatCard$Stat.class
+  com/dayzhud/mod/market/ItemStatCard.class
+  com/dayzhud/mod/market/LaptopBlock.class
+  com/dayzhud/mod/market/MagazineCompat.class
+  com/dayzhud/mod/market/MarketAccess.class
+  com/dayzhud/mod/market/MarketCatalog$1.class
+  com/dayzhud/mod/market/MarketCatalog.class
+  com/dayzhud/mod/market/MarketCommand.class
+  com/dayzhud/mod/market/MarketConfig.class
+  com/dayzhud/mod/market/MarketMenu$SellSlot.class
+  com/dayzhud/mod/market/MarketMenu.class
+  com/dayzhud/mod/market/MarketNetwork.class
+  com/dayzhud/mod/market/MarketOffer.class
+  com/dayzhud/mod/market/MarketPackets$Buy.class
+  com/dayzhud/mod/market/MarketPackets$Catalogue.class
+  com/dayzhud/mod/market/MarketPackets$PricesSync.class
+  com/dayzhud/mod/market/MarketPackets$Sell.class
+  com/dayzhud/mod/market/MarketPackets$WalletSync.class
+  com/dayzhud/mod/market/MarketPackets$Withdraw.class
+  com/dayzhud/mod/market/MarketPackets.class
+  com/dayzhud/mod/market/MarketPriceLoader.class
+  com/dayzhud/mod/market/MarketPrices$Entry.class
+  com/dayzhud/mod/market/MarketPrices.class
+  com/dayzhud/mod/market/MarketScreen$Confirm.class
+  com/dayzhud/mod/market/MarketScreen$Row.class
+  com/dayzhud/mod/market/MarketScreen.class
+  com/dayzhud/mod/market/ModBlocks.class
+  com/dayzhud/mod/market/Money.class
+  com/dayzhud/mod/market/NbtVariants.class
+  com/dayzhud/mod/market/SafeZoneData$Zone.class
+  com/dayzhud/mod/market/SafeZoneData.class
+  com/dayzhud/mod/market/SafeZoneProtection.class
+  com/dayzhud/mod/market/TaczMarketCompat$AttachmentEntry.class
+  com/dayzhud/mod/market/TaczMarketCompat$GunEntry.class
+  com/dayzhud/mod/market/TaczMarketCompat$GunStats.class
+  com/dayzhud/mod/market/TaczMarketCompat.class
+  com/dayzhud/mod/market/Wallet.class
+  com/dayzhud/mod/market/WalletCapability$1.class
+  com/dayzhud/mod/market/WalletCapability$ForgeBus.class
+  com/dayzhud/mod/market/WalletCapability$ModBus.class
+  com/dayzhud/mod/market/WalletCapability$Provider.class
+  com/dayzhud/mod/market/WalletCapability.class
+  com/dayzhud/mod/market/WalletEvents.class
+  com/dayzhud/mod/quest/
+  com/dayzhud/mod/quest/ClientQuestState.class
+  com/dayzhud/mod/quest/QuestDef$1.class
+  com/dayzhud/mod/quest/QuestDef$Objective.class
+  com/dayzhud/mod/quest/QuestDef$Reward.class
+  com/dayzhud/mod/quest/QuestDef$Type.class
+  com/dayzhud/mod/quest/QuestDef.class
+  com/dayzhud/mod/quest/QuestItems.class
+  com/dayzhud/mod/quest/QuestLoader.class
+  com/dayzhud/mod/quest/QuestLog$1.class
+  com/dayzhud/mod/quest/QuestLog$ForgeBus.class
+  com/dayzhud/mod/quest/QuestLog$ModBus.class
+  com/dayzhud/mod/quest/QuestLog$Provider.class
+  com/dayzhud/mod/quest/QuestLog.class
+  com/dayzhud/mod/quest/QuestPackets$Action.class
+  com/dayzhud/mod/quest/QuestPackets$ObjectiveView.class
+  com/dayzhud/mod/quest/QuestPackets$Sync.class
+  com/dayzhud/mod/quest/QuestPackets$View.class
+  com/dayzhud/mod/quest/QuestPackets.class
+  com/dayzhud/mod/quest/QuestSystem$1.class
+  com/dayzhud/mod/quest/QuestSystem.class
+  com/dayzhud/mod/search/
+  com/dayzhud/mod/search/ClientSearchState.class
+  com/dayzhud/mod/search/SearchConfig.class
+  com/dayzhud/mod/search/SearchHandler.class
+  com/dayzhud/mod/search/SearchNetwork$Packet.class
+  com/dayzhud/mod/search/SearchNetwork.class
+  com/dayzhud/mod/search/SearchProgress.class
+  com/dayzhud/mod/search/SearchedContainer.class
+  com/dayzhud/mod/skill/
+  com/dayzhud/mod/skill/ClientSkillState.class
+  com/dayzhud/mod/skill/PlayerSkills.class
+  com/dayzhud/mod/skill/Skill$1.class
+  com/dayzhud/mod/skill/Skill.class
+  com/dayzhud/mod/skill/SkillCapability$1.class
+  com/dayzhud/mod/skill/SkillCapability$ForgeBus.class
+  com/dayzhud/mod/skill/SkillCapability$ModBus.class
+  com/dayzhud/mod/skill/SkillCapability$Provider.class
+  com/dayzhud/mod/skill/SkillCapability.class
+  com/dayzhud/mod/skill/SkillCommand.class
+  com/dayzhud/mod/skill/SkillEffects.class
+  com/dayzhud/mod/skill/SkillStatePacket.class
+  com/dayzhud/mod/skill/SpendSkillPacket.class
+  com/dayzhud/mod/skill/StaminaSystem.class
+  com/dayzhud/mod/skill/TemperatureSystem.class
+  com/dayzhud/mod/sound/
+  com/dayzhud/mod/sound/ModSounds.class
+  com/dayzhud/mod/weight/
+  com/dayzhud/mod/weight/ClientWeight.class
+  com/dayzhud/mod/weight/ItemWeights.class
+  com/dayzhud/mod/weight/WeightConfig.class
+  com/dayzhud/mod/weight/WeightSyncPacket.class
+  com/dayzhud/mod/weight/WeightSystem$Limits.class
+  com/dayzhud/mod/weight/WeightSystem.class
+  data/
+  data/dayzhud/
+  data/dayzhud/damage_type/
+  data/dayzhud/damage_type/bleeding.json
+  data/dayzhud/dayzhud_quests/
+  data/dayzhud/dayzhud_quests/a_small_favour.json
+  data/dayzhud/dayzhud_quests/bounty.json
+  data/dayzhud/dayzhud_quests/clean_streets.json
+  data/dayzhud/dayzhud_quests/field_medic.json
+  data/dayzhud/dayzhud_quests/getting_out_alive.json
+  data/dayzhud/dayzhud_quests/gunpowder.json
+  data/dayzhud/dayzhud_quests/marksman.json
+  data/dayzhud/dayzhud_quests/night_shift.json
+  data/dayzhud/dayzhud_quests/regular.json
+  data/dayzhud/dayzhud_quests/scavenger.json
+  data/dayzhud/dayzhud_quests/supply_run.json
+  data/dayzhud/dayzhud_quests/tech_salvage.json
+  data/dayzhud/dayzhud_quests/veteran.json
+  data/dayzhud/loot_tables/
+  data/dayzhud/loot_tables/blocks/
+  data/dayzhud/loot_tables/blocks/laptop.json
+  data/dayzhud/loot_tables/blocks/stash.json
+  data/dayzhud/market/
+  data/dayzhud/market/prices.json
+  data/dayzhud/recipes/
+  data/dayzhud/recipes/laptop.json
+  data/dayzhud/recipes/stash.json
+  data/dayzhud/tags/
+  data/dayzhud/tags/items/
+  data/dayzhud/tags/items/sheath_weapons.json
+  data/minecraft/
+  data/minecraft/tags/
+  data/minecraft/tags/damage_type/
+  data/minecraft/tags/damage_type/bypasses_armor.json
+  data/minecraft/tags/damage_type/bypasses_shield.json
+  data/minecraft/tags/damage_type/no_impact.json
+  dayzhud/
+  dayzhud/gun_sizes.txt
+  pack.mcmeta

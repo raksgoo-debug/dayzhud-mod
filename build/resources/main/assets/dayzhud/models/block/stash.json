@@ -1,0 +1,24 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "front": "dayzhud:block/stash_front",
+    "side": "dayzhud:block/stash_side",
+    "top": "dayzhud:block/stash_top",
+    "particle": "dayzhud:block/stash_side"
+  },
+  "elements": [
+    {
+      "name": "locker",
+      "from": [1, 0, 1],
+      "to": [15, 12, 15],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#side"},
+        "east":  {"uv": [0, 0, 16, 16], "texture": "#side"},
+        "west":  {"uv": [0, 0, 16, 16], "texture": "#side"},
+        "up":    {"uv": [0, 0, 16, 16], "texture": "#top"},
+        "down":  {"uv": [0, 0, 16, 16], "texture": "#side", "cullface": "down"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Scavenger",
+  "description": "Old electronics still sell. A processor and a circuit board - pull them out of any wreck you find.",
+  "order": 60,
+  "requires": [
+    "dayzhud:supply_run"
+  ],
+  "objectives": [
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:cpu",
+      "count": 1
+    },
+    {
+      "type": "deliver",
+      "item": "tarkovdayz:circuitboard",
+      "count": 1
+    }
+  ],
+  "rewards": {
+    "roubles": 28000
+  }
+}

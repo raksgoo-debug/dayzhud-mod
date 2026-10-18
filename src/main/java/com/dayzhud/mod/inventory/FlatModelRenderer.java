@@ -46,6 +46,10 @@ import java.util.Set;
  *       other context (verified in its applyDisplayTransform bytecode) it draws the magazine in
  *       the gun model's own axes, y flipped up - so FIXED, turned 90 about Y, is exactly the
  *       guns' side-on pose. Reached through Forge's IClientItemExtensions, no reflection.</li>
+ *   <li><b>Field Kit tools and melee</b> (DefaultItemFootprints.SIDE_ON), side-on, head to the
+ *       left (2.18.0). Their item models are the 3D model, upright in block space.</li>
+ *   <li><b>Rig &amp; Plate gear</b>, front-on as worn, attachments included (2.18.0) - see
+ *       rigModel.</li>
  * </ul>
  *
  * Sized and centred by what's visible, via PixelProbe, measured once per item (per NBT for
@@ -78,18 +82,84 @@ public final class FlatModelRenderer {
         return id == null ? null : id.toString();
     }
 
-    private static boolean handles(String id) {
-        return id != null && (DefaultItemFootprints.BACKPACKS.contains(id) || MAGAZINES.contains(id));
+    private static boolean handles(ItemStack stack, String id) {
+        return id != null && (DefaultItemFootprints.BACKPACKS.contains(id) || MAGAZINES.contains(id)
+                || DefaultItemFootprints.SIDE_ON.contains(id) || isRigGear(stack, id));
     }
 
     public static boolean canRender(ItemStack stack) {
         if (stack.isEmpty() || !GridConfig.FLAT_GUN_RENDER.get()) return false;
         String id = idOf(stack);
-        return handles(id) && !BROKEN.contains(id);
+        return handles(stack, id) && !BROKEN.contains(id);
+    }
+
+    // ---- Rig & Plate (2.18.0) -------------------------------------------------------------
+    //
+    // Its gear is GeckoLib, and as an item it is only a flat sprite: the 3D model exists in its
+    // worn renderers. Helmets and vests are ArmorItems whose IClientItemExtensions hand back that
+    // renderer, already prepared, from getHumanoidArmorModel (checked in GearArmorItem$1's
+    // bytecode). Rigs, masks and the headset are curios: CurioGearRenderer keeps the same
+    // GearRenderer in its "renderer" field and prepares it itself with
+    // prepForRender(entity, stack, CHEST for a rig / HEAD otherwise, base model) - done here the
+    // same way, reflectively, so neither Rig & Plate nor GeckoLib is a compile dependency.
+    // GeoArmorRenderer.renderToBuffer ignores the buffer it's given and draws through the shared
+    // buffer source, undoing its own y-up flip, so the result is vanilla model space: y down,
+    // the wearer's front at -z. Fitted attachments (visors, NVGs) show, as worn.
+
+    private static final String RIG = "rigandplate:";
+    private static final Map<String, Boolean> RIG_GEAR = new HashMap<>();
+    private static net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.LivingEntity> baseModel;
+
+    private static boolean isRigGear(ItemStack stack, String id) {
+        if (!id.startsWith(RIG)) return false;
+        return RIG_GEAR.computeIfAbsent(id, k -> stack.getItem() instanceof net.minecraft.world.item.ArmorItem
+                || top.theillusivec4.curios.api.client.CuriosRendererRegistry.getRenderer(stack.getItem()).isPresent());
+    }
+
+    /** Rig & Plate's worn model for this stack, prepared on the local player. */
+    private static Model rigModel(ItemStack stack) throws Exception {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) throw new IllegalStateException("no player to wear it");
+        if (baseModel == null) {
+            baseModel = new net.minecraft.client.model.HumanoidModel<>(
+                    mc.getEntityModels().bakeLayer(net.minecraft.client.model.geom.ModelLayers.PLAYER_OUTER_ARMOR));
+        }
+        if (stack.getItem() instanceof net.minecraft.world.item.ArmorItem armor) {
+            Model m = IClientItemExtensions.of(stack).getHumanoidArmorModel(mc.player, stack,
+                    armor.getEquipmentSlot(), baseModel);
+            if (m == baseModel) throw new IllegalStateException("no worn model");
+            return m;
+        }
+        Object curioRenderer = top.theillusivec4.curios.api.client.CuriosRendererRegistry.getRenderer(stack.getItem())
+                .orElseThrow(() -> new IllegalStateException("no curio renderer"));
+        Field f = curioRenderer.getClass().getDeclaredField("renderer");
+        f.setAccessible(true);
+        Object renderer = f.get(curioRenderer);
+        // GearCurioItem.gear.kind(): RIG is worn on the body, the rest on the head.
+        Object gear = stack.getItem().getClass().getField("gear").get(stack.getItem());
+        String kind = String.valueOf(gear.getClass().getMethod("kind").invoke(gear));
+        net.minecraft.world.entity.EquipmentSlot slot = "RIG".equals(kind)
+                ? net.minecraft.world.entity.EquipmentSlot.CHEST : net.minecraft.world.entity.EquipmentSlot.HEAD;
+        java.lang.reflect.Method prep = null;
+        for (Class<?> c = renderer.getClass(); c != null && prep == null; c = c.getSuperclass()) {
+            for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                if (m.getName().equals("prepForRender") && m.getParameterCount() == 4) {
+                    prep = m;
+                    break;
+                }
+            }
+        }
+        if (prep == null) throw new IllegalStateException("no prepForRender on " + renderer.getClass().getName());
+        prep.setAccessible(true);
+        prep.invoke(renderer, mc.player, stack, slot, baseModel);
+        return (Model) renderer;
     }
 
     private static String cacheKey(ItemStack stack, String id) {
-        return MAGAZINES.contains(id) && stack.hasTag() ? id + "#" + stack.getTag().hashCode() : id;
+        // Per NBT for magazines (one item, every gun's model) and Rig & Plate gear (fitted
+        // attachments and a flipped visor change its outline).
+        return (MAGAZINES.contains(id) || id.startsWith(RIG)) && stack.hasTag()
+                ? id + "#" + stack.getTag().hashCode() : id;
     }
 
     /**
@@ -110,8 +180,9 @@ public final class FlatModelRenderer {
             PixelProbe.Box v = VISIBLE.get(key);
             if (v == null) {
                 // Probe px per block: bags are ~1.4 blocks (frame +-4 x +-2), magazines are
-                // fitted to 0.5 by their own renderer (frame +-2 x +-1).
-                float sp = MAGAZINES.contains(id) ? 256f : 128f;
+                // fitted to 0.5 by their own renderer (frame +-2 x +-1). Tools are one block
+                // long laid flat, the spear 1.5; worn gear is under a block tall - all +-2 x +-1.
+                float sp = DefaultItemFootprints.BACKPACKS.contains(id) ? 128f : 256f;
                 v = PixelProbe.measure(sp, p -> draw(p, stack, id), key);
                 if (v == null) throw new IllegalStateException("drew nothing");
                 VISIBLE.put(key, v);
@@ -160,6 +231,19 @@ public final class FlatModelRenderer {
                 pose.translate(-0.5f, -0.5f, -0.5f);
                 IClientItemExtensions.of(stack).getCustomRenderer().renderByItem(stack, ItemDisplayContext.FIXED,
                         pose, buffers, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            } else if (DefaultItemFootprints.SIDE_ON.contains(id)) {
+                // Upright in block space, head at +y: a quarter turn puts the head screen-left.
+                pose.mulPose(Axis.ZP.rotationDegrees(90f));
+                mc.getItemRenderer().render(stack, ItemDisplayContext.NONE, false, pose, buffers, FULL_BRIGHT,
+                        OverlayTexture.NO_OVERLAY, mc.getItemRenderer().getModel(stack, mc.level, null, 0));
+            } else if (id.startsWith(RIG)) {
+                // Model space (y down, front at -z) -> view space, front toward you: a half turn
+                // about X. Left stays left, so the wearer's left side is on screen-right.
+                Model model = rigModel(stack);
+                pose.mulPose(Axis.XP.rotationDegrees(180f));
+                model.renderToBuffer(pose, buffers.getBuffer(RenderType.armorCutoutNoCull(
+                                net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)),
+                        FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
             } else if (id.startsWith(CAPS + ":")) {
                 CapsModel cm = capsModel(id);
                 pose.mulPose(Axis.ZP.rotationDegrees(180f));
