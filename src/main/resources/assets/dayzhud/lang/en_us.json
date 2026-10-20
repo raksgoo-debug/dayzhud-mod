@@ -84,5 +84,13 @@
   "recap.dayzhud.cause.projectile": "Shot",
   "recap.dayzhud.cause.starvation": "Starved",
   "recap.dayzhud.cause.other": "Other (%s)",
-  "message.dayzhud.recap.kill": "Killed %s · %sm"
+  "message.dayzhud.recap.kill": "Killed %s · %sm",
+  "deathscreen.dayzhud.title": "YOU ARE DEAD",
+  "deathscreen.dayzhud.title.hardcore": "GAME OVER",
+  "recap.dayzhud.details": "Details",
+  "recap.dayzhud.this_life": "This life",
+  "recap.dayzhud.cause_of_death": "Cause of death",
+  "recap.dayzhud.score": "Score",
+  "recap.dayzhud.unknown": "Unknown",
+  "recap.dayzhud.none": "No recap for this death."
 }

@@ -15,9 +15,9 @@ public final class RecapConfig {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
         b.push("recap");
         ENABLED = b.comment(
-                        "Shows a recap panel on the death screen: who killed you, with what, from how",
+                        "Replaces the death screen with one showing who killed you (in 3D), with what, from how",
                         "far, whether it was a headshot, the damage you took just before dying, how",
-                        "long you survived and how many kills you had this life.")
+                        "long you survived and how many kills you had this life. false = vanilla's death screen.")
                 .define("enabled", true);
         WINDOW_SECONDS = b.comment(
                         "The recap's damage list covers this many seconds before death.")

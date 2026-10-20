@@ -1,4 +1,4 @@
-# dayzhud 2.19.0 - noise and death recap
+# dayzhud 2.19.0 - noise and a new death screen
 
 ## Noise
 
@@ -28,24 +28,37 @@ Project Zomboid style: what you do makes noise, and noise draws attention.
   Without TACZ, or if those names change, gunshots make no noise and everything else still
   works. Full-auto fire makes noise at most twice a second per shooter.
 
-## Death recap
+## Death screen
 
-- The death screen shows a panel left of the buttons, or under them on narrow screens:
-  - **Killed by:** the attacker's name, red for a player. If the killing blow had no attacker
-    (you bled out or fell after being shot), it shows whoever hurt you last, plus a
-    **Cause** line ("Bled out", "Fall").
-  - **Weapon:** the weapon that last hit you, as it was when the hit landed.
-  - **Distance**, and **HEADSHOT** for a TACZ headshot.
-  - **Wounds:** bleeding you still had when you died.
-  - **Damage taken in the last 30 seconds:** one line per attacker and weapon (or per cause),
-    with hit count and damage, biggest first.
-  - **Survived** (time since your last death) and **Kills** this life (players and hostile
-    mobs).
+Vanilla's death screen is replaced with one in the inventory's style:
+
+- **Title:** "YOU ARE DEAD" ("GAME OVER" in hardcore), with vanilla's death message under it.
+- **Killed by (left):** a 3D model of whoever killed you, wearing their gear and holding
+  their weapon. It turns to follow the mouse. Their name is under it (red for a player,
+  amber for a mob), then the weapon.
+  - If the killer is still loaded on your client, you see them live.
+  - Otherwise a copy is built from what the server sent: same mob type, or the same
+    player with their skin and their 6 equipment slots. Curios gear (rigs, backpacks)
+    isn't included.
+  - With no killer (a fall, starving) the box shows the cause in large text instead
+    ("BLED OUT", "FALL").
+- **Details (right):**
+  - weapon, distance, HEADSHOT (TACZ), wounds you still had;
+  - **Cause**, when you were killed by bleeding out or a fall after someone hurt you;
+  - **Damage taken in the last 30 seconds:** one line per attacker and weapon (or per
+    cause), with hit count and damage, biggest first;
+  - **This life:** time survived, kills (players and hostile mobs), score.
+- **Buttons:** Respawn (Spectate in hardcore) and Title Screen do exactly what vanilla's do,
+  including the 1-second delay and the "quit to title?" confirmation.
+- The screen is a subclass of vanilla's DeathScreen, so anything that checks for the death
+  screen still works. Only vanilla's own class is replaced; another mod's death screen is
+  left alone.
 - **Killer message:** whoever kills a player sees "Killed <name> - 87m" above the hotbar
   (`notifyKiller`).
 - **Kills this life** are kept in Forge's PlayerPersisted data, so they survive relogs and the
   End portal. They reset when you die.
-- `config/dayzhud-recap.toml`: `enabled`, `damageWindowSeconds`, `notifyKiller`.
+- `config/dayzhud-recap.toml`: `enabled` (false = vanilla's death screen),
+  `damageWindowSeconds`, `notifyKiller`.
 
 # dayzhud 2.18.0 - corpse loadout, Field Kit and Rig & Plate compat
 

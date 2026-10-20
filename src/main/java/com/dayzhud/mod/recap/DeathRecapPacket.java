@@ -2,11 +2,14 @@ package com.dayzhud.mod.recap;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
@@ -20,6 +23,19 @@ public class DeathRecapPacket {
 
     /** One row of the damage list: everything one attacker (with one weapon) or one cause did. */
     public record Line(Component who, @Nullable Component weapon, int hits, float damage) {}
+
+    /**
+     * Enough to draw whoever killed you on the death screen (2.19.0): their entity id, in case
+     * they're still loaded on your client, and otherwise a snapshot - entity type, profile for
+     * a player (so the skin loads), and what they had in each equipment slot, in
+     * EquipmentSlot.values() order.
+     */
+    public record KillerModel(int entityId, ResourceLocation type, @Nullable UUID profileId, String profileName,
+                              List<ItemStack> gear) {}
+
+    /** Vanilla's death message ("X was shot by Y"), or null. */
+    @Nullable public final Component deathMessage;
+    @Nullable public final KillerModel killerModel;
 
     @Nullable public final Component killer;
     public final boolean killerIsPlayer;
@@ -38,10 +54,13 @@ public class DeathRecapPacket {
     public final int lightWounds;
     public final int heavyWounds;
 
-    public DeathRecapPacket(@Nullable Component killer, boolean killerIsPlayer, @Nullable Component cause,
+    public DeathRecapPacket(@Nullable Component deathMessage, @Nullable KillerModel killerModel,
+                            @Nullable Component killer, boolean killerIsPlayer, @Nullable Component cause,
                             @Nullable Component weapon, float distance, boolean headshot, List<Line> lines,
                             float totalDamage, int windowSeconds, int survivedSeconds, int playerKills,
                             int mobKills, int lightWounds, int heavyWounds) {
+        this.deathMessage = deathMessage;
+        this.killerModel = killerModel;
         this.killer = killer;
         this.killerIsPlayer = killerIsPlayer;
         this.cause = cause;
@@ -59,6 +78,18 @@ public class DeathRecapPacket {
     }
 
     public static void encode(DeathRecapPacket p, FriendlyByteBuf buf) {
+        writeOptional(buf, p.deathMessage);
+        buf.writeBoolean(p.killerModel != null);
+        if (p.killerModel != null) {
+            KillerModel m = p.killerModel;
+            buf.writeVarInt(m.entityId());
+            buf.writeResourceLocation(m.type());
+            buf.writeBoolean(m.profileId() != null);
+            if (m.profileId() != null) buf.writeUUID(m.profileId());
+            buf.writeUtf(m.profileName(), 64);
+            buf.writeVarInt(m.gear().size());
+            for (ItemStack stack : m.gear()) buf.writeItem(stack);
+        }
         writeOptional(buf, p.killer);
         buf.writeBoolean(p.killerIsPlayer);
         writeOptional(buf, p.cause);
@@ -82,6 +113,18 @@ public class DeathRecapPacket {
     }
 
     public static DeathRecapPacket decode(FriendlyByteBuf buf) {
+        Component deathMessage = readOptional(buf);
+        KillerModel model = null;
+        if (buf.readBoolean()) {
+            int entityId = buf.readVarInt();
+            ResourceLocation type = buf.readResourceLocation();
+            UUID profileId = buf.readBoolean() ? buf.readUUID() : null;
+            String profileName = buf.readUtf(64);
+            int gearCount = Math.min(buf.readVarInt(), 16);
+            List<ItemStack> gear = new ArrayList<>(gearCount);
+            for (int i = 0; i < gearCount; i++) gear.add(buf.readItem());
+            model = new KillerModel(entityId, type, profileId, profileName, gear);
+        }
         Component killer = readOptional(buf);
         boolean killerIsPlayer = buf.readBoolean();
         Component cause = readOptional(buf);
@@ -93,7 +136,7 @@ public class DeathRecapPacket {
         for (int i = 0; i < count; i++) {
             lines.add(new Line(buf.readComponent(), readOptional(buf), buf.readVarInt(), buf.readFloat()));
         }
-        return new DeathRecapPacket(killer, killerIsPlayer, cause, weapon, distance, headshot, lines,
+        return new DeathRecapPacket(deathMessage, model, killer, killerIsPlayer, cause, weapon, distance, headshot, lines,
                 buf.readFloat(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), buf.readVarInt());
     }

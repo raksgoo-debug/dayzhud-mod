@@ -10,12 +10,14 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
@@ -29,6 +31,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Method;
@@ -227,6 +230,8 @@ public final class DeathRecapTracker {
         CompoundTag life = lifeTag(player);
 
         DeathRecapPacket packet = new DeathRecapPacket(
+                player.getCombatTracker().getDeathMessage(),
+                killerModel(killer),
                 killer == null ? null : killer.getDisplayName(),
                 killer instanceof Player,
                 blowHadAttacker ? null : causeOf(source),
@@ -242,6 +247,23 @@ public final class DeathRecapTracker {
                 light,
                 heavy);
         NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    /** What the death screen needs to draw the killer; null when there's no living killer. */
+    @Nullable
+    private static DeathRecapPacket.KillerModel killerModel(@Nullable Entity killer) {
+        if (!(killer instanceof LivingEntity living)) return null;
+        ResourceLocation type = ForgeRegistries.ENTITY_TYPES.getKey(living.getType());
+        if (type == null) return null;
+        List<ItemStack> gear = new ArrayList<>();
+        for (EquipmentSlot slot : EquipmentSlot.values()) gear.add(living.getItemBySlot(slot).copy());
+        UUID profileId = null;
+        String profileName = "";
+        if (living instanceof Player p) {
+            profileId = p.getGameProfile().getId();
+            profileName = p.getGameProfile().getName();
+        }
+        return new DeathRecapPacket.KillerModel(living.getId(), type, profileId, profileName, gear);
     }
 
     // ---- kills this life -----------------------------------------------------------------
