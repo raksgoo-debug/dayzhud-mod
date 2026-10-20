@@ -70,6 +70,8 @@ public class VitalsTracker {
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         // Otherwise the last world's readings linger into the next one you join.
         ClientSkillState.reset();
+        com.dayzhud.mod.noise.ClientNoise.reset();
+        com.dayzhud.mod.recap.ClientDeathRecap.clear();
         displayedStamina01 = 1f;
         localTemperature01 = 0.5f;
     }

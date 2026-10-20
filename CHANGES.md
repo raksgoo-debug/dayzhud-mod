@@ -1,3 +1,52 @@
+# dayzhud 2.19.0 - noise and death recap
+
+## Noise
+
+Project Zomboid style: what you do makes noise, and noise draws attention.
+
+- **Sources** (radius in blocks, all in `config/dayzhud-noise.toml`):
+  - gunshot (TACZ) 80, or 20 with a suppressor fitted;
+  - explosion 96;
+  - a player breaking glass or a glass pane 24;
+  - loosing an arrow 6;
+  - footsteps: sprinting 14, walking 6, sneaking or crawling silent.
+- **Mobs:** hostile mobs with no target walk to the noise, give or take a few blocks, for up
+  to 30 seconds. At most the 24 nearest react to one noise. Once there they use their own AI,
+  so if you're still around they'll find you. Endermen and the Warden ignore noise
+  (`deafMobs`).
+- **Players:** other players who hear a gunshot, explosion or breaking glass get a marker on
+  a ring around the crosshair. It points the way the noise came from and turns as you turn.
+  It's labelled with what it was and how far ("GUNSHOT - DISTANT"), and fades after 4
+  seconds. Players hear 1.5x as far as mobs (`playerHearingMultiplier`). Only the direction
+  is sent, never the position.
+- **Noise meter:** four bars above the movement icon show how far your noise carries right
+  now. Sneaking shows none, walking 1, sprinting 2, and after a shot all 4 light up for a
+  moment.
+- **Suppressors:** a TACZ gun counts as suppressed when its muzzle attachment's id contains
+  "silencer" or "suppressor" (`suppressorKeywords`).
+- **TACZ** is reached by reflection (its GunFireEvent, or GunShootEvent on older builds).
+  Without TACZ, or if those names change, gunshots make no noise and everything else still
+  works. Full-auto fire makes noise at most twice a second per shooter.
+
+## Death recap
+
+- The death screen shows a panel left of the buttons, or under them on narrow screens:
+  - **Killed by:** the attacker's name, red for a player. If the killing blow had no attacker
+    (you bled out or fell after being shot), it shows whoever hurt you last, plus a
+    **Cause** line ("Bled out", "Fall").
+  - **Weapon:** the weapon that last hit you, as it was when the hit landed.
+  - **Distance**, and **HEADSHOT** for a TACZ headshot.
+  - **Wounds:** bleeding you still had when you died.
+  - **Damage taken in the last 30 seconds:** one line per attacker and weapon (or per cause),
+    with hit count and damage, biggest first.
+  - **Survived** (time since your last death) and **Kills** this life (players and hostile
+    mobs).
+- **Killer message:** whoever kills a player sees "Killed <name> - 87m" above the hotbar
+  (`notifyKiller`).
+- **Kills this life** are kept in Forge's PlayerPersisted data, so they survive relogs and the
+  End portal. They reset when you die.
+- `config/dayzhud-recap.toml`: `enabled`, `damageWindowSeconds`, `notifyKiller`.
+
 # dayzhud 2.18.0 - corpse loadout, Field Kit and Rig & Plate compat
 
 ## Corpse loot column

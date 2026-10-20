@@ -141,5 +141,17 @@ public class NetworkHandler {
                 ApplyHealingPacket::encode,
                 ApplyHealingPacket::decode,
                 ApplyHealingPacket::handle);
+
+        // Noise and death recap (2.19.0). Appended, per the note above.
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.noise.NoisePacket.class,
+                com.dayzhud.mod.noise.NoisePacket::encode,
+                com.dayzhud.mod.noise.NoisePacket::decode,
+                com.dayzhud.mod.noise.NoisePacket::handle);
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.recap.DeathRecapPacket.class,
+                com.dayzhud.mod.recap.DeathRecapPacket::encode,
+                com.dayzhud.mod.recap.DeathRecapPacket::decode,
+                com.dayzhud.mod.recap.DeathRecapPacket::handle);
     }
 }

@@ -5,7 +5,6 @@ import com.dayzhud.mod.inventory.NetworkHandler;
 import com.dayzhud.mod.inventory.TarkovMenuTypes;
 import com.dayzhud.mod.market.MarketConfig;
 import com.dayzhud.mod.search.SearchConfig;
-import com.dayzhud.mod.search.SearchConfig;
 import com.dayzhud.mod.sound.ModSounds;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -48,9 +47,16 @@ public class DayzHudMod {
                 com.dayzhud.mod.weight.WeightConfig.SPEC, "dayzhud-weight.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
                 com.dayzhud.mod.injury.InjuryConfig.SPEC, "dayzhud-injuries.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.noise.NoiseConfig.SPEC, "dayzhud-noise.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.recap.RecapConfig.SPEC, "dayzhud-recap.toml");
         modEventBus.addListener(this::commonSetup);
         // LR Tactical's meds treat bleeding/pain through its own event (optional, reflective).
         com.dayzhud.mod.injury.InjurySystem.registerCompat();
+        // TACZ gunshots make noise; TACZ headshots show in the death recap (optional, reflective).
+        com.dayzhud.mod.noise.NoiseSystem.registerCompat();
+        com.dayzhud.mod.recap.DeathRecapTracker.registerCompat();
 
         // HUD rendering, vanilla overlay suppression, and the stamina/temperature
         // trackers are all purely visual for the local player, so they live client-only.

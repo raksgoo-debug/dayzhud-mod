@@ -6,6 +6,7 @@ import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -41,5 +42,7 @@ public class ClientEvents {
     public static void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("dayz_hotbar", new DayzHotbarOverlay());
         event.registerAboveAll("dayz_status_stack", new DayzHudOverlay());
+        // Noise markers ring the crosshair, so they sit just above it and under chat/menus.
+        event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), "dayz_noise", new NoiseOverlay());
     }
 }

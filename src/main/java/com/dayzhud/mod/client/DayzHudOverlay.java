@@ -318,6 +318,39 @@ public class DayzHudOverlay implements IGuiOverlay {
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         graphics.blit(icon, x, y, 0, 0, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE, MOVEMENT_ICON_SIZE);
         RenderSystem.disableBlend();
+
+        drawNoiseMeter(graphics, player, x + (MOVEMENT_ICON_SIZE - NOISE_METER_WIDTH) / 2, y - NOISE_METER_GAP);
+    }
+
+    private static final int NOISE_BARS = 4;
+    private static final int NOISE_BAR_WIDTH = 2;
+    private static final int NOISE_BAR_STEP = 3; // bar width + 1px gap
+    private static final int NOISE_METER_WIDTH = NOISE_BARS * NOISE_BAR_STEP - 1;
+    private static final int NOISE_METER_GAP = 3;
+    /** A noise this many blocks wide or more fills the meter. */
+    private static final double NOISE_METER_FULL = 32.0;
+
+    /**
+     * Noise meter (2.19.0): four rising bars directly above the movement icon showing how far
+     * your noise carries right now - your footsteps while moving (none while sneaking), or a
+     * few seconds of full bars after a gunshot. Uses the same radii the server uses, so it
+     * shows what mobs actually hear.
+     *
+     * @param bottom the y the bars stand on
+     */
+    private void drawNoiseMeter(GuiGraphics graphics, LocalPlayer player, int left, int bottom) {
+        if (!com.dayzhud.mod.noise.NoiseConfig.ENABLED.get()) return;
+        boolean moving = player.getDeltaMovement().horizontalDistanceSqr() > 1.0E-4 && !player.isPassenger();
+        double steps = moving ? com.dayzhud.mod.noise.NoiseSystem.footstepRadius(player) : 0.0;
+        float level = Math.max((float) Math.min(1.0, steps / NOISE_METER_FULL),
+                com.dayzhud.mod.noise.ClientNoise.selfPulse01());
+        int lit = level <= 0f ? 0 : Math.min(NOISE_BARS, (int) Math.ceil(level * NOISE_BARS));
+        int litColor = 0xFF000000 | (lit >= 4 ? COLOR_CRITICAL : lit == 3 ? COLOR_LOW : COLOR_NEUTRAL);
+        for (int i = 0; i < NOISE_BARS; i++) {
+            int x = left + i * NOISE_BAR_STEP;
+            int h = 2 * (i + 1);
+            graphics.fill(x, bottom - h, x + NOISE_BAR_WIDTH, bottom, i < lit ? litColor : 0x60A0A0A0);
+        }
     }
 
     private ResourceLocation movementIconFor(LocalPlayer player) {
