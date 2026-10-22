@@ -3,7 +3,6 @@ package com.dayzhud.mod.client;
 import com.dayzhud.mod.inventory.StyledTheme;
 import com.dayzhud.mod.recap.ClientDeathRecap;
 import com.dayzhud.mod.recap.DeathRecapPacket;
-import com.mojang.authlib.GameProfile;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -11,19 +10,13 @@ import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -52,9 +45,8 @@ import java.util.Locale;
  * never created (init is replaced); the two buttons are hand-drawn like the rest of the mod's
  * screens, and do exactly what vanilla's do, including the one-second delay before they work.
  *
- * The killer is drawn as their live entity when it's still loaded on this client (so you see
- * them as they are now, skin layers and all), otherwise as a copy built from the snapshot
- * the server sent: same entity type, same skin for a player, same gear.
+ * The killer is drawn from KillerModelCache: the real entity, captured the moment you died
+ * and kept even after the client unloads it, or a faithful rebuild when it was never loaded.
  */
 public class DayzDeathScreen extends DeathScreen {
 
@@ -77,10 +69,6 @@ public class DayzDeathScreen extends DeathScreen {
     private final boolean hardcore;
     private int ticks;
     private boolean respawning;
-
-    @Nullable private DeathRecapPacket modelFor;
-    @Nullable private LivingEntity snapshot;
-    private boolean snapshotFailed;
 
     public DayzDeathScreen(boolean hardcore) {
         super(null, hardcore);
@@ -212,7 +200,7 @@ public class DayzDeathScreen extends DeathScreen {
         centered(g, r.killer, cx, nameY, w - 8, r.killerIsPlayer ? StyledTheme.BAD : StyledTheme.WARN);
         if (r.weapon != null) centered(g, r.weapon, cx, nameY + LINE, w - 8, StyledTheme.LABEL_DIM);
 
-        LivingEntity model = killerModel(r);
+        LivingEntity model = KillerModelCache.get(r);
         if (model == null) return;
         int areaTop = y + StyledTheme.STRIP_H + 6;
         int feet = nameY - 6;
@@ -222,9 +210,19 @@ public class DayzDeathScreen extends DeathScreen {
         // Turns to follow the mouse, like the inventory preview.
         float lookX = (float) Math.atan((cx - mouseX) / 40f);
         float lookY = (float) Math.atan((feet - scale * tall * 0.75f - mouseY) / 40f);
+        // Drawn standing and unflinching even if they've since been hurt or killed (a teammate
+        // avenging you would otherwise show them toppling over).
+        int deathTime = model.deathTime, hurtTime = model.hurtTime;
+        model.deathTime = 0;
+        model.hurtTime = 0;
         g.enableScissor(x + 1, areaTop - 2, x + w - 1, feet + 2);
-        InventoryScreen.renderEntityInInventoryFollowsAngle(g, cx, feet, scale, lookX, lookY, model);
-        g.disableScissor();
+        try {
+            InventoryScreen.renderEntityInInventoryFollowsAngle(g, cx, feet, scale, lookX, lookY, model);
+        } finally {
+            g.disableScissor();
+            model.deathTime = deathTime;
+            model.hurtTime = hurtTime;
+        }
     }
 
     /** Right: the numbers. Clipped to the box on short screens. */
@@ -355,58 +353,6 @@ public class DayzDeathScreen extends DeathScreen {
         int hours = minutes / 60;
         if (hours < 24) return hours + "h " + (minutes % 60) + "m";
         return (hours / 24) + "d " + (hours % 24) + "h";
-    }
-
-    // ---- the killer's model -----------------------------------------------------------------
-
-    /** The live killer if this client still has them loaded, else a snapshot copy, else null. */
-    @Nullable
-    private LivingEntity killerModel(DeathRecapPacket r) {
-        DeathRecapPacket.KillerModel m = r.killerModel;
-        if (m == null || minecraft == null || minecraft.level == null) return null;
-        if (modelFor != r) {
-            modelFor = r;
-            snapshot = null;
-            snapshotFailed = false;
-        }
-        Entity live = minecraft.level.getEntity(m.entityId());
-        if (live instanceof LivingEntity living && living.isAlive()
-                && m.type().equals(ForgeRegistries.ENTITY_TYPES.getKey(living.getType()))) {
-            return living;
-        }
-        if (snapshot == null && !snapshotFailed) {
-            try {
-                snapshot = buildSnapshot(minecraft.level, m);
-            } catch (RuntimeException e) {
-                com.dayzhud.mod.DayzHudMod.LOGGER.debug("[dayzhud] Couldn't build the killer's model", e);
-            }
-            snapshotFailed = snapshot == null;
-        }
-        return snapshot;
-    }
-
-    @Nullable
-    private static LivingEntity buildSnapshot(ClientLevel level, DeathRecapPacket.KillerModel m) {
-        LivingEntity entity;
-        if (m.profileId() != null) {
-            // Same UUID as the real player, so the skin comes from the tab list like theirs does.
-            entity = new RemotePlayer(level, new GameProfile(m.profileId(), m.profileName())) {
-                {
-                    // Show every skin layer (hat, jacket, sleeves...) - a fresh player has them all off.
-                    getEntityData().set(DATA_PLAYER_MODE_CUSTOMISATION, (byte) 0x7F);
-                }
-            };
-        } else {
-            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(m.type());
-            Entity created = type == null ? null : type.create(level);
-            if (!(created instanceof LivingEntity living)) return null;
-            entity = living;
-        }
-        EquipmentSlot[] slots = EquipmentSlot.values();
-        for (int i = 0; i < slots.length && i < m.gear().size(); i++) {
-            entity.setItemSlot(slots[i], m.gear().get(i));
-        }
-        return entity;
     }
 
     // ---- input ------------------------------------------------------------------------------

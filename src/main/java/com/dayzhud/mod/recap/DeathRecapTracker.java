@@ -9,7 +9,11 @@ import com.dayzhud.mod.inventory.NetworkHandler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
@@ -17,12 +21,14 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.entity.IEntityAdditionalSpawnData;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -259,11 +265,70 @@ public final class DeathRecapTracker {
         for (EquipmentSlot slot : EquipmentSlot.values()) gear.add(living.getItemBySlot(slot).copy());
         UUID profileId = null;
         String profileName = "";
-        if (living instanceof Player p) {
-            profileId = p.getGameProfile().getId();
-            profileName = p.getGameProfile().getName();
+        // Only a real player gets rebuilt from their profile. An NPC that happens to extend
+        // Player has its own entity type and is rebuilt like any other mob.
+        boolean realPlayer = living instanceof Player && living.getType() == EntityType.PLAYER;
+        if (realPlayer) {
+            profileId = ((Player) living).getGameProfile().getId();
+            profileName = ((Player) living).getGameProfile().getName();
         }
-        return new DeathRecapPacket.KillerModel(living.getId(), type, profileId, profileName, gear);
+        return new DeathRecapPacket.KillerModel(living.getId(), type, profileId, profileName, gear,
+                realPlayer ? new byte[0] : spawnDataOf(living), syncedDataOf(living),
+                realPlayer ? null : nbtOf(living));
+    }
+
+    /** NBT bigger than this is left out of the snapshot (an NPC with a full inventory, say). */
+    private static final int MAX_SNAPSHOT_NBT_BYTES = 256 * 1024;
+
+    /** Forge's additional spawn data, exactly as the entity sends it when it comes into view. */
+    private static byte[] spawnDataOf(LivingEntity living) {
+        if (!(living instanceof IEntityAdditionalSpawnData spawn)) return new byte[0];
+        try {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            spawn.writeSpawnData(buf);
+            return bytesOf(buf);
+        } catch (RuntimeException e) {
+            DayzHudMod.LOGGER.debug("[dayzhud] Killer's spawn data unreadable", e);
+            return new byte[0];
+        }
+    }
+
+    /**
+     * The entity's synced data (everything not at its default), in the same wire format as
+     * vanilla's entity data packet - which is what the client reads it back with.
+     */
+    private static byte[] syncedDataOf(LivingEntity living) {
+        try {
+            List<SynchedEntityData.DataValue<?>> values = living.getEntityData().getNonDefaultValues();
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            new ClientboundSetEntityDataPacket(living.getId(), values == null ? List.of() : values).write(buf);
+            return bytesOf(buf);
+        } catch (RuntimeException e) {
+            DayzHudMod.LOGGER.debug("[dayzhud] Killer's entity data unreadable", e);
+            return new byte[0];
+        }
+    }
+
+    /** Saved NBT, minus what a picture doesn't need; null if it's too big to send. */
+    @Nullable
+    private static CompoundTag nbtOf(LivingEntity living) {
+        try {
+            CompoundTag tag = living.saveWithoutId(new CompoundTag());
+            tag.remove("Passengers");
+            tag.remove("Brain");
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+            buf.writeNbt(tag);
+            return buf.readableBytes() <= MAX_SNAPSHOT_NBT_BYTES ? tag : null;
+        } catch (RuntimeException e) {
+            DayzHudMod.LOGGER.debug("[dayzhud] Killer's NBT unreadable", e);
+            return null;
+        }
+    }
+
+    private static byte[] bytesOf(FriendlyByteBuf buf) {
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        return bytes;
     }
 
     // ---- kills this life -----------------------------------------------------------------

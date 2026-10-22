@@ -36,10 +36,14 @@ Vanilla's death screen is replaced with one in the inventory's style:
 - **Killed by (left):** a 3D model of whoever killed you, wearing their gear and holding
   their weapon. It turns to follow the mouse. Their name is under it (red for a player,
   amber for a mob), then the weapon.
-  - If the killer is still loaded on your client, you see them live.
-  - Otherwise a copy is built from what the server sent: same mob type, or the same
-    player with their skin and their 6 equipment slots. Curios gear (rigs, backpacks)
-    isn't included.
+  - The real killer is captured the moment you die and kept for the whole death screen, so
+    it keeps its own skin and gear. (The client unloads everything around you about a
+    second after death; without this a modded NPC turned into Steve at that point.)
+  - If the killer was never loaded on your client, a copy is rebuilt from what the server
+    sent. That's the same data a client gets when an entity comes into view (Forge spawn
+    data, synced entity data, equipment), plus the entity's saved NBT. Modded NPCs keep
+    their skin and loadout, and a player keeps theirs (from the tab list). Curios gear
+    (rigs, backpacks) isn't included.
   - With no killer (a fall, starving) the box shows the cause in large text instead
     ("BLED OUT", "FALL").
 - **Details (right):**

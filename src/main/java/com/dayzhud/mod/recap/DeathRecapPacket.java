@@ -1,5 +1,6 @@
 package com.dayzhud.mod.recap;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -25,13 +26,17 @@ public class DeathRecapPacket {
     public record Line(Component who, @Nullable Component weapon, int hits, float damage) {}
 
     /**
-     * Enough to draw whoever killed you on the death screen (2.19.0): their entity id, in case
-     * they're still loaded on your client, and otherwise a snapshot - entity type, profile for
-     * a player (so the skin loads), and what they had in each equipment slot, in
-     * EquipmentSlot.values() order.
+     * Enough to draw whoever killed you on the death screen (2.19.0): their entity id, so the
+     * client can hold on to the real entity while it's still loaded, and a snapshot to rebuild
+     * them from if it isn't. The snapshot is what a client normally gets when an entity comes
+     * into view - its type, Forge's additional spawn data, its synced entity data (skins and
+     * variants usually live in one of those two) and its equipment, in EquipmentSlot.values()
+     * order - plus its saved NBT for mods that keep the skin there. A real player instead
+     * carries their profile, so the skin comes from the tab list.
      */
     public record KillerModel(int entityId, ResourceLocation type, @Nullable UUID profileId, String profileName,
-                              List<ItemStack> gear) {}
+                              List<ItemStack> gear, byte[] spawnData, byte[] syncedData,
+                              @Nullable CompoundTag nbt) {}
 
     /** Vanilla's death message ("X was shot by Y"), or null. */
     @Nullable public final Component deathMessage;
@@ -89,6 +94,9 @@ public class DeathRecapPacket {
             buf.writeUtf(m.profileName(), 64);
             buf.writeVarInt(m.gear().size());
             for (ItemStack stack : m.gear()) buf.writeItem(stack);
+            buf.writeByteArray(m.spawnData());
+            buf.writeByteArray(m.syncedData());
+            buf.writeNbt(m.nbt());
         }
         writeOptional(buf, p.killer);
         buf.writeBoolean(p.killerIsPlayer);
@@ -123,7 +131,10 @@ public class DeathRecapPacket {
             int gearCount = Math.min(buf.readVarInt(), 16);
             List<ItemStack> gear = new ArrayList<>(gearCount);
             for (int i = 0; i < gearCount; i++) gear.add(buf.readItem());
-            model = new KillerModel(entityId, type, profileId, profileName, gear);
+            byte[] spawnData = buf.readByteArray();
+            byte[] syncedData = buf.readByteArray();
+            CompoundTag nbt = buf.readNbt();
+            model = new KillerModel(entityId, type, profileId, profileName, gear, spawnData, syncedData, nbt);
         }
         Component killer = readOptional(buf);
         boolean killerIsPlayer = buf.readBoolean();
