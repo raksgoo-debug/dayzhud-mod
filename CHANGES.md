@@ -39,6 +39,13 @@ Vanilla's death screen is replaced with one in the inventory's style:
   - The real killer is captured the moment you die and kept for the whole death screen, so
     it keeps its own skin and gear. (The client unloads everything around you about a
     second after death; without this a modded NPC turned into Steve at that point.)
+  - Unloading also cuts the killer off from its mod data (Forge disables an entity's
+    capabilities, and NPC mods often keep the skin in one). So the kept killer has those
+    revived, and the skin its renderer used at capture is remembered. If the renderer later
+    asks for a different texture (Steve), the remembered skin is drawn instead.
+  - The game log gets one line per death naming the killer's type, class, renderer, how it
+    was obtained and its skin, plus a line if the skin had to be swapped back. Look for
+    `[dayzhud] Death screen:`.
   - If the killer was never loaded on your client, a copy is rebuilt from what the server
     sent. That's the same data a client gets when an entity comes into view (Forge spawn
     data, synced entity data, equipment), plus the entity's saved NBT. Modded NPCs keep

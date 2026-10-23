@@ -9,7 +9,6 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.CommonComponents;
@@ -217,7 +216,7 @@ public class DayzDeathScreen extends DeathScreen {
         model.hurtTime = 0;
         g.enableScissor(x + 1, areaTop - 2, x + w - 1, feet + 2);
         try {
-            InventoryScreen.renderEntityInInventoryFollowsAngle(g, cx, feet, scale, lookX, lookY, model);
+            KillerModelCache.draw(g, model, cx, feet, scale, lookX, lookY);
         } finally {
             g.disableScissor();
             model.deathTime = deathTime;
