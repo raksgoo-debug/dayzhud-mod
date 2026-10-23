@@ -71,6 +71,17 @@ Vanilla's death screen is replaced with one in the inventory's style:
 - `config/dayzhud-recap.toml`: `enabled` (false = vanilla's death screen),
   `damageWindowSeconds`, `notifyKiller`.
 
+## Market
+
+- **MAGAZINES always shows on BUY.** TaCZ Magazines lists its magazines only once gun data
+  has loaded, which can be just after the trader screen opens. The shop's list went out
+  once, on open, so magazines only appeared after you closed and reopened it. Now:
+  - while the trader is open, the server checks its list once a second and sends it again
+    if it changed (magazines arriving late, a price reload);
+  - the open screen redraws the stock list as soon as a new list arrives, and keeps your
+    selection on the same item. Before, it only redrew when you clicked a category or
+    typed in search.
+
 # dayzhud 2.18.0 - corpse loadout, Field Kit and Rig & Plate compat
 
 ## Corpse loot column

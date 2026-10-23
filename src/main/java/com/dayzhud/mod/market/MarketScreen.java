@@ -71,6 +71,8 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
     private int selected = -1;
     private int quantity = 1;
     private List<Integer> filtered = new ArrayList<>();
+    /** The catalogue {@link #filtered} was built from - see containerTick. */
+    private List<MarketOffer> shownOffers;
     private Confirm confirm;
 
     private record Confirm(String title, String line, String cost, Runnable onConfirm) {}
@@ -167,9 +169,35 @@ public class MarketScreen extends AbstractContainerScreen<MarketMenu> {
         if (search != null) search.setValue(query);
     }
 
+    /**
+     * The catalogue arrives in its own packet just after the screen opens, and the server
+     * re-sends it while the screen is open whenever it changes (magazines that load late,
+     * a price reload). Either way the list was built from the old one, so rebuild it - and
+     * keep the selection on the same item, since offers are addressed by index and a new
+     * catalogue can renumber them.
+     */
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        List<MarketOffer> now = ClientMarketState.offers();
+        if (now == shownOffers) return;
+        MarketOffer was = shownOffers != null && selected >= 0 && selected < shownOffers.size()
+                ? shownOffers.get(selected) : null;
+        rebuild();
+        if (was == null) return;
+        for (int i : filtered) {
+            MarketOffer o = now.get(i);
+            if (ItemStack.isSameItemSameTags(o.prototype(), was.prototype())) {
+                selected = i;
+                break;
+            }
+        }
+    }
+
     private void rebuild() {
         filtered = new ArrayList<>();
         List<MarketOffer> offers = ClientMarketState.offers();
+        shownOffers = offers;
         String query = search == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
         for (int i = 0; i < offers.size(); i++) {
             MarketOffer offer = offers.get(i);
