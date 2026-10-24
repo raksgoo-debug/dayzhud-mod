@@ -30,7 +30,9 @@ public final class DistantGunfire {
 
     public static void onShot(LivingEntity shooter, ItemStack gun, boolean suppressed) {
         if (!GunfireConfig.ENABLED.get() || !(shooter.level() instanceof ServerLevel level)) return;
-        double range = suppressed ? GunfireConfig.SUPPRESSED_RANGE.get() : rangeOf(gun);
+        GunLoudness.Profile loud = GunLoudness.of(gun);
+        double range = suppressed ? GunfireConfig.SUPPRESSED_RANGE.get() * Math.min(loud.range(), 1.5)
+                : rangeOf(gun, loud);
         double near = GunfireConfig.DISTANT_FROM.get() * 0.6;
         if (range <= near) return;
         Vec3 pos = shooter.getEyePosition();
@@ -42,15 +44,16 @@ public final class DistantGunfire {
             if (distSq < nearSq || distSq > rangeSq) continue;
             if (packet == null) {
                 packet = new DistantShotPacket(pos.x, pos.y, pos.z, gun.copy(), suppressed, shooter.getId(),
-                        (float) range);
+                        (float) range, loud.gain());
             }
             DistantShotPacket send = packet;
             NetworkHandler.CHANNEL.send(PacketDistributor.PLAYER.with(() -> listener), send);
         }
     }
 
-    private static double rangeOf(ItemStack gun) {
-        double fallback = GunfireConfig.RANGE.get();
+    /** gunRanges' entry for this gun if it has one, else range scaled by its calibre. */
+    private static double rangeOf(ItemStack gun, GunLoudness.Profile loud) {
+        double fallback = GunfireConfig.RANGE.get() * loud.range();
         List<? extends String> lines = GunfireConfig.GUN_RANGES.get();
         if (lines.isEmpty()) return fallback;
         if (lines != parsedFrom) {

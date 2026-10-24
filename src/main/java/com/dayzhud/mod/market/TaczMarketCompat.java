@@ -569,6 +569,34 @@ public final class TaczMarketCompat {
         return out;
     }
 
+    /** What a gun fires, for how loud it is (DistantGunfire). Fields are null/0 when unknown. */
+    public record Ballistics(String type, String ammoId, float damage, int pellets) {}
+
+    /**
+     * A gun id's type, calibre and damage from its index. Not gated by the market's TACZ switch -
+     * gunshot loudness uses it on any server with TACZ. Null when unknown.
+     */
+    public static Ballistics ballisticsOf(ResourceLocation id) {
+        if (id == null || !isModLoaded() || !resolve()) return null;
+        try {
+            @SuppressWarnings("unchecked")
+            Set<Map.Entry<ResourceLocation, Object>> all =
+                    (Set<Map.Entry<ResourceLocation, Object>>) getAllCommonGunIndex.invoke(null);
+            for (Map.Entry<ResourceLocation, Object> e : all) {
+                if (!e.getKey().equals(id)) continue;
+                String type = String.valueOf(gunIndexGetType.invoke(e.getValue())).toLowerCase(java.util.Locale.ROOT);
+                Object gunData = gunIndexGetGunData.invoke(e.getValue());
+                Object ammo = gunDataGetAmmoId.invoke(gunData);
+                Object bullet = gunDataGetBulletData.invoke(gunData);
+                float damage = bullet == null ? 0f : ((Number) bulletGetDamage.invoke(bullet)).floatValue();
+                int pellets = bullet == null ? 1 : Math.max(1, ((Number) bulletGetAmount.invoke(bullet)).intValue());
+                return new Ballistics(type, ammo == null ? null : ammo.toString(), damage, pellets);
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
     /** Everything the details panel wants about one gun. Client-safe. */
     public record GunStats(float damage, int pellets, int rpm, int pierce, float armorIgnore,
                            float speed, float headshot, int magazine, String ammoId,

@@ -22,9 +22,11 @@ public class DistantShotPacket {
     final int shooterId;
     /** How far this gun carries, so the client can fade it out at the right distance. */
     final float range;
+    /** Volume multiplier for its calibre (GunLoudness). */
+    final float loudness;
 
     public DistantShotPacket(double x, double y, double z, ItemStack gun, boolean suppressed, int shooterId,
-                             float range) {
+                             float range, float loudness) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -32,6 +34,7 @@ public class DistantShotPacket {
         this.suppressed = suppressed;
         this.shooterId = shooterId;
         this.range = range;
+        this.loudness = loudness;
     }
 
     public double x() { return x; }
@@ -41,6 +44,7 @@ public class DistantShotPacket {
     public boolean suppressed() { return suppressed; }
     public int shooterId() { return shooterId; }
     public float range() { return range; }
+    public float loudness() { return loudness; }
 
     public static void encode(DistantShotPacket p, FriendlyByteBuf buf) {
         buf.writeDouble(p.x);
@@ -50,11 +54,12 @@ public class DistantShotPacket {
         buf.writeBoolean(p.suppressed);
         buf.writeVarInt(p.shooterId);
         buf.writeFloat(p.range);
+        buf.writeFloat(p.loudness);
     }
 
     public static DistantShotPacket decode(FriendlyByteBuf buf) {
         return new DistantShotPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readItem(),
-                buf.readBoolean(), buf.readVarInt(), buf.readFloat());
+                buf.readBoolean(), buf.readVarInt(), buf.readFloat(), buf.readFloat());
     }
 
     public static void handle(DistantShotPacket p, Supplier<NetworkEvent.Context> ctx) {

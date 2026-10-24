@@ -43,8 +43,26 @@ would, and you hear it from where it was fired.
 - **Quieter and darker with distance:** -6 dB every time the distance doubles, a little air
   absorption, and up to 6% lower pitch at the far end. It fades out over the last 20% of the
   gun's range.
-- **Range:** 640 blocks, 128 suppressed. Per-gun overrides go in `gunRanges`, e.g.
-  `"tacz:m107=1200"`.
+- **Loudness by calibre:** each gun is classed from its TACZ ammo id (then its type, then
+  its damage), and the log names the class each gun got:
+
+  | Class | e.g. | Volume | Range |
+  |---|---|---|---|
+  | pistol | 9mm, .45, 5.7, .357 | x0.7 | x0.55 |
+  | shotgun | 12 gauge | x1 | x0.85 |
+  | intermediate | 5.56, 5.45, 7.62x39 | x1 | x1 |
+  | full-power | .308, 7.62x54, .30-06 | x1.25 | x1.35 |
+  | heavy | .50 BMG, .338, 12.7 | x1.7 | x2 |
+
+  Mobs hear guns on the same scale, so a .50 draws them from twice as far.
+- **Range:** 640 blocks for an intermediate rifle (so 352 for a pistol, 1280 for a .50),
+  128 suppressed (scaled by calibre up to x1.5). Per-gun overrides in `gunRanges`, e.g.
+  `"tacz:m107=1200"`, win over the calibre scaling.
+- **Muffled through terrain:** solid blocks on the straight line between you and the shot
+  make it quieter and duller. Any cover at all takes it to about -7 dB, and it keeps falling
+  with thickness, to about -18 dB. Leaves, glass and fences don't count, nor do the couple of
+  blocks right at either end, so you leaning on a wall isn't "behind cover". Echoes still come
+  round, a little weaker, so a shot behind a hill is a dull thump with the roll still in it.
 - **Echoes:**
   - rays from you find walls, cliffs and buildings within 160 blocks; up to 3 become echoes,
     each coming from the surface it bounced off, delayed by the extra path;
@@ -54,7 +72,8 @@ would, and you hear it from where it was fired.
 - Every round is heard, not just one per burst. Players already in range of TACZ's own sound
   aren't sent anything.
 - `config/dayzhud-gunfire.toml`: `enabled`, `distantFrom`, `range`, `suppressedRange`,
-  `gunRanges`, `volume`, `speedOfSound` (0 = no delay), `echoes`.
+  `gunRanges`, `volume`, `speedOfSound` (0 = no delay), `echoes`, `loudnessByCalibre`,
+  `occlusion`.
 
 ## Death screen
 

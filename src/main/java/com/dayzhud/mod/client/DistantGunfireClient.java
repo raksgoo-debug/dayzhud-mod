@@ -4,9 +4,11 @@ import com.dayzhud.mod.gunfire.DistantShotPacket;
 import com.dayzhud.mod.gunfire.GunfireConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -30,7 +32,10 @@ import java.util.Map;
  *   <li><b>Late</b> - delayed by distance / speedOfSound: a shot 340 blocks off lands a
  *       second after the flash.</li>
  *   <li><b>Quieter with distance</b> - -6 dB per doubling (spherical spreading) plus a little
- *       air absorption, faded in under TACZ's own sound and out at the gun's range.</li>
+ *       air absorption, faded in under TACZ's own sound and out at the gun's range - and
+ *       louder or quieter by calibre (GunLoudness, worked out on the server).</li>
+ *   <li><b>Muffled through terrain</b> - solid blocks on the line to the shot make the direct
+ *       sound quieter and duller; echoes still come round.</li>
  *   <li><b>Darker with distance</b> - a few percent lower pitch, which is as close to air
  *       eating the high end as vanilla's sound engine gets without filters.</li>
  *   <li><b>Echoes</b> - rays from you find walls, cliffs and buildings within 160 blocks. Each
@@ -69,9 +74,21 @@ public final class DistantGunfireClient {
         Vec3 ear = mc.gameRenderer.getMainCamera().getPosition();
         Vec3 source = new Vec3(p.x(), p.y(), p.z());
         double distance = ear.distanceTo(source);
-        float gain = gain(distance, p.range(), p.suppressed());
-        if (gain < MIN_GAIN) return;
+        float open = Math.min(1f, gain(distance, p.range(), p.suppressed()) * p.loudness());
+        if (open < MIN_GAIN) return;
         float pitch = 1f - 0.06f * (float) Mth.clamp(distance / Math.max(1.0, p.range()), 0.0, 1.0);
+
+        // Terrain or walls in the way: the direct sound is muffled, the more so the thicker it
+        // is. Echoes reach you around it, so they're only somewhat weaker.
+        float gain = open, echoGain = open;
+        if (GunfireConfig.OCCLUSION.get()) {
+            double thickness = obstruction(level, ear, source, distance);
+            if (thickness > 0) {
+                gain = open * (float) Math.max(0.12, 0.45 * Math.exp(-thickness / 16.0));
+                pitch *= 0.93f;
+                echoGain = open * 0.65f;
+            }
+        }
 
         playAt(sound, source, gain, pitch, distance);
 
@@ -80,7 +97,7 @@ public final class DistantGunfireClient {
         Long last = LAST_ECHO.get(p.shooterId());
         if (last != null && now - last < ECHO_INTERVAL_MS) return;
         LAST_ECHO.put(p.shooterId(), now);
-        for (Tap tap : echoes(level, ear, source, distance, gain, p.suppressed())) {
+        for (Tap tap : echoes(level, ear, source, distance, echoGain, p.suppressed())) {
             float echoPitch = pitch * (0.93f + RANDOM.nextFloat() * 0.04f);
             playAt(sound, tap.from, tap.gain, echoPitch, distance + tap.extra);
         }
@@ -107,6 +124,27 @@ public final class DistantGunfireClient {
         TaczFileSound instance = new TaczFileSound(sound.soundId(), sound.file(), from, gain,
                 Mth.clamp(pitch, 0.5f, 2f));
         Minecraft.getInstance().getSoundManager().playDelayed(instance, delayTicks);
+    }
+
+    /**
+     * Blocks of solid stuff on the straight line from you to the shot, sampled every block or
+     * so (coarser past 256 blocks, at most 300 samples). Full blocks only - leaves, glass and
+     * fences let sound through - and the first and last couple of blocks are skipped, so the
+     * shooter's own cover or the wall you're leaning on doesn't count. Unloaded chunks read as
+     * air.
+     */
+    private static double obstruction(ClientLevel level, Vec3 ear, Vec3 source, double distance) {
+        if (distance < 6) return 0;
+        double step = Math.max(1.0, distance / 300.0);
+        Vec3 dir = source.subtract(ear).scale(1.0 / distance);
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        double solid = 0;
+        for (double t = 2.0; t < distance - 2.0; t += step) {
+            at.set(ear.x + dir.x * t, ear.y + dir.y * t, ear.z + dir.z * t);
+            BlockState state = level.getBlockState(at);
+            if (!state.isAir() && state.isSolidRender(level, at)) solid += step;
+        }
+        return solid;
     }
 
     /** Up to MAX_ECHOES reflections, strongest first. */

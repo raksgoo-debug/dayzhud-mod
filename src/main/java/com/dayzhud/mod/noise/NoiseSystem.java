@@ -234,8 +234,11 @@ public final class NoiseSystem {
         if (last != null && now >= last && now - last < GUNSHOT_COOLDOWN) return;
         LAST_GUNSHOT.put(shooter.getUUID(), now);
         boolean suppressed = isSuppressed(gun);
+        // Mobs hear a .50 farther than a pistol, on the same scale players do (GunLoudness).
+        double scale = com.dayzhud.mod.gunfire.GunLoudness.of(gun).range();
+        if (suppressed) scale = Math.min(scale, 1.5);
         emit(level, shooter.position(), suppressed ? NoiseKind.SUPPRESSED_GUNSHOT : NoiseKind.GUNSHOT,
-                suppressed ? NoiseConfig.SUPPRESSED_GUNSHOT.get() : NoiseConfig.GUNSHOT.get(), shooter);
+                (suppressed ? NoiseConfig.SUPPRESSED_GUNSHOT.get() : NoiseConfig.GUNSHOT.get()) * scale, shooter);
     }
 
     /**

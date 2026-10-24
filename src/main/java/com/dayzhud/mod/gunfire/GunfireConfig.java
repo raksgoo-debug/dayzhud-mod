@@ -22,6 +22,8 @@ public final class GunfireConfig {
     public static final ForgeConfigSpec.DoubleValue VOLUME;
     public static final ForgeConfigSpec.DoubleValue SPEED_OF_SOUND;
     public static final ForgeConfigSpec.BooleanValue ECHOES;
+    public static final ForgeConfigSpec.BooleanValue LOUDNESS_BY_CALIBRE;
+    public static final ForgeConfigSpec.BooleanValue OCCLUSION;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -36,9 +38,13 @@ public final class GunfireConfig {
                         "TACZ's own gunshot covers nearby players; the distant sound takes over from about",
                         "this many blocks (it fades in from 60% of it, so the two overlap a little).")
                 .defineInRange("distantFrom", 48.0, 8.0, 512.0);
-        RANGE = b.comment("How far an unsuppressed gunshot carries (blocks).")
+        RANGE = b.comment(
+                        "How far an unsuppressed gunshot carries (blocks), for an intermediate rifle",
+                        "cartridge. With loudnessByCalibre, pistols carry x0.55 of this, shotguns x0.85,",
+                        "full-power rifles x1.35 and heavy calibres (.50 BMG, .338) x2.")
                 .defineInRange("range", 640.0, 16.0, 4096.0);
-        SUPPRESSED_RANGE = b.comment("How far a suppressed gunshot carries (blocks).")
+        SUPPRESSED_RANGE = b.comment(
+                        "How far a suppressed gunshot carries (blocks); scaled by calibre too, up to x1.5.")
                 .defineInRange("suppressedRange", 128.0, 0.0, 4096.0);
         GUN_RANGES = b.comment(
                         "Per-gun range overrides as \"gunId=blocks\", e.g. \"tacz:m107=1200\" for a .50 or",
@@ -56,6 +62,16 @@ public final class GunfireConfig {
                         "Echoes off walls, cliffs and buildings around you (or a long rolling echo in open",
                         "country). Client side.")
                 .define("echoes", true);
+        LOUDNESS_BY_CALIBRE = b.comment(
+                        "Louder and farther-carrying the bigger the cartridge, from each gun's TACZ ammo id",
+                        "(then its type, then its damage): pistol x0.7 volume, intermediate rifle x1,",
+                        "full-power rifle x1.25, heavy x1.7. Also scales how far mobs hear it. The log",
+                        "names the class each gun got.")
+                .define("loudnessByCalibre", true);
+        OCCLUSION = b.comment(
+                        "Shots with solid terrain or walls between you and the shooter are quieter and",
+                        "duller, the more so the more is in the way. Echoes still come through. Client side.")
+                .define("occlusion", true);
         b.pop();
         SPEC = b.build();
     }
