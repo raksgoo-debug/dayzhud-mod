@@ -26,8 +26,10 @@ public final class PixelProbe {
     /**
      * An item's visible box, in the units of the pose it was drawn in (+x screen-right, +y
      * screen-up): its centre relative to the draw's origin, and its width/height.
+     * {@code clipped}: visible pixels reached the probe's edge, so part of the item was outside
+     * the frame and the box is too small - measure again at a smaller scale.
      */
-    public record Box(float dx, float dy, float length, float height) {}
+    public record Box(float dx, float dy, float length, float height, boolean clipped) {}
 
     /** Draws an item into the given pose; may throw, which the caller handles. */
     @FunctionalInterface
@@ -110,13 +112,14 @@ public final class PixelProbe {
             if (scissor) GlStateManager._enableScissorTest();
         }
         if (x1 < 0) return null;
-        if (GridConfig.DEBUG_LOGGING.get() && (x0 == 0 || y0 == 0 || x1 == W - 1 || y1 == H - 1)) {
-            DayzHudMod.LOGGER.info("flat item {}: visible pixels reach the probe's edge; its size may be "
-                    + "under-measured", what);
+        boolean clipped = x0 == 0 || y0 == 0 || x1 == W - 1 || y1 == H - 1;
+        if (GridConfig.DEBUG_LOGGING.get() && clipped) {
+            DayzHudMod.LOGGER.info("flat item {}: visible pixels reach the probe's edge at {} px per unit; its "
+                    + "size may be under-measured", what, sp);
         }
         // Probe px -> units: screen x = W/2 + sp*vx, screen y = H/2 - sp*vy.
         float left = x0, right = x1 + 1, top = y0, bottom = y1 + 1;
         return new Box(((left + right) / 2f - W / 2f) / sp, (H / 2f - (top + bottom) / 2f) / sp,
-                (right - left) / sp, (bottom - top) / sp);
+                (right - left) / sp, (bottom - top) / sp, clipped);
     }
 }

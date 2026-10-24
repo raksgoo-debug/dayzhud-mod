@@ -180,10 +180,19 @@ public final class FlatModelRenderer {
             PixelProbe.Box v = VISIBLE.get(key);
             if (v == null) {
                 // Probe px per block: bags are ~1.4 blocks (frame +-4 x +-2), magazines are
-                // fitted to 0.5 by their own renderer (frame +-2 x +-1). Tools are one block
-                // long laid flat, the spear 1.5; worn gear is under a block tall - all +-2 x +-1.
-                float sp = DefaultItemFootprints.BACKPACKS.contains(id) ? 128f : 256f;
+                // fitted to 0.5 by their own renderer (frame +-2 x +-1), tools are one block
+                // long laid flat, the spear 1.5 (+-2 x +-1). Rig & Plate gear is drawn where it's
+                // worn, relative to the neck: a vest's groin flap or a rig's low pouches reach
+                // more than a block below it, so it gets the bags' larger frame (2.19.0) - in a
+                // +-1 frame they were cut off, measured short, and hung out of their cells.
+                float sp = DefaultItemFootprints.BACKPACKS.contains(id) || id.startsWith(RIG) ? 128f : 256f;
                 v = PixelProbe.measure(sp, p -> draw(p, stack, id), key);
+                // Anything still touching the frame's edge didn't fit: measure again with the
+                // frame doubled, twice at most.
+                for (int retry = 0; v != null && v.clipped() && retry < 2; retry++) {
+                    sp /= 2f;
+                    v = PixelProbe.measure(sp, p -> draw(p, stack, id), key);
+                }
                 if (v == null) throw new IllegalStateException("drew nothing");
                 VISIBLE.put(key, v);
                 if (GridConfig.DEBUG_LOGGING.get()) {

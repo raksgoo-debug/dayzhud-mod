@@ -377,7 +377,7 @@ public final class TaczFlatGunRenderer {
                         + "instead.", key, t);
             }
         }
-        if (v == null) v = new PixelProbe.Box(0f, 0f, b.length(), b.height());
+        if (v == null) v = new PixelProbe.Box(0f, 0f, b.length(), b.height(), false);
         VISIBLE.put(key, v);
         if (GridConfig.DEBUG_LOGGING.get()) {
             DayzHudMod.LOGGER.info("flat item {}: vertex box {} x {}, visible {} x {} offset ({}, {})", key,

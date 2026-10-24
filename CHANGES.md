@@ -99,6 +99,17 @@ Vanilla's death screen is replaced with one in the inventory's style:
 - `config/dayzhud-recap.toml`: `enabled` (false = vanilla's death screen),
   `damageWindowSeconds`, `notifyKiller`.
 
+## Grid: Rig & Plate gear fits its cells
+
+- Some vests and rigs drew too low and spilled out of their cells: a rig in a 3x2 space
+  looked 3x3. The grid sizes a model by drawing it once off-screen and measuring what's
+  visible. Rig & Plate gear is drawn where it's worn, relative to the neck, and that frame
+  only reached a block below it. Groin flaps and low-slung pouches went past the edge, so
+  the model was measured short, scaled too big, and the cut-off part hung out of the cell.
+  - Rig & Plate gear now gets a frame twice as tall.
+  - Any model-drawn item (bags, magazines, tools, gear) that still reaches the frame's edge
+    is measured again with the frame doubled, up to twice, so it can't be measured short.
+
 ## Market
 
 - **MAGAZINES always shows on BUY.** TaCZ Magazines lists its magazines only once gun data
