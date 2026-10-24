@@ -45,7 +45,7 @@ public final class NoiseConfig {
                         "Hostile mobs with no target walk to noises they hear.")
                 .define("mobsInvestigate", true);
         PLAYER_MARKERS = b.comment(
-                        "Players who hear a gunshot, explosion or breaking glass get a direction marker",
+                        "Players who hear an explosion or breaking glass get a direction marker",
                         "around the crosshair (direction and rough distance only - never coordinates).")
                 .define("playerMarkers", true);
         PLAYER_HEARING = b.comment(

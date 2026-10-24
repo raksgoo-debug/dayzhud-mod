@@ -245,7 +245,7 @@ public final class NoiseSystem {
      * built-in TACZ suppressor's id contains "silencer". Read as text rather than parsed, so
      * a change to how that stack is nested inside the tag doesn't matter.
      */
-    private static boolean isSuppressed(ItemStack gun) {
+    public static boolean isSuppressed(ItemStack gun) {
         CompoundTag tag = gun.getTag();
         if (tag == null) return false;
         Tag muzzle = tag.get("AttachmentMUZZLE");
@@ -295,6 +295,8 @@ public final class NoiseSystem {
                 try {
                     if (getShooter.invoke(event) instanceof LivingEntity shooter
                             && getGun.invoke(event) instanceof ItemStack gun) {
+                        // Every round reaches distant ears; noise for mobs is rate-limited inside.
+                        com.dayzhud.mod.gunfire.DistantGunfire.onShot(shooter, gun, isSuppressed(gun));
                         onGunFired(shooter, gun);
                     }
                 } catch (ReflectiveOperationException e) {

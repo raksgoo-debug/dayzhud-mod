@@ -3,14 +3,15 @@ package com.dayzhud.mod.noise;
 /**
  * What made a noise. The radius comes from NoiseConfig; {@link #heardByPlayers} decides
  * whether other players get a direction marker for it (footsteps and bows only draw mobs -
- * a marker for every footstep would be noise of a different kind).
+ * a marker for every footstep would be noise of a different kind). Gunshots get no marker:
+ * they're heard for real now, from where they were fired (DistantGunfire).
  *
  * Sent over the network by ordinal, so new kinds go on the END.
  */
 public enum NoiseKind {
     FOOTSTEP(false, 0xBFBFBF),
-    GUNSHOT(true, 0xE2A62E),
-    SUPPRESSED_GUNSHOT(true, 0xC9B98A),
+    GUNSHOT(false, 0xE2A62E),
+    SUPPRESSED_GUNSHOT(false, 0xC9B98A),
     EXPLOSION(true, 0xE23A2E),
     GLASS(true, 0x9CD3E8),
     BOW(false, 0xBFBFBF);

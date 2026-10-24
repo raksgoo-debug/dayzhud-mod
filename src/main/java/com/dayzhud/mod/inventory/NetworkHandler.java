@@ -153,5 +153,10 @@ public class NetworkHandler {
                 com.dayzhud.mod.recap.DeathRecapPacket::encode,
                 com.dayzhud.mod.recap.DeathRecapPacket::decode,
                 com.dayzhud.mod.recap.DeathRecapPacket::handle);
+        CHANNEL.registerMessage(packetId++,
+                com.dayzhud.mod.gunfire.DistantShotPacket.class,
+                com.dayzhud.mod.gunfire.DistantShotPacket::encode,
+                com.dayzhud.mod.gunfire.DistantShotPacket::decode,
+                com.dayzhud.mod.gunfire.DistantShotPacket::handle);
     }
 }

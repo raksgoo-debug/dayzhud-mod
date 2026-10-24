@@ -51,6 +51,8 @@ public class DayzHudMod {
                 com.dayzhud.mod.noise.NoiseConfig.SPEC, "dayzhud-noise.toml");
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
                 com.dayzhud.mod.recap.RecapConfig.SPEC, "dayzhud-recap.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+                com.dayzhud.mod.gunfire.GunfireConfig.SPEC, "dayzhud-gunfire.toml");
         modEventBus.addListener(this::commonSetup);
         // LR Tactical's meds treat bleeding/pain through its own event (optional, reflective).
         com.dayzhud.mod.injury.InjurySystem.registerCompat();

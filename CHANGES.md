@@ -1,4 +1,4 @@
-# dayzhud 2.19.0 - noise and a new death screen
+# dayzhud 2.19.0 - noise, distant gunfire and a new death screen
 
 ## Noise
 
@@ -14,11 +14,10 @@ Project Zomboid style: what you do makes noise, and noise draws attention.
   to 30 seconds. At most the 24 nearest react to one noise. Once there they use their own AI,
   so if you're still around they'll find you. Endermen and the Warden ignore noise
   (`deafMobs`).
-- **Players:** other players who hear a gunshot, explosion or breaking glass get a marker on
-  a ring around the crosshair. It points the way the noise came from and turns as you turn.
-  It's labelled with what it was and how far ("GUNSHOT - DISTANT"), and fades after 4
-  seconds. Players hear 1.5x as far as mobs (`playerHearingMultiplier`). Only the direction
-  is sent, never the position.
+- **Players:** other players who hear an explosion or breaking glass get a marker on a ring
+  around the crosshair. It points the way the noise came from, turns as you turn, and fades
+  after 4 seconds. Only the direction is sent, never the position. Gunshots get no marker:
+  you hear them for real instead (see Distant gunfire).
 - **Noise meter:** four bars above the movement icon show how far your noise carries right
   now. Sneaking shows none, walking 1, sprinting 2, and after a shot all 4 light up for a
   moment.
@@ -27,6 +26,35 @@ Project Zomboid style: what you do makes noise, and noise draws attention.
 - **TACZ** is reached by reflection (its GunFireEvent, or GunShootEvent on older builds).
   Without TACZ, or if those names change, gunshots make no noise and everything else still
   works. Full-auto fire makes noise at most twice a second per shooter.
+
+## Distant gunfire
+
+TACZ's own gunshot fades out after a few dozen blocks. Now a shot carries as far as a real one
+would, and you hear it from where it was fired.
+
+- **The gun's own sound:** dayzhud asks TACZ which third-person sound the gun makes
+  (`shoot_3p`, or `silence_3p` with a suppressor). It plays that file through the normal
+  resource manager, so a resource pack's custom gun sounds are what you hear. If TACZ's
+  display can't be read, its file naming is tried, and a gun with no sound found is logged.
+- **Takes over from TACZ:** the distant sound fades in from 60% of `distantFrom` (48
+  blocks) and is full from 48 on, so the two overlap slightly instead of leaving a gap.
+- **Late:** delayed by the speed of sound (343 blocks a second). A shot 500 blocks away is
+  heard about 1.5 s after it's fired.
+- **Quieter and darker with distance:** -6 dB every time the distance doubles, a little air
+  absorption, and up to 6% lower pitch at the far end. It fades out over the last 20% of the
+  gun's range.
+- **Range:** 640 blocks, 128 suppressed. Per-gun overrides go in `gunRanges`, e.g.
+  `"tacz:m107=1200"`.
+- **Echoes:**
+  - rays from you find walls, cliffs and buildings within 160 blocks; up to 3 become echoes,
+    each coming from the surface it bounced off, delayed by the extra path;
+  - in open country with nothing to bounce off, you get the long, soft roll off distant
+    terrain instead, from the side the shot came from;
+  - echoes are made at most every 0.22 s per shooter, so full auto doesn't stack dozens.
+- Every round is heard, not just one per burst. Players already in range of TACZ's own sound
+  aren't sent anything.
+- `config/dayzhud-gunfire.toml`: `enabled`, `distantFrom`, `range`, `suppressedRange`,
+  `gunRanges`, `volume`, `speedOfSound` (0 = no delay), `echoes`.
 
 ## Death screen
 
