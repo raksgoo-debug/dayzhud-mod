@@ -34,6 +34,8 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 /**
  * The entity the death screen draws as your killer (2.19.0).
@@ -121,11 +123,11 @@ public final class KillerModelCache {
      */
     public static void draw(GuiGraphics g, LivingEntity entity, int x, int y, int scale, float lookX, float lookY) {
         if (entity.isRemoved()) {
+            clearRemoved(entity);
             try {
-                entity.unsetRemoved();
                 entity.reviveCaps();
             } catch (RuntimeException e) {
-                DayzHudMod.LOGGER.debug("[dayzhud] Couldn't revive the killer after unload", e);
+                DayzHudMod.LOGGER.debug("[dayzhud] Couldn't revive the killer's capabilities", e);
             }
         }
         ResourceLocation now = entity == model ? textureOf(entity) : null;
@@ -140,6 +142,37 @@ public final class KillerModelCache {
                     + "unloaded - drawing it with {}", keep, now, keep);
         }
         renderWithSkin(g, x, y, scale, lookX, lookY, entity, now, keep);
+    }
+
+    /**
+     * Entity's removal reason, found by type: Entity.unsetRemoved() would do this but is
+     * protected, and the field's name differs between dev and release mappings while its
+     * type doesn't. Null if it can't be found - then the entity just stays marked removed.
+     */
+    @Nullable private static Field removalReason;
+    private static boolean removalReasonLooked;
+
+    private static void clearRemoved(Entity entity) {
+        if (!removalReasonLooked) {
+            removalReasonLooked = true;
+            for (Field f : Entity.class.getDeclaredFields()) {
+                if (f.getType() == Entity.RemovalReason.class && !Modifier.isStatic(f.getModifiers())) {
+                    try {
+                        f.setAccessible(true);
+                        removalReason = f;
+                    } catch (RuntimeException e) {
+                        DayzHudMod.LOGGER.debug("[dayzhud] Entity's removal reason isn't accessible", e);
+                    }
+                    break;
+                }
+            }
+        }
+        if (removalReason == null) return;
+        try {
+            removalReason.set(entity, null);
+        } catch (IllegalAccessException | RuntimeException e) {
+            DayzHudMod.LOGGER.debug("[dayzhud] Couldn't clear the killer's removed flag", e);
+        }
     }
 
     @Nullable
